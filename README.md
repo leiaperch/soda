@@ -69,10 +69,8 @@ because they play tidily. Measured on the current build with a scripted pilot:
 a player who touches nothing dies around 300 m, a player who dodges correctly
 passes 10 000 m and reaches top speed.
 
-**Zones.** Six of them, each an ambience *and* a mechanic rather than a reskin.
-Three are built as ambiences today (The Ring, The Shore, The Market) and share
-the base mechanic; The Docks, The Heights and The Core are listed on the select
-screen as locked so the shape of the game is visible.
+**Zones.** All six are built, and each is an ambience *and* a rule change
+rather than a reskin.
 
 Everything a zone changes lives in `world/zones.js`: sky gradient, fog, key and
 fill light, backdrop tints, road and kerb colours, facade palette, and a prop
@@ -147,7 +145,9 @@ as bubblegum rather than as a wash.
 
 ## Assets
 
-**Music** lives in `public/audio`, five tracks made in Suno. `game/audio.js`
+**Music** lives in `public/audio`, eight tracks made in Suno. The Heights, The
+Core and The Docks own a theme each via `track` on the zone; the rest draw
+from a shuffled bag, which anything used as a theme is kept out of. `game/audio.js`
 runs two `<audio>` elements and crossfades between them rather than using the
 Web Audio API: these are full-length streamed songs, and decoding them into
 AudioBuffers would cost tens of megabytes of RAM on a phone for nothing.
@@ -246,17 +246,28 @@ the music, and everything respects the mute toggle.
 
 ## Zone verbs
 
-Each built zone now has its own verb, not just its own light.
+Every zone changes a rule, not just a colour.
 
 - **The Ring** — the base grammar: jump, slide, switch lane.
-- **The Shore** — swells cross the road. Clear one in the air and you get
-  SURF: a speed boost and charge back. Plough into it grounded and you get
-  SPLASH: a speed cut and charge lost. It is a timing reward, not an obstacle,
-  so getting it wrong costs tempo rather than your run.
+- **The Shore** — there is no road at all, the lane is open sea. Swells rear
+  up across it: clear one in the air for SURF (speed boost and charge back),
+  plough into it grounded for SPLASH (speed cut, charge lost). A timing
+  reward, not an obstacle, so getting it wrong costs tempo not your run.
 - **The Market** — grind rails run along a lane. Land on one and you lock to
-  it, riding above barrier height and earning charge per second, until it ends
-  or you jump off. Rail height sits deliberately above a barrier's, so a grind
-  clears barriers for free — that is the whole payoff.
+  it, riding above barrier height and earning charge per second. Run into one
+  on the ground and it is a wall. That is the bargain: it is only a shortcut
+  if you commit to the jump.
+- **The Docks** — gravity drops to 42% with a slightly softer push, so she
+  hangs. A jump becomes a commitment you cannot take back mid-air.
+- **The Heights** — a crosswind shifts your target off the lane centre rather
+  than nudging x directly, so it is something you steer against instead of a
+  stutter you cannot read. Collision uses x, so the drift genuinely costs you.
+- **The Core** — starts at 25 and tops out at 54 with a steeper ramp, plus a
+  light crosswind and the rails from The Market. Everything at once.
+
+Zone rule changes live in `physics` on the zone config (`gravityScale`,
+`jumpScale`, `wind`, `startSpeed`, `maxSpeed`, `speedRamp`) and are applied in
+`Game.setZone`, so a new zone never means touching the player or the loop.
 
 Feature layouts are authored per zone in `world/chunks.js` for the same reason
 the obstacle phrases are: a swell you cannot see coming, or a rail that starts
@@ -272,7 +283,7 @@ matte now.
 
 ## Not done yet
 
-- Ghost replay, Daily Run leaderboard, the three unbuilt zones.
+- Ghost replay and the Daily Run leaderboard.
 - Never tested on a real phone. Everything so far is a desktop browser at a
   mobile viewport, so touch latency and sustained frame rate on low-end
   Android are unverified.

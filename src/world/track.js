@@ -100,7 +100,7 @@ export class Track {
       for (const f of (variant.features || [])) {
         slot.features.push(f.kind === 'swell'
           ? { kind: 'swell', z: zStart - f.z, done: false }
-          : { kind: 'rail', lane: f.lane, x: LANE_X[f.lane], startZ: zStart - f.from, endZ: zStart - f.to });
+          : { kind: 'rail', lane: f.lane, x: LANE_X[f.lane], startZ: zStart - f.from, endZ: zStart - f.to, hit: false });
       }
       for (const c of variant.cells) {
         this.cells.push({ x: LANE_X[c.lane], y: 1.15, z: zStart + c.z, slot: index });

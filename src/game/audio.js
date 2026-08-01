@@ -11,12 +11,13 @@ const KEY = 'soda.muted.v1';
 
 const TRACKS = {
   menu: 'audio/neon-glitch.mp3',
+  // Zones without a theme of their own draw from this bag. Anything assigned
+  // as a zone theme is kept out of it, or the same track turns up twice.
   run: [
     'audio/sugar-crash.mp3',
     'audio/sugar-crash-core.mp3',
     'audio/glitter-and-grit.mp3',
     'audio/glitch-in-the-velvet-rope.mp3',
-    'audio/neon-glitch.mp3',
   ],
 };
 
@@ -113,7 +114,11 @@ export function createAudio() {
     },
 
     playMenu() { crossfadeTo(TRACKS.menu, MENU_VOLUME); },
-    playRun() { crossfadeTo(nextRunTrack(), RUN_VOLUME); },
+
+    /** A zone may own its theme; otherwise it gets one from the shuffled bag. */
+    playRun(zone) {
+      crossfadeTo(zone && zone.track ? zone.track : nextRunTrack(), RUN_VOLUME);
+    },
 
     /** Drop the music back without stopping it, for the end screens. */
     duck() { fade(decks[active], muted ? 0 : MENU_VOLUME * 0.6, FADE_MS); },

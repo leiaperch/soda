@@ -232,12 +232,15 @@ export function swell(b, pal, z) {
     const t = (i + 0.5) / segs;
     const x = -span / 2 + span * t;
     const w = span / segs;
-    const h = 0.28 + Math.sin(t * Math.PI) * 0.5;
+    const h = 0.3 + Math.sin(t * Math.PI) * 0.8;
     // Matte and well under 1.0. This is a wide surface repeated across the
     // whole road; reflective or bright here and the bloom whites out the zone.
-    b.box('toon', x, 0.03, z, w * 1.02, h, 2.6, shade(pal.edge, 0.75));
-    b.box('beam', x, 0.03 + h, z, w * 1.02, 0.12, 2.8, shade(pal.lane, 0.42));
-    b.box('emissive', x, 0.05, z + 1.35, w * 1.02, 0.08, 0.2, shade(pal.lane, 0.5));
+    b.box('toon', x, 0.03, z, w * 1.02, h, 3.0, shade(pal.edge, 0.72));
+    // the lip curls forward, which is what makes it read as breaking
+    b.box('toon', x, 0.03 + h, z + 0.9, w * 1.02, 0.26, 1.3, shade(pal.edge, 0.9));
+    b.box('emissive', x, 0.03 + h + 0.26, z + 0.9, w * 1.02, 0.07, 1.35, shade(pal.lane, 0.55));
+    b.box('beam', x, 0.03 + h * 0.6, z, w * 1.02, 0.5, 0.06, shade(pal.lane, 0.3));
+    b.box('emissive', x, 0.05, z + 1.6, w * 1.02, 0.06, 0.3, shade(pal.lane, 0.45));
   }
 }
 
@@ -260,6 +263,53 @@ export function rail(b, pal, x, from, to) {
   // lit approach ramp so the entry point is unmistakable
   for (let i = 0; i < 3; i++) {
     b.box('emissive', x, 0.04, -(from - 1.6 - i * 1.6), 1.5, 0.02, 0.7, shade(pal.accentGlow, 0.22 + i * 0.18));
+  }
+}
+
+/**
+ * Cargo stack for The Docks: containers piled at angles, chrome banding, a
+ * lit hazard stripe. Blocky on purpose, because everything else in the game
+ * is rounded and the docks should feel like the industrial back of house.
+ */
+export function cargoStack(b, rng, pal, x, z, side) {
+  const cols = rng.int(2, 3);
+  let y = 0;
+  for (let c = 0; c < cols; c++) {
+    const rows = rng.int(1, 3);
+    for (let r = 0; r < rows; r++) {
+      const w = rng.range(4.5, 6.5);
+      const d = rng.range(5, 9);
+      const h = 2.6;
+      const jitter = rng.range(-0.6, 0.6);
+      const col = pal.facades[rng.int(0, pal.facades.length - 1)];
+      b.at(x + jitter, y, z + rng.range(-1, 1), rng.range(-0.12, 0.12));
+      b.box('toon', 0, 0, 0, w, h, d, shade(col, 1 - r * 0.06));
+      b.box('chrome', 0, h - 0.2, 0, w + 0.2, 0.2, d + 0.2, shade(pal.chrome, 0.9));
+      b.box('chrome', 0, 0, 0, w + 0.2, 0.2, d + 0.2, shade(pal.chrome, 0.85));
+      // ribbing
+      for (let i = -2; i <= 2; i++) {
+        b.box('toon', i * (w / 6), h / 2, d / 2 + 0.06, w / 12, h * 0.7, 0.08, shade(col, 0.8));
+      }
+      b.box('emissive', 0, h * 0.5, -side * (d / 2 + 0.05), w * 0.5, 0.16, 0.06, shade(pal.accentGlow, 1.1));
+      b.pop();
+      y += h;
+    }
+    y = 0;
+    x += rng.range(5.5, 7.5) * (side > 0 ? 1 : -1);
+  }
+}
+
+/**
+ * Cloud bank for The Heights: soft stacked domes below the deck, so the road
+ * reads as being above the weather rather than floating in nothing.
+ */
+export function cloudBank(b, rng, pal, x, z) {
+  const puffs = rng.int(4, 7);
+  const baseY = rng.range(-9, -4);
+  for (let i = 0; i < puffs; i++) {
+    const r = rng.range(3.5, 8);
+    b.dome('toon', x + rng.range(-9, 9), baseY + rng.range(-1.5, 2.5), z + rng.range(-10, 10),
+      r, r * rng.range(0.45, 0.75), 10, 4, shade(pal.lane, rng.range(0.88, 1.05)));
   }
 }
 

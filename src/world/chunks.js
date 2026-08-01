@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
-  marketStall, skyArch, gantry, hoverPod, swell, rail,
+  marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
 } from './props.js';
 import { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
 
@@ -74,7 +74,28 @@ function buildRoad(b, pal, props) {
   const mid = -L / 2;
 
   b.box('toon', 0, -1.2, mid, ROAD_HALF * 2 + 9, 1.2, L, shade(pal.road, 0.6));
-  b.slab('toon', 0, 0.02, mid, ROAD_HALF * 2, L, pal.road);
+
+  if (props.waterRoad) {
+    // On The Shore there is no asphalt at all: the lane IS the sea. Rolling
+    // rows of crest across the full width, so a swell reads as the water
+    // rearing up rather than as a bump sitting on a road.
+    // Shallow and low-contrast on purpose: step the height or the shade too
+    // far and rolling water reads as a flight of stairs.
+    const rows = 56;
+    const step = L / rows;
+    for (let i = 0; i < rows; i++) {
+      const z = -(i + 0.5) * step;
+      const phase = i * 0.42;
+      const h = 0.07 + Math.sin(phase) * 0.035 + Math.sin(phase * 0.31) * 0.025;
+      b.box('toon', 0, 0.02, z, ROAD_HALF * 2, h, step * 1.02, shade(pal.road, 0.95 + Math.sin(phase) * 0.07));
+      // foam only on the odd crest, so it scatters rather than stripes
+      if (Math.sin(phase) > 0.86) {
+        b.box('emissive', 0, 0.02 + h, z + step * 0.4, ROAD_HALF * 2 * 0.8, 0.035, step * 0.26, shade(pal.lane, 0.32));
+      }
+    }
+  } else {
+    b.slab('toon', 0, 0.02, mid, ROAD_HALF * 2, L, pal.road);
+  }
 
   for (const s of [-1, 1]) {
     b.box('toon', s * (ROAD_HALF + 0.35), 0, mid, 0.7, 0.42, L, shade(pal.kerb, 0.95));
@@ -82,10 +103,12 @@ function buildRoad(b, pal, props) {
     b.box('toon', s * (ROAD_HALF + 3.2), 0, mid, 5.4, 0.4, L, pal.deck);
   }
 
-  // Dashed lane dividers
+  // Dashed lane dividers. Lifted clear of the swell on a water road, or they
+  // sink inside the crests and the player loses the only lane reference.
+  const laneY = props.waterRoad ? 0.17 : 0.03;
   for (let z = 1; z < L; z += 4) {
     for (const x of [-1.3, 1.3]) {
-      b.box('emissive', x, 0.03, -z, 0.16, 0.02, 2.0, shade(pal.lane, 1.0));
+      b.box('emissive', x, laneY, -z, 0.16, 0.02, 2.0, shade(pal.lane, 1.0));
     }
   }
 
@@ -175,13 +198,18 @@ function buildScenery(b, rng, pal, props) {
       const depth = rng.range(props.lotMin, props.lotMax);
       const x = side * (ROAD_HALF + 9 + rng.range(0, 9));
       if (rng() < props.skylineChance) {
-        if (rng.chance(0.75)) {
+        if (props.cargoChance && rng() < props.cargoChance) {
+          cargoStack(b, rng, pal, x, -(z + depth / 2), side);
+        } else if (rng.chance(0.75)) {
           tower(b, rng, pal, x, -(z + depth / 2), side, {
             d: depth, stacks: rng.int(props.towerStacks[0], props.towerStacks[1]),
           });
         } else {
           bubbleHab(b, rng, pal, x, -(z + depth / 2), side);
         }
+      }
+      if (props.cloudChance && rng() < props.cloudChance) {
+        cloudBank(b, rng, pal, side * (ROAD_HALF + rng.range(10, 26)), -(z + depth / 2));
       }
       if (rng() < props.backRowChance) {
         tower(b, rng, pal, side * (ROAD_HALF + 24 + rng.range(0, 12)), -(z + rng.range(0, 14)), side, {

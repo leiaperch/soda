@@ -9,8 +9,8 @@ import { Animator, loadClips } from './animator.js';
  *  puts her back to us and her nose down the track. */
 const MODEL_FACING = Math.PI;
 
-const GRAVITY = -34;
-const JUMP_V = 11.4;
+export const GRAVITY = -34;
+export const JUMP_V = 11.4;
 const SLIDE_TIME = 0.58;
 const LANE_SPEED = 12;
 
@@ -107,6 +107,8 @@ export class Player {
     // the frame until it does, so the game is playable from the first frame.
     this.animator = new Animator();
     this.animated = false;
+    // Overridden per zone: low gravity on The Docks, crosswind on The Heights.
+    this.physics = { gravity: GRAVITY, jump: JUMP_V, wind: 0 };
 
     loadCourier(materials).then(async (rig) => {
       if (!rig) return;
@@ -132,6 +134,7 @@ export class Player {
     this.sliding = 0;
     this.stunned = 0;
     this.grinding = null;
+    this.wind = 0;
     this.root.position.set(this.x, 0, 0);
     this.tilt.rotation.set(0, 0, 0);
     this.tilt.scale.set(1, 1, 1);
@@ -146,7 +149,7 @@ export class Player {
       this.grinding = null;
       this.airborne = true;
       this.sliding = 0;
-      this.vy = JUMP_V;
+      this.vy = this.physics.jump;
     } else if (kind === 'slide' && !this.airborne) {
       this.sliding = SLIDE_TIME;
     } else if (kind === 'slide' && this.airborne) {
@@ -160,7 +163,13 @@ export class Player {
     this.stunned = Math.max(0, this.stunned - dt);
     this.z -= speed * dt;
 
-    const targetX = LANE_X[this.lane];
+    // Crosswind shifts the target off the lane centre rather than nudging x
+    // directly, so the drift is something you steer against instead of a
+    // stutter you cannot read. Collision uses x, so it genuinely costs you.
+    this.wind = this.physics.wind
+      ? (Math.sin(time * 0.42) + Math.sin(time * 1.13) * 0.32) * this.physics.wind
+      : 0;
+    const targetX = LANE_X[this.lane] + this.wind;
     const dx = targetX - this.x;
     this.x += dx * Math.min(1, LANE_SPEED * dt);
 
@@ -175,7 +184,7 @@ export class Player {
         this.vy = 0;
       }
     } else if (this.airborne) {
-      this.vy += GRAVITY * dt;
+      this.vy += this.physics.gravity * dt;
       this.y += this.vy * dt;
       if (this.y <= 0) { this.y = 0; this.vy = 0; this.airborne = false; this.landedAt = time; }
     }

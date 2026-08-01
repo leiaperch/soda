@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Track } from '../world/track.js';
-import { Player, PLAYER } from './player.js';
+import { Player, PLAYER, GRAVITY, JUMP_V } from './player.js';
 import { records } from './records.js';
 import { bendUniforms } from '../render/materials.js';
 import { makeRng } from '../core/rng.js';
@@ -65,6 +65,20 @@ export class Game {
     this.zone = zone;
     this.stage.applyZone(zone);
     this.track.setZone(zone);
+
+    // A zone can bend the rules: gravity on The Docks, crosswind on The
+    // Heights, the whole speed envelope on The Core.
+    const ph = zone.physics || {};
+    this.player.physics = {
+      gravity: GRAVITY * (ph.gravityScale ?? 1),
+      jump: JUMP_V * (ph.jumpScale ?? 1),
+      wind: ph.wind ?? 0,
+    };
+    this.pace = {
+      start: ph.startSpeed ?? TUNE.startSpeed,
+      max: ph.maxSpeed ?? TUNE.maxSpeed,
+      ramp: ph.speedRamp ?? TUNE.speedRamp,
+    };
   }
 
   start(zone = this.zone || DEFAULT_ZONE) {
@@ -74,12 +88,12 @@ export class Game {
     this.state = 'running';
     this.time = 0;
     this.shake = 0;
-    this.speed = TUNE.startSpeed;
+    this.speed = this.pace.start;
     this.charge = TUNE.maxCharge;
     this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false };
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.toast('GO!');
-    if (this.audio) { this.audio.unlock(); this.audio.resetRate(); this.audio.playRun(); }
+    if (this.audio) { this.audio.unlock(); this.audio.resetRate(); this.audio.playRun(this.zone); }
   }
 
   _finish() {
@@ -106,7 +120,7 @@ export class Game {
 
   _hit() {
     this.charge += TUNE.hitCharge;
-    this.speed = Math.max(TUNE.startSpeed * 0.85, this.speed * TUNE.hitSpeedCut);
+    this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.hitSpeedCut);
     this.player.stunned = TUNE.hitStun;
     this.run.clean = false;
     this.shake = 0.55;
@@ -180,12 +194,12 @@ export class Game {
         if (f.done || p.z > f.z - 0.1) continue;
         f.done = true;
         if (p.airborne) {
-          this.speed = Math.min(TUNE.maxSpeed + 6, this.speed * TUNE.surfBoost);
+          this.speed = Math.min(this.pace.max + 6, this.speed * TUNE.surfBoost);
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.surfCharge);
           this.hud.toast('SURF!', 'relay');
           this.sfx.surf();
         } else {
-          this.speed = Math.max(TUNE.startSpeed * 0.85, this.speed * TUNE.splashCut);
+          this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.splashCut);
           this.charge += TUNE.splashCharge;
           this.hud.toast('SPLASH', 'warn');
           this.sfx.splash();
@@ -193,12 +207,18 @@ export class Game {
         continue;
       }
 
-      // rail: you are on it if you arrive over it, in its lane, off the ground
+      // Rail: land on it and you ride, run into it and it is a wall. That is
+      // the whole bargain — it is only a shortcut if you commit to the jump.
       const onSpan = p.z <= f.startZ && p.z > f.endZ;
-      if (!p.grinding && onSpan && p.lane === f.lane && p.y > RAIL_H - 0.45 && p.vy <= 0) {
+      if (!onSpan || p.lane !== f.lane) continue;
+
+      if (!p.grinding && p.y > RAIL_H - 0.45 && p.vy <= 0) {
         p.grinding = { y: RAIL_H, endZ: f.endZ, lane: f.lane };
         this.hud.toast('GRIND', 'relay');
         this.sfx.grind();
+      } else if (!p.grinding && !f.hit && p.y < RAIL_H - 0.35) {
+        f.hit = true;
+        this._hit();
       }
     }
     if (p.grinding) this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.grindCharge * dt);
@@ -223,7 +243,7 @@ export class Game {
     cam.lookAt(this._tmp);
 
     // Speed sells itself through FOV, not through numbers.
-    const t = (this.speed - TUNE.startSpeed) / (TUNE.maxSpeed - TUNE.startSpeed);
+    const t = (this.speed - this.pace.start) / (this.pace.max - this.pace.start);
     const base = window.innerHeight > window.innerWidth ? 74 : 58;
     const wanted = base + t * 10;
     if (Math.abs(cam.fov - wanted) > 0.05) {
@@ -237,8 +257,8 @@ export class Game {
     bendUniforms.uTime.value = this.time;
 
     if (this.state === 'running') {
-      this.speed = Math.min(TUNE.maxSpeed, this.speed + TUNE.speedRamp * dt);
-      const speedRatio = (this.speed - TUNE.startSpeed) / (TUNE.maxSpeed - TUNE.startSpeed);
+      this.speed = Math.min(this.pace.max, this.speed + this.pace.ramp * dt);
+      const speedRatio = (this.speed - this.pace.start) / (this.pace.max - this.pace.start);
       this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * dt;
 
       this.player.update(dt, this.speed, this.time);
