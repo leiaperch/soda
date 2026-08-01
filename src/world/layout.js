@@ -15,4 +15,7 @@ export const OBSTACLE = {
   barrier: { w: 2.3, h: 1.05, d: 0.7, base: 0 },      // jump it
   gate:    { w: 2.4, h: 2.2, d: 0.7, base: 1.35 },    // slide under it
   block:   { w: 2.3, h: 3.6, d: 1.0, base: 0 },       // change lane
+  // Spans every lane and is taller than a normal jump apex. There is no way
+  // around or over it except off a bloom pad, which is the entire point.
+  hedge:   { w: 2.62, h: 3.2, d: 2.2, base: 0 },
 };

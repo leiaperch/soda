@@ -3,7 +3,7 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
-  springPad, glassVault, plantBed, bigFern, vaultBay,
+  springPad, glassVault, plantBed, bigFern, vaultBay, ringGate,
 } from './props.js';
 import { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
@@ -72,11 +72,25 @@ const FEATURES = {
   // is not on the table, so the answer is always "be in another lane".
   // The Greenhouse: bloom pads that fire you up. Chained close enough that a
   // clean run reads as bouncing rather than as jumping.
+  // One pad and one hedge per chunk.
+  //
+  // The boosted arc covers 26 to 40 m. With pads every 12 m you flew straight
+  // over the next pad without triggering it, then landed in front of its hedge
+  // with nothing to clear it. Same failure as the first Docks layout: the
+  // move outranges the spacing.
   spring: [
-    [{ lane: 1, z: 14 }, { lane: 1, z: 26 }, { lane: 1, z: 38 }],
-    [{ lane: 0, z: 12 }, { lane: 1, z: 24 }, { lane: 2, z: 36 }],
-    [{ lane: 2, z: 16 }, { lane: 1, z: 30 }],
-    [{ lane: 0, z: 18 }, { lane: 0, z: 32 }, { lane: 1, z: 44 }],
+    [{ lane: 1, z: 16 }],
+    [{ lane: 0, z: 18 }],
+    [{ lane: 2, z: 15 }],
+    [{ lane: 1, z: 20 }],
+  ],
+  // The Vault: a slalom of hoops. High wants a jump, low wants a slide, and
+  // they alternate so the zone is a rhythm of two verbs rather than dodging.
+  ring: [
+    [{ lane: 1, z: 12, mode: 'high' }, { lane: 1, z: 24, mode: 'low' }, { lane: 1, z: 36, mode: 'high' }],
+    [{ lane: 0, z: 14, mode: 'low' }, { lane: 1, z: 26, mode: 'high' }, { lane: 2, z: 38, mode: 'low' }],
+    [{ lane: 2, z: 11, mode: 'high' }, { lane: 2, z: 22, mode: 'high' }, { lane: 1, z: 34, mode: 'low' }],
+    [{ lane: 1, z: 15, mode: 'low' }, { lane: 0, z: 28, mode: 'low' }, { lane: 0, z: 40, mode: 'high' }],
   ],
   hole: [
     [{ lane: 0, from: 12, to: 30 }],
@@ -91,7 +105,10 @@ const FEATURES = {
 function conflicts(o, features) {
   return features.some((f) => {
     if (f.kind === 'swell') return Math.abs(o.z - f.z) < 5.5;
-    if (f.kind === 'spring') return o.lane === f.lane && Math.abs(o.z - f.z) < 7;
+    // A pad owns the stretch after it in every lane, because the hedge it
+    // exists to clear spans all of them.
+    if (f.kind === 'spring') return o.z > f.z - 6 && o.z < f.z + 15;
+    if (f.kind === 'ring') return o.lane === f.lane && Math.abs(o.z - f.z) < 8;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
@@ -472,27 +489,43 @@ export function buildChunk(rng, pattern, materials, zone) {
 
   // Road first, but it has to know the features: on The Docks the gaps are
   // holes in the deck, not markings on it.
-  buildRoad(b, pal, zone.props, features, rng);
-  buildScenery(b, rng, pal, zone.props);
-  for (const o of kept) buildObstacle(b, pal, o, LANE_X[o.lane], zone.props.obstacleKit);
-  for (const f of features) {
-    if (f.kind === 'swell') swell(b, pal, -f.z);
-    else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
-    else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
-  }
-
-  const group = b.toGroup(materials);
-  const obstacles = kept.map((o) => ({
-    lane: o.lane,
-    z: -o.z,
-    type: o.t,
-    spec: OBSTACLE[o.t],
-  }));
   const cells = [];
   for (const row of (pattern.cells || [])) {
     for (let i = 0; i < row.n; i++) {
       cells.push({ lane: row.lane, z: -(row.z + i * 2.6) });
     }
   }
+
+  // A bloom pad without a reason to use it is a decoration. Each one is paired
+  // with a hedge across every lane, close enough to be inside the boosted arc
+  // and too tall for a normal jump, plus a string of CELLS along that arc. So
+  // the pad is both the only way through and the only way to the fuel.
+  const extra = [];
+  for (const f of features) {
+    if (f.kind !== 'spring') continue;
+    for (let lane = 0; lane < 3; lane++) extra.push({ t: 'hedge', lane, z: f.z + 9 });
+    for (let i = 0; i < 5; i++) {
+      const t = i / 4;
+      cells.push({ lane: f.lane, z: -(f.z + 3 + t * 12), y: 1.8 + Math.sin(t * Math.PI) * 3.4 });
+    }
+  }
+
+  buildRoad(b, pal, zone.props, features, rng);
+  buildScenery(b, rng, pal, zone.props);
+  for (const o of [...kept, ...extra]) buildObstacle(b, pal, o, LANE_X[o.lane], zone.props.obstacleKit);
+  for (const f of features) {
+    if (f.kind === 'swell') swell(b, pal, -f.z);
+    else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
+    else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode);
+    else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
+  }
+
+  const group = b.toGroup(materials);
+  const obstacles = [...kept, ...extra].map((o) => ({
+    lane: o.lane,
+    z: -o.z,
+    type: o.t,
+    spec: OBSTACLE[o.t],
+  }));
   return { group, obstacles, cells, features };
 }

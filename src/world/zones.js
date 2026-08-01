@@ -17,7 +17,7 @@ export const ZONES = [
     mechanic: 'Three lanes. Jump, slide, survive.',
     built: true,
     length: 1400,
-    track: 'audio/neon-glitch.mp3',
+    track: 'audio/sugar-crash.mp3',
     sky: [
       [0.00, '#2a1450'], [0.28, '#7a3d9c'], [0.50, '#ff7ac6'],
       [0.68, '#ffb27a'], [0.82, '#ffe9c9'], [1.00, '#7ff0d4'],
@@ -54,7 +54,7 @@ export const ZONES = [
     mechanic: 'Surf the swell. Waves taken clean give a boost.',
     built: true,
     length: 1900,
-    track: 'audio/sugar-crash.mp3',
+    track: 'audio/surf-punk.mp3',
     sky: [
       [0.00, '#0e3f74'], [0.20, '#2f8fc0'], [0.36, '#8fd8e8'],
       [0.47, '#ffd9a0'], [0.54, '#ff9d6e'], [0.72, '#ffc9a0'], [1.00, '#ffe9d0'],
@@ -127,11 +127,14 @@ export const ZONES = [
     id: 'greenhouse',
     name: 'THE GREENHOUSE',
     subtitle: 'THE BIODOME WENT FERAL',
-    mechanic: 'Bloom pads fire you up. Chain them.',
+    mechanic: 'Hedges block every lane. Only a bloom pad clears them.',
     built: true,
     length: 2100,
     track: 'audio/glitter-and-grit.mp3',
-    physics: { gravityScale: 0.72 },
+    // Speed is capped because the pad-to-hedge distance is fixed: too fast and
+    // you reach the hedge before the boosted arc has lifted you over it.
+    // At 28 the arc is 4.0 m high at the hedge against a 3.2 m hedge.
+    physics: { gravityScale: 0.72, maxSpeed: 28, speedRamp: 0.18 },
     sky: [
       [0.00, '#0f3a24'], [0.26, '#1f6b3f'], [0.48, '#7fd06a'],
       [0.66, '#ffe9a0'], [0.82, '#ffd0e4'], [1.00, '#2a5a3a'],
@@ -254,10 +257,10 @@ export const ZONES = [
     id: 'vault',
     name: 'THE VAULT',
     subtitle: 'SEALED TRANSIT TUBE',
-    mechanic: 'No sky, no horizon. Only the ribs and the beat.',
+    mechanic: 'Thread the hoops. High wants a jump, low wants a slide.',
     built: true,
     length: 2600,
-    track: 'audio/sugar-crash-core.mp3',
+    track: 'audio/neon-tears-in-the-void.mp3',
     physics: { startSpeed: 22, maxSpeed: 50, speedRamp: 0.3 },
     sky: [
       [0.00, '#0a0614'], [0.4, '#160c28'], [0.7, '#2a1450'], [1.00, '#08040f'],
@@ -285,7 +288,7 @@ export const ZONES = [
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0, stallChance: 0,
       skylineChance: 0, backRowChance: 0, waterSides: false, waterRoad: false,
-      lotMin: 6, lotMax: 10, towerStacks: [1, 2], feature: 'rail',
+      lotMin: 6, lotMax: 10, towerStacks: [1, 2], feature: 'ring',
     },
   },
 

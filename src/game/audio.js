@@ -14,8 +14,9 @@ const TRACKS = {
   // Every zone owns a theme now, so this bag is only a safety net for a zone
   // that forgets to declare one.
   run: [
-    'audio/sugar-crash.mp3',
-    'audio/glitch-in-the-velvet-rope.mp3',
+    'audio/neon-tides.mp3',
+    'audio/electronicore-finale.mp3',
+    'audio/sugar-crash-core.mp3',
   ],
 };
 

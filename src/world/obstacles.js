@@ -198,7 +198,24 @@ const BLOCKS = {
   },
 };
 
-const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar' };
+// ---------- hedge: spans everything, only a bloom pad clears it ------------
+
+function hedge(b, pal, x, z, s) {
+  const dark = new THREE.Color('#2f5a34');
+  b.box('toon', x, 0, z, s.w, s.h * 0.55, s.d, shade(dark, 1.0));
+  for (let i = 0; i < 5; i++) {
+    const px = x + (i - 2) * (s.w / 5);
+    b.dome('toon', px, s.h * 0.45, z + ((i % 2) - 0.5) * 0.5,
+      s.w * 0.34, s.h * (0.5 + (i % 3) * 0.09), 7, 3, shade(pal.edge, 0.6 + (i % 3) * 0.16));
+  }
+  // thorn tips, so it never reads as something soft you could push through
+  for (let i = 0; i < 4; i++) {
+    b.cyl('toon', x + (i - 1.5) * (s.w / 4), s.h * 0.86, z, 0.09, 0.01, 0.55, 5, shade(dark, 0.7));
+  }
+  b.box('emissive', x, 0.12, z + s.d * 0.5, s.w * 0.9, 0.1, 0.06, shade(pal.accentGlow, 0.9));
+}
+
+const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'hedge' };
 
 /**
  * @param {object} kit - `{ barrier, gate, block }` form names from the zone.
@@ -206,6 +223,7 @@ const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar' };
 export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
   const spec = OBSTACLE[o.t];
   const z = -o.z;
+  if (o.t === 'hedge') return hedge(b, pal, x, z, spec);
   const form = (kit && kit[o.t]) || DEFAULTS[o.t];
   const table = o.t === 'barrier' ? BARRIERS : o.t === 'gate' ? GATES : BLOCKS;
   (table[form] || table[DEFAULTS[o.t]])(b, pal, x, z, spec);

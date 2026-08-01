@@ -104,6 +104,8 @@ export class Track {
           slot.features.push({ kind: 'gap', startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else if (f.kind === 'spring') {
           slot.features.push({ kind: 'spring', lane: f.lane, x: LANE_X[f.lane], z: zStart - f.z, done: false });
+        } else if (f.kind === 'ring') {
+          slot.features.push({ kind: 'ring', lane: f.lane, mode: f.mode, z: zStart - f.z, done: false });
         } else if (f.kind === 'hole') {
           slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {
@@ -111,7 +113,7 @@ export class Track {
         }
       }
       for (const c of variant.cells) {
-        this.cells.push({ x: LANE_X[c.lane], y: 1.15, z: zStart + c.z, slot: index });
+        this.cells.push({ x: LANE_X[c.lane], y: c.y ?? 1.15, z: zStart + c.z, slot: index });
       }
     }
     // No checkpoint within sight of the finish line: the last stretch is meant
@@ -154,7 +156,7 @@ export class Track {
     const out = [];
     for (const s of this.slots) {
       for (const f of s.features) {
-        const z = (f.kind === 'swell' || f.kind === 'spring') ? f.z : f.startZ;
+        const z = f.z !== undefined ? f.z : f.startZ;
         if (Math.abs(z - playerZ) < range) out.push(f);
       }
     }

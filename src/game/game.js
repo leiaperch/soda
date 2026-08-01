@@ -33,6 +33,9 @@ const TUNE = {
   fallCharge: -32,    // off the catwalk, or off the bridge
   springBoost: 1.55,  // bloom pads, relative to a normal jump
   springCharge: 3,
+  ringBoost: 1.08,    // threading a hoop in The Vault
+  ringCharge: 7,
+  ringMiss: 0.93,
 };
 
 /** Lets the game run headless in tests without branching on `if (sfx)`. */
@@ -228,6 +231,27 @@ export class Game {
         if (over && inIt && !f.done && !p.grinding && p.y < 0.4) {
           f.done = true;
           this._fall(f.kind === 'gap' ? 'MISSED IT' : 'NO DECK');
+        }
+        continue;
+      }
+
+      if (f.kind === 'ring') {
+        // Generous on purpose: the hoop's height teaches which verb it wants,
+        // and being airborne or tucked at all is enough. Pixel-accurate hoops
+        // in a runner are a punishment, not a skill.
+        if (f.done || p.z > f.z - 0.1) continue;
+        f.done = true;
+        if (p.lane !== f.lane) continue;
+        const threaded = f.mode === 'high' ? p.y > 1.15 : p.sliding > 0;
+        if (threaded) {
+          this.speed = Math.min(this.pace.max + 5, this.speed * TUNE.ringBoost);
+          this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.ringCharge);
+          this.hud.toast('THREADED', 'relay');
+          this.sfx.clean();
+        } else {
+          this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.ringMiss);
+          this.hud.toast('CLIPPED', 'warn');
+          this.sfx.splash();
         }
         continue;
       }

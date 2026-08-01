@@ -153,7 +153,13 @@ as bubblegum rather than as a wash.
 
 ## Assets
 
-**Music** lives in `public/audio`, eight tracks made in Suno. Every zone owns a
+**A move must not outrange its spacing.** Both The Docks and The Greenhouse
+shipped broken the same way: the boosted arc was longer than the gap between
+the things it was meant to clear, so you flew past the next launch point and
+landed in front of an obstacle with no tool left. If a zone gives you a big
+arc, cap its top speed and put one feature per chunk.
+
+**Music** lives in `public/audio`, twelve tracks made in Suno. Every zone owns a
 theme via `track` on the zone config, and The Ring shares its theme with the
 menu because the menu sits on The Ring. The shuffled bag is now only a safety
 net for a zone that forgets to declare one. Watch for a track being both a
@@ -290,17 +296,22 @@ Every zone changes a rule, not just a colour.
   cap: 1.31 s of airtime and 57 m per jump, longer than a whole 48 m chunk, so
   you could not choose where you landed and a second gap in the same chunk was
   unavoidable. It was not hard, it was impossible. One gap per chunk now.
-- **The Greenhouse** — bloom pads fire you upward, harder than your own jump
-  and whether you were running or already falling onto one, so pads chain into
-  a bounce instead of a stutter. Gravity is slightly low to hold the arc.
+- **The Greenhouse** — hedges span every lane and stand 3.2 m, above a normal
+  jump apex of 2.65 m. The only way through is the bloom pad nine metres
+  before, which boosts you to a 4.4 m arc, and a string of CELLS rides that
+  arc. So the pad is both the only route and the only fuel. A pad that is
+  merely fun to touch is a decoration; this one you cannot skip.
 - **The Heights** — whole lane panels of the bridge are missing. The deck is
   built as three lane strips rather than one slab, so a hole is a hole you can
   see through. They are long enough that jumping is not on the table: the
   answer is always "be in a lane that still exists". Standing still costs 19
   falls in two minutes.
-- **The Vault** — a sealed tube, walls and ceiling. With no sky and no skyline
-  there is nothing to read but the track and the rib beat, which makes the
-  same three obstacles feel completely different.
+- **The Vault** — a sealed tube, walls and ceiling, and a slalom of hoops hung
+  in it. High hoops want a jump, low hoops want a slide, and the height is the
+  only cue. Threading one pays speed and charge, clipping one only costs
+  tempo. It is the same two verbs as everywhere else aimed at precision
+  instead of avoidance, which is the point: the zone rewards accuracy rather
+  than survival.
 - **The Core** — starts at 25 and tops out at 54 with a steeper ramp, plus a
   light crosswind and the rails from The Market. Everything at once.
 
