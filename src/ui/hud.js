@@ -55,6 +55,14 @@ export function createHud() {
     el.btnChangeZone = doc.getElementById('btnChangeZone');
     el.btnBackTitle = doc.getElementById('btnBackTitle');
     el.btnMute = doc.getElementById('btnMute');
+    el.btnPause = doc.getElementById('btnPause');
+
+    el.screenPause = doc.getElementById('screenPause');
+    el.pauseZone = doc.getElementById('pauseZone');
+    el.pauseDistance = doc.getElementById('pauseDistance');
+    el.pauseCells = doc.getElementById('pauseCells');
+    el.btnResume = doc.getElementById('btnResume');
+    el.btnQuitRun = doc.getElementById('btnQuitRun');
 
     el.zoneCard = doc.getElementById('zoneCard');
     el.zoneCardNum = doc.getElementById('zoneCardNum');
@@ -110,13 +118,39 @@ export function createHud() {
       if (nextZone) onPickZone(nextZone);
       else handlers.retry();
     });
+    el.btnPause.addEventListener('click', (e) => { e.stopPropagation(); handlers.pause(); });
+    el.btnResume.addEventListener('click', (e) => { e.stopPropagation(); handlers.resume(); });
+    el.btnQuitRun.addEventListener('click', handlers.openZones);
   };
 
   const only = (screen) => {
-    for (const s of [el.screenTitle, el.screenZones, el.screenOver, el.screenClear]) {
+    for (const s of [el.screenTitle, el.screenZones, el.screenOver, el.screenClear, el.screenPause]) {
       s.classList.toggle('is-hidden', s !== screen);
     }
     el.hud.classList.toggle('is-hidden', screen !== null);
+    // The pause button belongs to a run, and a paused run still counts.
+    el.btnPause.classList.toggle('is-hidden', screen !== null && screen !== el.screenPause);
+  };
+
+  /** Which screen is up, so navigation can decide what "back" means. */
+  api.current = () => {
+    if (!el.screenPause.classList.contains('is-hidden')) return 'pause';
+    if (!el.screenZones.classList.contains('is-hidden')) return 'zones';
+    if (!el.screenOver.classList.contains('is-hidden')) return 'over';
+    if (!el.screenClear.classList.contains('is-hidden')) return 'clear';
+    if (!el.screenTitle.classList.contains('is-hidden')) return 'title';
+    return 'run';
+  };
+
+  /** Back to the run without touching any of its readouts. */
+  api.hideOverlays = () => { only(null); };
+
+  api.showPause = (run, zone) => {
+    only(el.screenPause);
+    api.hideZoneIntro();
+    el.pauseZone.textContent = zone.name;
+    el.pauseDistance.textContent = `${Math.floor(run.distance)} M`;
+    el.pauseCells.textContent = String(run.cells);
   };
 
   api.showTitle = () => { only(el.screenTitle); };

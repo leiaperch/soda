@@ -289,6 +289,14 @@ html, body {
 
 .mute:active { transform: translateY(5px); box-shadow: 0 1px 0 #6d0040, inset 0 -4px 10px rgba(120, 0, 60, 0.55); }
 
+/* Pause sits beside mute, thumb-side, and only exists during a run. */
+.mute--pause {
+  right: 78px;
+  background: linear-gradient(180deg, #cfe9ff 0%, #7fb6e8 46%, #5b8fd0 47%, #2c4f8a 100%);
+  box-shadow: 0 6px 0 #1d3560, 0 0 26px rgba(127, 182, 232, 0.5), inset 0 -7px 12px rgba(20, 40, 90, 0.55);
+}
+.mute--pause:active { box-shadow: 0 1px 0 #1d3560, inset 0 -4px 10px rgba(20, 40, 90, 0.55); }
+
 /* --------------------------------------------------------------------------
    Feedback layers
    -------------------------------------------------------------------------- */

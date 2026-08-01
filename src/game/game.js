@@ -508,6 +508,25 @@ export class Game {
     this._camera(dt);
   }
 
+  /** A run can be suspended and picked back up without losing anything. */
+  pause() {
+    if (this.state !== 'running') return false;
+    this.state = 'paused';
+    this.hud.showPause(this.run, this.zone);
+    if (this.audio) this.audio.duck();
+    return true;
+  }
+
+  resume() {
+    if (this.state !== 'paused') return false;
+    this.state = 'running';
+    // Not showRun(): that resets the progress bar and the best-distance label,
+    // which would make resuming look like restarting.
+    this.hud.hideOverlays();
+    if (this.audio) this.audio.playRun(this.zone);
+    return true;
+  }
+
   intent(kind) {
     if (this.state !== 'running') return;
     const wasAirborne = this.player.airborne;

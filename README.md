@@ -15,6 +15,47 @@ npm run dev
 
 Open http://localhost:5184. Swipe or use the arrow keys.
 
+## Shipping to Google Play
+
+The game is wrapped with **Capacitor**, not a TWA: it bundles every asset into
+the APK, so it works offline and does not depend on the Pages site staying up.
+A TWA would also have needed Digital Asset Links at a domain root, which
+`github.io` does not let you own.
+
+```bash
+npm run android:debug     # build + sync + assembleDebug, for sideloading
+npm run android:bundle    # build + sync + bundleRelease, the AAB Play wants
+npm run android:open      # open the project in Android Studio
+```
+
+Gradle needs a JDK 17+; Android Studio ships one at
+`C:\Program Files\Android\Android Studio\jbr`, so set `JAVA_HOME` to it. The
+debug APK comes out at 38 MB, targeting API 36, portrait-locked, minSdk 24.
+
+**Signing.** `android/app/build.gradle` reads `android/keystore.properties`,
+which is gitignored, and falls back to an unsigned release if the file is
+absent so a fresh clone still builds. Copy `keystore.properties.example`, and
+back the `.jks` up somewhere you will still have in five years: losing the
+upload key means never being able to update the listing again.
+
+**Store assets** are in `store/`, with draft listing copy in
+`store/LISTING.md`. The privacy policy is a real page at
+`public/privacy.html`, served at `/soda/privacy.html`, which Play requires
+even for an app that collects nothing.
+
+**The back button** is handled in `core/backbutton.js`. Left alone, Android's
+back closes the app mid-run, which is a guaranteed one-star review and
+something Play reviewers check. Here it means "go up one level": a run pauses,
+a paused run drops to the zone list, the list drops to the title, and only the
+title exits. The mechanism is one dummy history entry kept pushed while deeper
+than the title, so the gesture fires `popstate` instead of leaving the page.
+
+**Payload.** The twelve tracks were re-encoded from ~180 kbps to VBR q7, which
+took the audio from 60 MB to 33 MB with no audible loss on a phone speaker.
+The original glTF courier and her texture atlas were deleted outright: they
+were a 5.7 MB fallback for a path that never ran, and the procedural courier
+in `player.js` is a better fallback because it weighs nothing.
+
 ## Testing on a phone
 
 The dev server binds to the LAN, so it prints a second URL like

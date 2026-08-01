@@ -38,6 +38,10 @@
         <path d="M12 38h16L50 18v64L28 62H12z"/>
         <path d="M62 34a24 24 0 0 1 0 32l-7-7a14 14 0 0 0 0-18zM74 22a40 40 0 0 1 0 56l-7-7a30 30 0 0 0 0-42z"/>
       </symbol>
+      <symbol id="pause" viewBox="0 0 100 100">
+        <rect x="24" y="18" width="18" height="64" rx="5"/>
+        <rect x="58" y="18" width="18" height="64" rx="5"/>
+      </symbol>
       <symbol id="lock" viewBox="0 0 100 100">
         <path d="M28 44V32a22 22 0 0 1 44 0v12h-10V32a12 12 0 0 0-24 0v12z"/>
         <rect x="20" y="44" width="60" height="48" rx="10"/>
@@ -54,6 +58,11 @@
     <span class="jelly__gloss"></span>
     <svg class="ico mute__icon mute__icon--on"><use href="#sound"/></svg>
     <svg class="ico mute__icon mute__icon--off"><use href="#mute"/></svg>
+  </button>
+
+  <button class="mute mute--pause is-hidden" id="btnPause" type="button" aria-label="Pause">
+    <span class="jelly__gloss"></span>
+    <svg class="ico"><use href="#pause"/></svg>
   </button>
 
   <div class="flash" id="flash"></div>
@@ -181,6 +190,30 @@
       <svg class="ico zone__lock"><use href="#lock"/></svg>
     </button>
   </template>
+
+  <div id="screenPause" class="screen is-hidden">
+    <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="screen__inner">
+      <div class="panel">
+        <div class="panel__gloss"></div>
+        <div class="over__zone" id="pauseZone"></div>
+        <h2 class="clear__title">PAUSED</h2>
+        <dl class="tally">
+          <div><dt>DISTANCE</dt><dd id="pauseDistance">0</dd></div>
+          <div><dt>CELLS</dt><dd id="pauseCells">0</dd></div>
+        </dl>
+      </div>
+      <button class="jelly" id="btnResume" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">RESUME</span>
+        <svg class="ico jelly__spark"><use href="#spark"/></svg>
+      </button>
+      <button class="jelly jelly--ghost" id="btnQuitRun" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">QUIT RUN</span>
+      </button>
+    </div>
+  </div>
 
   <div id="screenClear" class="screen is-hidden">
     <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>

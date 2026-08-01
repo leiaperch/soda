@@ -1,6 +1,17 @@
 node_modules/
 dist/
 shots/
+
+# Android build output and, above all, signing material. Losing the upload key
+# means never being able to update the app again, and committing it means
+# anyone can publish as you.
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
 *.local
 .DS_Store
 .vite/

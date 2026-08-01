@@ -1,10 +1,7 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
 const RIGGED_URL = 'models/courier-b.fbx';   // Mixamo auto-rig, T-pose
-const STATIC_URL = 'models/courier.gltf';    // original export, no skeleton
-const TEXTURE_URL = 'models/courier.png';    // recovered from the glTF
 const TARGET_HEIGHT = 2.1;
 
 /** The authored texture is darker than the city. Colour is not clamped to 1 in
@@ -12,46 +9,33 @@ const TARGET_HEIGHT = 2.1;
 const LIFT = 1.42;
 
 /**
- * Set false to go back to the original textured mesh and lose the skeletal
- * animation. It is a straight trade until the texture problem below is fixed.
- */
-const PREFER_RIGGED = true;
-
-/**
  * Loads the courier and conditions her for the game.
  *
- * Two sources:
+ * One source: `courier-b.fbx`, the Mixamo auto-rigged mesh. The original
+ * untextured glTF used to ship alongside it as a fallback, but it never ran,
+ * and it and its texture atlas cost 5.7 MB of every install. The fallback is
+ * now the procedural courier in `player.js`, which is code and weighs nothing.
  *
- * 1. `courier-b.fbx`, the Mixamo auto-rigged mesh. Skinned, so the FBX clips
- *    can drive it. Preferred, because movement sells a runner more than
- *    surface detail does.
- * 2. `courier.gltf`, the original. No skeleton, so procedural motion only,
- *    but it still wears its own texture. Fallback if the FBX ever fails.
+ * TEXTURE NOTE. She is deliberately untextured. Mixamo did not just rig the
+ * model, it reprocessed the geometry, and the UV layout no longer matches the
+ * original atlas: applying it produces marbled garbage, verified lit, unlit
+ * and with flipY both ways. She wears a painted pink/blue/violet ramp instead.
+ * The real fix is upstream, re-uploading her to Mixamo WITH the texture so it
+ * comes back on a UV set that matches.
  *
- * TEXTURE NOTE. The rigged mesh is deliberately untextured. Mixamo did not
- * just rig the model, it reprocessed the geometry: the glTF has 7412
- * triangles, the returned FBX has 6984, and the UV layout no longer matches
- * the original 1024² atlas. Applying it produces marbled garbage, verified
- * both lit and unlit and with flipY both ways. So the rigged version wears a
- * chrome finish instead, which at least reads as a deliberate choice in this
- * art direction. The real fix is upstream: re-upload her to Mixamo WITH the
- * texture applied so it comes back on a UV set that matches.
- *
- * Neither export ships normals and three does not synthesise them, so the mesh
- * renders unlit until `computeVertexNormals()`. Both arrive around one unit
+ * The export ships no normals and three does not synthesise them, so the mesh
+ * renders unlit until `computeVertexNormals()`, and it arrives about one unit
  * tall centred on the origin rather than standing on the floor.
  *
- * Resolves to null only if both fail, so the caller keeps the procedural
- * placeholder rather than dropping the player into an empty scene.
+ * Resolves to null if it fails, so the caller keeps the procedural placeholder
+ * rather than dropping the player into an empty scene.
  */
 export async function loadCourier(materials, { outline = true } = {}) {
-  const rigged = PREFER_RIGGED ? await loadRigged() : null;
-  const loaded = rigged || await loadStatic();
+  const loaded = await loadRigged();
   if (!loaded) return null;
 
   const { model, skinned } = loaded;
-  // Only the original mesh can wear the original atlas. See TEXTURE NOTE above.
-  const map = skinned ? null : await loadTexture();
+  const map = null;
 
   for (const mesh of meshesOf(model)) {
     if (!mesh.geometry.attributes.normal) mesh.geometry.computeVertexNormals();
@@ -144,21 +128,6 @@ function meshesOf(root) {
   return out;
 }
 
-async function loadTexture() {
-  try {
-    const tex = await new THREE.TextureLoader().loadAsync(TEXTURE_URL);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    // The PNG came out of a glTF, whose UV origin is the opposite of the FBX
-    // convention three assumes by default.
-    tex.flipY = false;
-    tex.needsUpdate = true;
-    return tex;
-  } catch (err) {
-    console.warn('[soda] courier texture failed to load', err);
-    return null;
-  }
-}
-
 async function loadRigged() {
   try {
     const fbx = await new FBXLoader().loadAsync(RIGGED_URL);
@@ -169,21 +138,7 @@ async function loadRigged() {
     fbx.animations.length = 0;
     return { model: fbx, skinned: true };
   } catch (err) {
-    console.warn('[soda] rigged courier failed to load, falling back to glTF', err);
-    return null;
-  }
-}
-
-async function loadStatic() {
-  try {
-    const gltf = await new GLTFLoader().loadAsync(STATIC_URL);
-    const model = gltf.scene;
-    // The export carries four punctual lights that would stack on the scene key.
-    model.traverse((o) => { if (o.isLight) o.removeFromParent(); });
-    if (meshesOf(model).length === 0) throw new Error('no mesh in glTF');
-    return { model, skinned: false };
-  } catch (err) {
-    console.warn('[soda] courier model failed to load, keeping placeholder', err);
+    console.warn('[soda] rigged courier failed to load, keeping placeholder', err);
     return null;
   }
 }

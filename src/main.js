@@ -5,6 +5,7 @@ import { createHud } from './ui/hud.js';
 import { createAudio } from './game/audio.js';
 import { createSfx } from './game/sfx.js';
 import { keepAwake, createPauser, describeViewport } from './core/device.js';
+import { createBackButton, exitApp } from './core/backbutton.js';
 import { Game } from './game/game.js';
 import { records } from './game/records.js';
 import { ZONES } from './world/zones.js';
@@ -19,11 +20,31 @@ const game = new Game(stage, hud, 1, audio, sfx);
 const input = createInput(canvas);
 input.on((intent) => game.intent(intent));
 
+const openZones = () => { hud.showZones(ZONES, records); back.trap(); };
+const backToTitle = () => { hud.showTitle(); back.release(); };
+
 hud.bindNav({
-  openZones: () => hud.showZones(ZONES, records),
-  backToTitle: () => hud.showTitle(),
-  retry: () => game.start(),
-  pickZone: (zone) => game.start(zone),
+  openZones,
+  backToTitle,
+  retry: () => { game.start(); back.trap(); },
+  pickZone: (zone) => { game.start(zone); back.trap(); },
+  pause: () => game.pause(),
+  resume: () => game.resume(),
+});
+
+/**
+ * Back means "up one level": a run pauses, a paused run drops to the zone
+ * list, the zone list drops to the title, and only the title exits.
+ */
+const back = createBackButton({
+  onBack() {
+    const screen = hud.current();
+    if (screen === 'run') return game.pause();
+    if (screen === 'pause' || screen === 'over' || screen === 'clear') { openZones(); return true; }
+    if (screen === 'zones') { hud.showTitle(); return false; }
+    return false;
+  },
+  onExit: exitApp,
 });
 hud.bindMute(audio);
 hud.showTitle();

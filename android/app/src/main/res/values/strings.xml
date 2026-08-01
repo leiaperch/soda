@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SODA</string>
+    <string name="title_activity_main">SODA</string>
+    <string name="package_name">cloud.pandaerp.soda</string>
+    <string name="custom_url_scheme">cloud.pandaerp.soda</string>
+</resources>
