@@ -92,6 +92,19 @@
 
   <div class="toasts" id="toasts"></div>
 
+  <!-- Shown for a beat at the start of every run. Without it a player is
+       dropped into a zone whose rules they were told once, on a card, on a
+       different screen. -->
+  <div class="zonecard is-hidden" id="zoneCard">
+    <span class="zonecard__num" id="zoneCardNum">1</span>
+    <span class="zonecard__body">
+      <span class="zonecard__name" id="zoneCardName"></span>
+      <span class="zonecard__sub" id="zoneCardSub"></span>
+      <span class="zonecard__mech" id="zoneCardMech"></span>
+    </span>
+    <svg class="ico zonecard__spark"><use href="#burst"/></svg>
+  </div>
+
   <div id="screenTitle" class="screen">
     <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div class="sparkles" aria-hidden="true">

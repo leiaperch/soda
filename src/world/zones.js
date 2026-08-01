@@ -412,15 +412,17 @@ export const ZONES = [
     },
     facades: ['#ffd0ea', '#c9b6ff', '#a8ecda', '#ff9ed0', '#e8d8ff', '#fff0c8'],
     props: {
-      road: 'street',
-      walls: true,
+      // A bottling line, not a walled street. The first pass was structurally
+      // identical to The Core with a different palette, which is exactly the
+      // trap this project keeps falling into.
+      road: 'plant',
       drain: 1.3,
       obstacleKit: { barrier: 'crate', gate: 'pipe', block: 'press' },
-      arches: 'gantry', archEvery: 18, archTint: ['#ff2e93', '#6ff0d4'],
-      lampEvery: 10, streetEvery: 8, billboardChance: 0.4,
-      palmChance: 0, podChance: 0.25, stallChance: 0.2,
-      skylineChance: 0.95, backRowChance: 0.8, waterSides: false, waterRoad: false,
-      lotMin: 6, lotMax: 12, towerStacks: [2, 4], feature: 'belt',
+      arches: 'none', archEvery: 0, archTint: ['#ff2e93', '#6ff0d4'],
+      lampEvery: 0, streetEvery: 0, billboardChance: 0.25,
+      palmChance: 0, podChance: 0, stallChance: 0,
+      skylineChance: 0.4, backRowChance: 0.25, waterSides: false, waterRoad: false,
+      lotMin: 10, lotMax: 18, towerStacks: [2, 3], feature: 'belt',
     },
   },
 

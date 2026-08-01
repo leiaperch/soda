@@ -320,6 +320,26 @@ so any drain-based mechanic is only as sharp as the distance between them. The
 Arcade doubles the gap (`props.relayEvery`) or the chain is decorative: at the
 normal 144 m a competent player clears it without ever chaining.
 
+**Eleven mechanics need eleven explanations.** Stating a rule once, on a select
+card, on a different screen, is the same as not stating it: the zones read as
+arbitrary. Two things fix it, and both are cheap. A **zone card** drops in for
+four seconds at the start of every run with the number, the name and the one
+line of rule. And each verb is **named once, in a toast, the first time its
+object comes into view** — JUMP THE WAVE, LAND ON THE RAIL, RIDE THE MINT
+BELT. The card states the rule; the toast states it again with the thing on
+screen, which is the only moment it is actually legible.
+
+**Structure, not palette, is what makes a zone distinct.** The Bottling Plant
+first shipped as a walled street with gantries, which is precisely what The
+Core already is, in different colours. It is now a bottling line: three
+separate belt decks with open grating between them, syrup pipes overhead,
+bottle racks at the sides, no kerbs and no walls. If a zone can be described
+with the same sentence as another zone, it is not a zone yet.
+
+**`Builder.at()` only rotates around Y.** A `cyl()` inside it stands up. Two
+"horizontal pipes" and a whole deck of "rollers" shipped as a forest of posts
+in the middle of the track. Use boxes for anything meant to lie down.
+
 **Palette is part of the brief, not decoration.** The Dunes shipped as a brown
 desert and the Foundry as a rust industrial estate. Both were perfectly decent
 and completely off-brief, and they are what made the game stop looking Y2K.

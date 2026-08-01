@@ -55,7 +55,37 @@ export function createHud() {
     el.btnChangeZone = doc.getElementById('btnChangeZone');
     el.btnBackTitle = doc.getElementById('btnBackTitle');
     el.btnMute = doc.getElementById('btnMute');
+
+    el.zoneCard = doc.getElementById('zoneCard');
+    el.zoneCardNum = doc.getElementById('zoneCardNum');
+    el.zoneCardName = doc.getElementById('zoneCardName');
+    el.zoneCardSub = doc.getElementById('zoneCardSub');
+    el.zoneCardMech = doc.getElementById('zoneCardMech');
     return api;
+  };
+
+  /**
+   * The rules, in the zone, at the moment they start mattering. Telling a
+   * player once on a select card and never again is how eleven distinct
+   * mechanics turn into eleven confusing ones.
+   */
+  api.showZoneIntro = (zone, index) => {
+    el.zoneCardNum.textContent = String(index);
+    el.zoneCardName.textContent = zone.name;
+    el.zoneCardSub.textContent = zone.subtitle;
+    el.zoneCardMech.textContent = zone.mechanic;
+    el.zoneCard.classList.remove('is-hidden');
+    // restart the animation even if the last card is still on screen
+    el.zoneCard.style.animation = 'none';
+    void el.zoneCard.offsetWidth;
+    el.zoneCard.style.animation = '';
+    clearTimeout(el._cardTimer);
+    el._cardTimer = setTimeout(() => el.zoneCard.classList.add('is-hidden'), 4200);
+  };
+
+  api.hideZoneIntro = () => {
+    clearTimeout(el._cardTimer);
+    el.zoneCard.classList.add('is-hidden');
   };
 
   api.bindMute = (audio) => {
@@ -94,6 +124,7 @@ export function createHud() {
   /** Rebuilt on every open so newly cleared unlocks show up immediately. */
   api.showZones = (zones, records) => {
     only(el.screenZones);
+    api.hideZoneIntro();
     el.zoneList.replaceChildren();
     const built = zones.filter((z) => z.built);
 
@@ -136,6 +167,7 @@ export function createHud() {
 
   api.showOver = (run, beat, zone) => {
     only(el.screenOver);
+    api.hideZoneIntro();
     el.vignette.classList.remove('vignette--low');
     el.overZone.textContent = zone.name;
     el.overDistance.textContent = String(Math.floor(run.distance));
@@ -147,6 +179,7 @@ export function createHud() {
 
   api.showClear = (run, beat, zone, next) => {
     only(el.screenClear);
+    api.hideZoneIntro();
     nextZone = next;
     el.vignette.classList.remove('vignette--low');
     el.clearZone.textContent = zone.name;

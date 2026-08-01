@@ -117,8 +117,9 @@ export class Game {
     this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false };
     this.combo = 0;
     this.lastBump = -99;
+    this.taught = new Set();
     this.hud.showRun(records.zone(this.zone.id), this.zone);
-    this.hud.toast('GO!');
+    this.hud.showZoneIntro(this.zone, ZONES.indexOf(this.zone) + 1);
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
   }
 
@@ -264,9 +265,43 @@ export class Game {
     this.sfx.crash();
   }
 
+  /** Says a thing once per run, the first time it can possibly matter. */
+  _teach(key, text) {
+    if (this.taught.has(key)) return;
+    this.taught.add(key);
+    this.hud.toast(text, 'relay');
+  }
+
+  /**
+   * Name the verb the first time its object comes into view. The zone card
+   * states the rule; this states it again with the thing on screen, which is
+   * the only moment it is actually legible.
+   */
+  _teachAhead() {
+    const p = this.player;
+    for (const f of this.track.nearFeatures(p.z, 70)) {
+      const z = f.z !== undefined ? f.z : f.startZ;
+      if (p.z - z < 12 || p.z - z > 60) continue;
+      if (f.kind === 'swell') this._teach('swell', 'JUMP THE WAVE');
+      else if (f.kind === 'spring') this._teach('spring', 'HIT THE BLOOM PAD');
+      else if (f.kind === 'rail') this._teach('rail', 'LAND ON THE RAIL');
+      else if (f.kind === 'gap') this._teach('gap', 'JUMP THE GAP');
+      else if (f.kind === 'hole') this._teach('hole', 'NO DECK — SWITCH LANE');
+      else if (f.kind === 'belt') this._teach('belt', 'RIDE THE MINT BELT');
+      else if (f.kind === 'ring') {
+        this._teach('ring', p.flying ? 'FLY THROUGH THE HOOP' : 'THREAD THE HOOP');
+      }
+    }
+    if (this.zone.props.bumpers) {
+      const b = this.track.nearObstacles(p.z, 60).find((o) => o.type === 'bumper' && p.z - o.z > 10);
+      if (b) this._teach('bumper', 'CHAIN THE BUMPERS');
+    }
+  }
+
   _features(dt) {
     const p = this.player;
     this.onBadBelt = false;
+    this._teachAhead();
 
     // The Heights has no railings, and the gusts are strong enough to carry
     // the outer lane over the edge. Standing still is not a strategy.

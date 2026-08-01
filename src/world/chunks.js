@@ -171,6 +171,7 @@ function buildRoad(b, pal, props, features = [], rng) {
     case 'catwalk': return buildCatwalk(b, pal, props, features);
     case 'skybridge': return buildSkybridge(b, pal, props, features);
     case 'tube': return buildTube(b, pal, props, rng);
+    case 'plant': return buildPlant(b, pal, props);
     default: return buildStreet(b, pal, props);
   }
 }
@@ -383,6 +384,62 @@ function longBox(b, key, x, y, from, to, w, h, color, slice) {
   const step = len / n;
   for (let i = 0; i < n; i++) {
     b.box(key, x, y, -(from + step * (i + 0.5)), w, h, step * 1.02, color);
+  }
+}
+
+/**
+ * A bottling line, not a road.
+ *
+ * Three separate belt decks running side by side with open grating between
+ * them, syrup pipes overhead and bottle racks at the sides. The first version
+ * of this zone was a walled street with gantries, which is exactly what The
+ * Core already is: the palette was different and the structure was not.
+ */
+function buildPlant(b, pal, props) {
+  const L = CHUNK_LEN;
+  const mid = -L / 2;
+
+  b.box('toon', 0, -1.1, mid, ROAD_HALF * 2 + 12, 1.1, L, shade(pal.road, 0.7));
+
+  // one deck per lane, with a visible slot between them
+  for (let lane = 0; lane < 3; lane++) {
+    const x = LANE_X[lane];
+    b.box('toon', x, 0, mid, 2.3, 0.34, L, shade(pal.road, 1.5));
+    b.box('chrome', x, 0.34, mid, 2.34, 0.06, L, shade(pal.chrome, 0.75));
+    for (const s of [-1, 1]) {
+      b.box('chrome', x + s * 1.2, 0, mid, 0.2, 0.5, L, shade(pal.chrome, 0.85));
+    }
+    // Rollers across the deck, the tell that this is machinery. Boxes, not
+    // cylinders: the matrix stack only rotates around Y, so a cyl() here
+    // stands up as a post instead of lying down as a roller.
+    for (let z = 1.5; z < L; z += 1.6) {
+      b.box('chrome', x, 0.34, -z, 2.1, 0.16, 0.3, shade(pal.chrome, 0.95));
+    }
+  }
+
+  // syrup pipes and vats above the line
+  for (let z = 3; z < L; z += 8) {
+    b.box('chrome', 0, 6.2, -z, ROAD_HALF * 2 + 6, 1.0, 1.0, shade(pal.chrome, 0.9));
+    b.box('emissive', 0, 6.1, -z, ROAD_HALF * 2, 0.12, 1.1, shade(pal.accentGlow, 0.75));
+  }
+  for (let z = 6; z < L; z += 16) {
+    for (const s of [-1, 1]) {
+      const x = s * (ROAD_HALF + 4.5);
+      b.cyl('chrome', x, 3.4, -z, 2.6, 2.4, 5.5, 12, shade(pal.chrome, 0.95));
+      b.cyl('glass', x, 3.6, -z, 2.2, 2.2, 4.2, 12, shade(pal.accentGlow, 1.1));
+      b.dome('chrome', x, 8.9, -z, 2.7, 1.3, 12, 4, shade(pal.chrome, 0.9));
+      b.cyl('toon', x, 0, -z, 3.0, 2.8, 3.4, 12, shade(pal.deck, 1.1));
+      b.box('emissive', x, 2.2, -z, 5.4, 0.14, 0.5, shade(pal.edge, 0.9));
+    }
+  }
+  // bottle racks along the sides
+  for (const s of [-1, 1]) {
+    const x = s * (ROAD_HALF + 1.6);
+    b.box('toon', x, 0, mid, 2.0, 1.1, L, shade(pal.deck, 1.0));
+    for (let z = 1; z < L; z += 1.3) {
+      b.cyl('glass', x + s * 0.4, 1.1, -z, 0.24, 0.2, 0.85, 6, shade(pal.accentGlow, 1.15));
+      b.cyl('toon', x + s * 0.4, 1.9, -z, 0.1, 0.1, 0.16, 6, shade(pal.lane, 1.0));
+    }
   }
 }
 
