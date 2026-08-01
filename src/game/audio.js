@@ -11,12 +11,10 @@ const KEY = 'soda.muted.v1';
 
 const TRACKS = {
   menu: 'audio/neon-glitch.mp3',
-  // Zones without a theme of their own draw from this bag. Anything assigned
-  // as a zone theme is kept out of it, or the same track turns up twice.
+  // Every zone owns a theme now, so this bag is only a safety net for a zone
+  // that forgets to declare one.
   run: [
     'audio/sugar-crash.mp3',
-    'audio/sugar-crash-core.mp3',
-    'audio/glitter-and-grit.mp3',
     'audio/glitch-in-the-velvet-rope.mp3',
   ],
 };

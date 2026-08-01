@@ -17,6 +17,7 @@ export const ZONES = [
     mechanic: 'Three lanes. Jump, slide, survive.',
     built: true,
     length: 1400,
+    track: 'audio/neon-glitch.mp3',
     sky: [
       [0.00, '#2a1450'], [0.28, '#7a3d9c'], [0.50, '#ff7ac6'],
       [0.68, '#ffb27a'], [0.82, '#ffe9c9'], [1.00, '#7ff0d4'],
@@ -53,6 +54,7 @@ export const ZONES = [
     mechanic: 'Surf the swell. Waves taken clean give a boost.',
     built: true,
     length: 1900,
+    track: 'audio/sugar-crash.mp3',
     sky: [
       [0.00, '#0e3f74'], [0.20, '#2f8fc0'], [0.36, '#8fd8e8'],
       [0.47, '#ffd9a0'], [0.54, '#ff9d6e'], [0.72, '#ffc9a0'], [1.00, '#ffe9d0'],
@@ -91,6 +93,7 @@ export const ZONES = [
     mechanic: 'Grind the rails to clear the crowd.',
     built: true,
     length: 2400,
+    track: 'audio/glitch-in-the-velvet-rope.mp3',
     sky: [
       [0.00, '#08061c'], [0.30, '#1d0f3a'], [0.52, '#4a1155'],
       [0.70, '#8e1d63'], [0.86, '#d63b7a'], [1.00, '#2a0b3f'],
@@ -138,23 +141,25 @@ export const ZONES = [
     hemi: { sky: '#cfffd0', ground: '#1a3d22', intensity: 0.5 },
     backdrop: { sun: '#fff8d8', halo: '#a8e86a', arc: '#cfeeb0', planet: '#4a8a4a' },
     colors: {
-      road: '#2c4a30',
-      kerb: '#d8c8a0',
-      deck: '#3f6b42',
-      edge: '#6fe08a',
+      road: '#4a4436',
+      kerb: '#e8dcc0',
+      deck: '#7a8a56',
+      edge: '#5cc472',
       lane: '#fff6d0',
-      accent: '#ffb0e0',
-      accentGlow: '#ffe066',
+      accent: '#ff9ec8',
+      accentGlow: '#ffd84a',
     },
-    facades: ['#4f8a52', '#6aa85e', '#3f7a48', '#88bd6a', '#5c9a5a', '#7ab070'],
+    facades: ['#8fbf78', '#d8e0b0', '#6fa860', '#c8d89a', '#a8cc84', '#e8e8c8'],
     props: {
       road: 'street',
       obstacleKit: { barrier: 'log', gate: 'vine', block: 'tree' },
-      arches: 'round', archEvery: 20, archTint: ['#6fe08a', '#ffe066', '#ffb0e0'],
-      lampEvery: 14, streetEvery: 8, billboardChance: 0,
-      palmChance: 0.9, podChance: 0.1, stallChance: 0,
-      skylineChance: 0.85, backRowChance: 0.6, waterSides: false, waterRoad: false,
-      lotMin: 6, lotMax: 12, towerStacks: [1, 2], feature: 'spring',
+      // A glass vault over the track and beds spilling onto the kerb: the
+      // silhouette has to change, not just the colour.
+      arches: 'glass', archEvery: 11, archTint: ['#6fe08a', '#ffe066', '#ffb0e0'],
+      lampEvery: 22, streetEvery: 6, billboardChance: 0,
+      palmChance: 0, podChance: 0, stallChance: 0, bedChance: 0.85,
+      skylineChance: 0.5, backRowChance: 0.25, waterSides: false, waterRoad: false,
+      lotMin: 8, lotMax: 16, towerStacks: [1, 2], feature: 'spring',
     },
   },
 
@@ -166,9 +171,12 @@ export const ZONES = [
     built: true,
     length: 2800,
     track: 'audio/emo-hyperpop.mp3',
-    // Low gravity with a slightly softer push: she hangs, so a jump becomes a
-    // commitment you cannot take back rather than a tap.
-    physics: { gravityScale: 0.42, jumpScale: 0.82 },
+    // Floaty, but not so floaty that the jump outruns the level. Airtime is
+    // ~1.0 s and the speed is capped at 30, so a jump covers at most ~30 m
+    // against 48 m between gaps. At the old 0.42 gravity and no speed cap it
+    // was 57 m per jump, longer than a whole chunk, which is why it could not
+    // be played.
+    physics: { gravityScale: 0.58, jumpScale: 0.88, maxSpeed: 30, speedRamp: 0.16 },
     sky: [
       [0.00, '#04060f'], [0.26, '#0d1738'], [0.46, '#1d2f66'],
       [0.62, '#3a5aa8'], [0.80, '#6f8fd0'], [1.00, '#101a33'],

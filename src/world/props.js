@@ -357,6 +357,100 @@ export function springPad(b, pal, x, z) {
   }
 }
 
+/**
+ * The glass vault of a greenhouse: white ribs with panes between them, arcing
+ * right over the track. It is the single image that says "greenhouse", and it
+ * changes the silhouette of the whole zone rather than its colour.
+ */
+export function glassVault(b, pal, z, roadHalf) {
+  const r = roadHalf + 4.5;
+  const frame = new THREE.Color('#fdf6e8');
+  b.arch('chrome', 0, 0.4, z, r, 0.34, 18, 6, shade(frame, 0.95), Math.PI, 0);
+  b.arch('glass', 0, 0.4, z, r, 0.9, 18, 5, shade(pal.edge, 1.05), Math.PI, 0);
+  // vertical glazing bars, which is what reads as panes at speed
+  const bars = 7;
+  for (let i = 1; i < bars; i++) {
+    const a = (i / bars) * Math.PI;
+    b.at(Math.cos(a) * r, 0.4 + Math.sin(a) * r, z, 0, 1, 1, 1);
+    b.box('chrome', 0, 0, 0, 0.2, 0.2, 2.6, shade(frame, 0.9));
+    b.pop();
+  }
+  for (const s of [-1, 1]) {
+    b.box('chrome', s * r, 0, z, 0.5, 0.5, 0.5, shade(frame, 0.85));
+    b.box('toon', s * (r + 0.4), 0, z, 0.7, 1.1, 1.4, shade(pal.deck, 1.2));
+  }
+}
+
+/**
+ * A raised bed spilling over the kerb: soil, layered leaves, a few blooms.
+ * Built in three sizes of dome so the mass reads as foliage rather than as a
+ * green box, which is what the first pass got wrong.
+ */
+export function plantBed(b, rng, pal, x, z, side) {
+  const soil = new THREE.Color('#4a3524');
+  const w = rng.range(3.4, 5);
+  const d = rng.range(4, 7);
+  b.box('toon', x, 0, z, w, 0.7, d, shade(new THREE.Color('#c8b088'), 1.0));
+  b.box('toon', x, 0.7, z, w - 0.4, 0.2, d - 0.4, shade(soil, 1.0));
+
+  const clumps = rng.int(5, 9);
+  for (let i = 0; i < clumps; i++) {
+    const px = x + rng.range(-w * 0.4, w * 0.4);
+    const pz = z + rng.range(-d * 0.4, d * 0.4);
+    const r = rng.range(0.5, 1.3);
+    const h = rng.range(0.6, 2.1);
+    b.dome('toon', px, 0.85, pz, r, h, 7, 3, shade(pal.edge, rng.range(0.62, 1.1)));
+    if (rng.chance(0.45)) {
+      // a bloom on top, one of the few warm notes in a very green zone
+      const bloom = rng.chance(0.5) ? pal.accent : pal.accentGlow;
+      for (let p = 0; p < 5; p++) {
+        const a = (p / 5) * Math.PI * 2;
+        b.dome('toon', px + Math.cos(a) * r * 0.32, 0.85 + h, pz + Math.sin(a) * r * 0.32,
+          r * 0.3, r * 0.16, 6, 2, shade(bloom, 1.0));
+      }
+      b.dome('emissive', px, 0.85 + h + 0.05, pz, r * 0.16, r * 0.14, 6, 2, shade(pal.lane, 0.9));
+    }
+  }
+}
+
+/** Big arcing fern, drooping over the track edge. */
+export function bigFern(b, rng, pal, x, z) {
+  const fronds = rng.int(6, 9);
+  const h = rng.range(1.4, 2.6);
+  b.cyl('toon', x, 0, z, 0.3, 0.2, h * 0.5, 7, shade(new THREE.Color('#4a6b32'), 1.0));
+  for (let i = 0; i < fronds; i++) {
+    const a = (i / fronds) * Math.PI * 2 + rng.range(0, 0.4);
+    const len = rng.range(2, 3.6);
+    const tint = shade(pal.edge, rng.range(0.6, 1.0));
+    b.at(x, h * 0.5, z, a);
+    // three tapering segments make the frond bend instead of sticking out flat
+    for (let s = 0; s < 3; s++) {
+      const t = s / 3;
+      b.box('toon', 0, -t * t * len * 0.55, len * (t + 0.16), 0.75 - t * 0.22, 0.13, len * 0.36, tint);
+    }
+    b.pop();
+  }
+}
+
+/**
+ * Wall bay for The Vault: a recessed alcove with a lit screen and cable runs.
+ * The tube was legible but empty, and empty reads as unfinished.
+ */
+export function vaultBay(b, rng, pal, z, roadHalf, side) {
+  const x = side * (roadHalf + 0.7);
+  const h = rng.range(1.6, 2.6);
+  const y = rng.range(1.2, 3.2);
+  b.box('toon', x, y, z, 0.5, h, 3.2, shade(pal.road, 0.7));
+  b.box('emissive', x - side * 0.16, y + 0.16, z, 0.1, h - 0.32, 2.7,
+    shade(rng.chance(0.5) ? pal.accentGlow : pal.edge, 0.85));
+  b.box('chrome', x - side * 0.1, y + h, z, 0.4, 0.18, 3.4, shade(pal.chrome, 0.85));
+  b.box('chrome', x - side * 0.1, y - 0.18, z, 0.4, 0.18, 3.4, shade(pal.chrome, 0.85));
+  // cable bundle running the length of the wall
+  for (let i = 0; i < 3; i++) {
+    b.box('toon', x - side * 0.22, 0.5 + i * 0.22, z, 0.16, 0.16, 3.6, shade(pal.deck, 0.8 + i * 0.15));
+  }
+}
+
 /** Parked hover pod, floating just off the deck. */
 export function hoverPod(b, rng, pal, x, z) {
   const y = rng.range(1.1, 1.9);

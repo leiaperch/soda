@@ -153,9 +153,12 @@ as bubblegum rather than as a wash.
 
 ## Assets
 
-**Music** lives in `public/audio`, eight tracks made in Suno. The Heights, The
-Core and The Docks own a theme each via `track` on the zone; the rest draw
-from a shuffled bag, which anything used as a theme is kept out of. `game/audio.js`
+**Music** lives in `public/audio`, eight tracks made in Suno. Every zone owns a
+theme via `track` on the zone config, and The Ring shares its theme with the
+menu because the menu sits on The Ring. The shuffled bag is now only a safety
+net for a zone that forgets to declare one. Watch for a track being both a
+theme and a bag entry, which is how the same song ended up playing in two
+different zones. `game/audio.js`
 runs two `<audio>` elements and crossfades between them rather than using the
 Web Audio API: these are full-length streamed songs, and decoding them into
 AudioBuffers would cost tens of megabytes of RAM on a phone for nothing.
@@ -281,8 +284,12 @@ Every zone changes a rule, not just a colour.
   it, riding above barrier height and earning charge per second. Run into one
   on the ground and it is a wall. That is the bargain: it is only a shortcut
   if you commit to the jump.
-- **The Docks** — the catwalk simply runs out. Gravity drops to 42% so the
-  jump arc roughly doubles, and gap widths are tuned to it. Miss and you fall.
+- **The Docks** — the catwalk simply runs out. Gravity drops to 58% and top
+  speed is capped at 30, which puts airtime at ~1.0 s and a jump at 18 to 30 m
+  against 48 m between gaps. The first pass used 0.42 gravity with no speed
+  cap: 1.31 s of airtime and 57 m per jump, longer than a whole 48 m chunk, so
+  you could not choose where you landed and a second gap in the same chunk was
+  unavoidable. It was not hard, it was impossible. One gap per chunk now.
 - **The Greenhouse** — bloom pads fire you upward, harder than your own jump
   and whether you were running or already falling onto one, so pads chain into
   a bounce instead of a stutter. Gravity is slightly low to hold the arc.

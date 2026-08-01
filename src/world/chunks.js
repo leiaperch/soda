@@ -3,7 +3,7 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
-  springPad,
+  springPad, glassVault, plantBed, bigFern, vaultBay,
 } from './props.js';
 import { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
@@ -56,11 +56,17 @@ const FEATURES = {
   ],
   // The Docks: the catwalk simply stops. Widths are tuned to the low-gravity
   // jump arc, which is roughly twice as long as everywhere else.
+  // Exactly one gap per chunk, and never near a chunk edge.
+  //
+  // The low-gravity jump covers about 30 m at that zone's top speed, so two
+  // gaps inside one 48 m chunk made the second one unavoidable: you were still
+  // in the air from the first with no way to choose where you came down. One
+  // per chunk puts 48 m between holes, which leaves real margin.
   gap: [
+    [{ from: 20, to: 26 }],
+    [{ from: 24, to: 32 }],
     [{ from: 18, to: 25 }],
-    [{ from: 12, to: 18 }, { from: 32, to: 39 }],
-    [{ from: 22, to: 31 }],
-    [{ from: 10, to: 16 }, { from: 26, to: 32 }, { from: 40, to: 45 }],
+    [{ from: 22, to: 30 }],
   ],
   // The Heights: whole lane panels are missing. Long enough that jumping them
   // is not on the table, so the answer is always "be in another lane".
@@ -107,12 +113,12 @@ const shade = (color, m) => _c.copy(color).multiplyScalar(m).clone();
  * ground beside you. Repainting a street was the thing that made every zone
  * feel like the first one.
  */
-function buildRoad(b, pal, props, features = []) {
+function buildRoad(b, pal, props, features = [], rng) {
   switch (props.road) {
     case 'sea': return buildSea(b, pal, props);
     case 'catwalk': return buildCatwalk(b, pal, props, features);
     case 'skybridge': return buildSkybridge(b, pal, props, features);
-    case 'tube': return buildTube(b, pal, props);
+    case 'tube': return buildTube(b, pal, props, rng);
     default: return buildStreet(b, pal, props);
   }
 }
@@ -269,37 +275,41 @@ function buildSkybridge(b, pal, props, features = []) {
  * overhead there is no sky and no skyline, so the only thing to read is the
  * track. It makes the same three obstacles feel completely different.
  */
-function buildTube(b, pal, props) {
+function buildTube(b, pal, props, rng) {
   const L = CHUNK_LEN;
   const mid = -L / 2;
   const half = ROAD_HALF;
-  // Just under the rib apex (radius half + 0.9), or daylight shows through the
-  // top of a tube that is supposed to be sealed.
-  const top = 6.2;
 
   b.box('toon', 0, -1.0, mid, half * 2 + 2, 1.0, L, shade(pal.road, 0.6));
   b.slab('toon', 0, 0.02, mid, half * 2, L, pal.road);
 
+  // The shell is a run of solid arches, one per metre, which closes the vault
+  // properly. A flat ceiling slab left a lit grey lid hanging over the track.
+  const shellR = half + 1.5;
+  for (let z = 0.5; z < L; z += 1.0) {
+    b.arch('toon', 0, 0.02, -z, shellR, 1.1, 13, 5, shade(pal.road, 0.85), Math.PI, 0);
+  }
+  // ribs on top of the shell, every third one lit: that is the speed beat
   const rings = 16;
   const step = L / rings;
   for (let i = 0; i < rings; i++) {
     const z = -(i + 0.5) * step;
-    // ribs, alternating chrome and lit, which is what gives speed a beat
-    const lit = i % 2 === 0;
-    b.arch(lit ? 'emissive' : 'chrome', 0, 0.02, z, half + 0.9, lit ? 0.16 : 0.42, 14, 6,
-      lit ? shade(pal.accentGlow, 1.15) : shade(pal.chrome, 0.9), Math.PI, 0);
+    const lit = i % 3 === 0;
+    b.arch(lit ? 'emissive' : 'chrome', 0, 0.02, z, half + 0.55, lit ? 0.13 : 0.3, 13, 5,
+      lit ? shade(pal.accentGlow, 1.0) : shade(pal.chrome, 0.85), Math.PI, 0);
   }
   for (const s of [-1, 1]) {
-    b.box('toon', s * (half + 1.3), 0, mid, 1.4, top, L, shade(pal.road, 1.6));
-    b.box('emissive', s * (half + 0.62), 1.5, mid, 0.14, 0.22, L, shade(pal.edge, 0.9));
-    b.box('emissive', s * (half + 0.62), 4.6, mid, 0.14, 0.16, L, shade(pal.accentGlow, 0.7));
+    b.box('emissive', s * (half + 0.5), 1.4, mid, 0.12, 0.2, L, shade(pal.edge, 0.75));
+    b.box('emissive', s * (half + 0.5), 4.2, mid, 0.12, 0.14, L, shade(pal.accentGlow, 0.55));
   }
-  b.box('toon', 0, top, mid, half * 2 + 3, 1.2, L, shade(pal.road, 1.3));
-  b.box('emissive', 0, top - 0.12, mid, half * 2 * 0.5, 0.12, L, shade(pal.lane, 0.55));
   for (let z = 1; z < L; z += 4) {
     for (const x of [-1.3, 1.3]) {
       b.box('emissive', x, 0.03, -z, 0.16, 0.02, 2.0, shade(pal.lane, 1.0));
     }
+  }
+  // Wall bays. An empty tube is legible but reads as unfinished.
+  for (let z = 3; z < L; z += 6) {
+    for (const s of [-1, 1]) vaultBay(b, rng, pal, -z, half, s);
   }
 }
 
@@ -389,6 +399,7 @@ function buildScenery(b, rng, pal, props) {
     for (let z = props.archEvery * 0.3; z < L; z += props.archEvery) {
       const tint = pal.archTints[rng.int(0, pal.archTints.length - 1)];
       if (props.arches === 'gantry') gantry(b, pal, -z, ROAD_HALF, tint);
+      else if (props.arches === 'glass') glassVault(b, pal, -z, ROAD_HALF);
       else skyArch(b, pal, -z, ROAD_HALF, tint);
     }
   }
@@ -401,7 +412,10 @@ function buildScenery(b, rng, pal, props) {
     for (let z = 6; props.streetEvery > 0 && z < L; z += props.streetEvery) {
       const roll = rng();
       const x = side * (ROAD_HALF + 4.6);
-      if (roll < props.stallChance) marketStall(b, rng, pal, side * (ROAD_HALF + 5.4), -z, side);
+      if (props.bedChance && roll < props.bedChance) {
+        plantBed(b, rng, pal, side * (ROAD_HALF + 3.2), -z, side);
+        if (rng.chance(0.7)) bigFern(b, rng, pal, side * (ROAD_HALF + 1.4), -(z + rng.range(-2, 2)));
+      } else if (roll < props.stallChance) marketStall(b, rng, pal, side * (ROAD_HALF + 5.4), -z, side);
       else if (roll < props.stallChance + props.palmChance * 0.6) {
         if (props.waterSides) palmTree(b, rng, pal, x, -z);
         else antennaPalm(b, rng, pal, x, -z);
@@ -458,7 +472,7 @@ export function buildChunk(rng, pattern, materials, zone) {
 
   // Road first, but it has to know the features: on The Docks the gaps are
   // holes in the deck, not markings on it.
-  buildRoad(b, pal, zone.props, features);
+  buildRoad(b, pal, zone.props, features, rng);
   buildScenery(b, rng, pal, zone.props);
   for (const o of kept) buildObstacle(b, pal, o, LANE_X[o.lane], zone.props.obstacleKit);
   for (const f of features) {
