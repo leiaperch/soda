@@ -12,6 +12,8 @@ const MODEL_FACING = Math.PI;
 export const GRAVITY = -34;
 export const JUMP_V = 11.4;
 const SLIDE_TIME = 0.58;
+/** How long the stand-up flourish runs after a slide ends. */
+const SLIDE_RECOVER = 0.36;
 const LANE_SPEED = 12;
 
 export const PLAYER = {
@@ -141,6 +143,8 @@ export class Player {
     this.sliding = 0;
     this.stunned = 0;
     this.grinding = null;
+    this.slideRecover = 0;
+    this.wasSliding = false;
     this.wind = 0;
     this.root.position.set(this.x, 0, 0);
     this.tilt.rotation.set(0, 0, 0);
@@ -167,6 +171,24 @@ export class Player {
     } else if (kind === 'slide' && this.airborne) {
       this.vy = Math.min(this.vy, -14); // fast-fall, feels great and is free
     }
+  }
+
+  /**
+   * The stand-up after a slide: she unwinds past upright, bobs up and shakes
+   * it off, all damped back to neutral. Returns the extra pitch to add to the
+   * tuck target; the pop, roll and stretch are applied here.
+   *
+   * A damped overshoot rather than a lerp, because the whole point is that
+   * recovering is a move she performs, not a state that stops being true.
+   */
+  _slideFlourish() {
+    if (this.slideRecover <= 0) return 0;
+    const t = 1 - this.slideRecover / SLIDE_RECOVER;   // 0 at the start
+    const decay = Math.exp(-t * 4.2);
+    this.tilt.position.y += 0.17 * Math.sin(t * Math.PI) * (1 - t * 0.35);
+    this.tilt.rotation.z += 0.17 * Math.sin(t * Math.PI * 3.2) * decay;
+    this.tilt.scale.y *= 1 + 0.13 * Math.sin(t * Math.PI * 1.4) * decay;
+    return -0.5 * Math.sin(t * Math.PI * 2.3) * decay;
   }
 
   get height() {
@@ -212,6 +234,14 @@ export class Player {
     }
     if (this.sliding > 0) this.sliding = Math.max(0, this.sliding - dt);
 
+    // Coming out of a slide used to be a plain lerp back to standing, which
+    // read as the pose simply switching off. Catching the moment it ends lets
+    // the stand-up be an action of its own.
+    const slidingNow = this.sliding > 0;
+    if (this.wasSliding && !slidingNow) this.slideRecover = SLIDE_RECOVER;
+    this.wasSliding = slidingNow;
+    if (this.slideRecover > 0) this.slideRecover = Math.max(0, this.slideRecover - dt);
+
     this.root.position.set(this.x, this.y, this.z);
 
     // Lean into the lane change, tuck into the slide, squash on landing.
@@ -236,18 +266,21 @@ export class Player {
     if (this.animated) {
       this.animator.syncTo(this);
       this.animator.update(dt);
-      // The slide has no clip of its own; keep the tuck for it.
+      // The slide has no clip of its own; keep the tuck and the stand-up.
       const tuckOnly = this.sliding > 0 ? 1 : 0;
-      this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuckOnly * 1.15, 0.35);
       this.tilt.position.y = tuckOnly ? 0.32 : 0;
+      this.tilt.scale.y = 1;
+      const kickA = this._slideFlourish();
+      this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuckOnly * 1.15 + kickA, 0.35);
       return;
     }
 
     const tuck = this.sliding > 0 ? 1 : 0;
-    this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuck * 1.15, 0.35);
     const squash = this.landedAt && time - this.landedAt < 0.16 ? 0.82 : 1;
     this.tilt.scale.y = THREE.MathUtils.lerp(this.tilt.scale.y, squash, 0.4);
     this.tilt.position.y = tuck ? 0.32 : 0;
+    const kick = this._slideFlourish();
+    this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuck * 1.15 + kick, 0.35);
     if (!this.airborne && !tuck) this.root.position.y += Math.sin(time * 9) * 0.05;
   }
 }
