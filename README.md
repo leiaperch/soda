@@ -336,6 +336,17 @@ separate belt decks with open grating between them, syrup pipes overhead,
 bottle racks at the sides, no kerbs and no walls. If a zone can be described
 with the same sentence as another zone, it is not a zone yet.
 
+**Check that a zone's own mechanic is above its floor.** The Bottling Plant's
+lane decks were built 0.34 tall while the conveyor surface sits at 0.18, so
+every belt was buried inside the deck and the zone's single mechanic was
+invisible. The decks are 0.1 now. Anything a zone is *about* has to be the
+thing you cannot miss.
+
+**Keep set dressing out of the play space.** The bottle racks sat just off the
+kerb, which put a picket fence of upright shapes at the edge of vision: they
+read as obstacles and then you sailed straight through them. Either something
+is in the lane and solid, or it is well clear and obviously scenery.
+
 **`Builder.at()` only rotates around Y.** A `cyl()` inside it stands up. Two
 "horizontal pipes" and a whole deck of "rollers" shipped as a forest of posts
 in the middle of the track. Use boxes for anything meant to lie down.

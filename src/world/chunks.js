@@ -401,19 +401,22 @@ function buildPlant(b, pal, props) {
 
   b.box('toon', 0, -1.1, mid, ROAD_HALF * 2 + 12, 1.1, L, shade(pal.road, 0.7));
 
-  // one deck per lane, with a visible slot between them
+  // One deck per lane, with a visible slot between them.
+  //
+  // Kept deliberately low. The first version was 0.34 tall, which is higher
+  // than the conveyor surface the zone is entirely about, so every belt was
+  // buried inside the floor and the zone's one mechanic was invisible.
   for (let lane = 0; lane < 3; lane++) {
     const x = LANE_X[lane];
-    b.box('toon', x, 0, mid, 2.3, 0.34, L, shade(pal.road, 1.5));
-    b.box('chrome', x, 0.34, mid, 2.34, 0.06, L, shade(pal.chrome, 0.75));
+    b.box('toon', x, 0, mid, 2.3, 0.1, L, shade(pal.road, 1.5));
     for (const s of [-1, 1]) {
-      b.box('chrome', x + s * 1.2, 0, mid, 0.2, 0.5, L, shade(pal.chrome, 0.85));
+      b.box('chrome', x + s * 1.22, 0, mid, 0.16, 0.22, L, shade(pal.chrome, 0.85));
     }
-    // Rollers across the deck, the tell that this is machinery. Boxes, not
-    // cylinders: the matrix stack only rotates around Y, so a cyl() here
+    // Idle rollers, so a lane with no belt still reads as machinery. Boxes,
+    // not cylinders: the matrix stack only rotates around Y, so a cyl() here
     // stands up as a post instead of lying down as a roller.
     for (let z = 1.5; z < L; z += 1.6) {
-      b.box('chrome', x, 0.34, -z, 2.1, 0.16, 0.3, shade(pal.chrome, 0.95));
+      b.box('chrome', x, 0.1, -z, 2.0, 0.09, 0.28, shade(pal.chrome, 0.95));
     }
   }
 
@@ -424,7 +427,8 @@ function buildPlant(b, pal, props) {
   }
   for (let z = 6; z < L; z += 16) {
     for (const s of [-1, 1]) {
-      const x = s * (ROAD_HALF + 4.5);
+      // Beyond the bottle racks, which now occupy the near shoulder.
+      const x = s * (ROAD_HALF + 9.5);
       b.cyl('chrome', x, 3.4, -z, 2.6, 2.4, 5.5, 12, shade(pal.chrome, 0.95));
       b.cyl('glass', x, 3.6, -z, 2.2, 2.2, 4.2, 12, shade(pal.accentGlow, 1.1));
       b.dome('chrome', x, 8.9, -z, 2.7, 1.3, 12, 4, shade(pal.chrome, 0.9));
@@ -432,13 +436,15 @@ function buildPlant(b, pal, props) {
       b.box('emissive', x, 2.2, -z, 5.4, 0.14, 0.5, shade(pal.edge, 0.9));
     }
   }
-  // bottle racks along the sides
+  // Bottle racks, well clear of the lanes. Sitting them just off the kerb made
+  // a picket fence of upright shapes right at the edge of vision that read as
+  // obstacles you then sailed straight through.
   for (const s of [-1, 1]) {
-    const x = s * (ROAD_HALF + 1.6);
-    b.box('toon', x, 0, mid, 2.0, 1.1, L, shade(pal.deck, 1.0));
-    for (let z = 1; z < L; z += 1.3) {
-      b.cyl('glass', x + s * 0.4, 1.1, -z, 0.24, 0.2, 0.85, 6, shade(pal.accentGlow, 1.15));
-      b.cyl('toon', x + s * 0.4, 1.9, -z, 0.1, 0.1, 0.16, 6, shade(pal.lane, 1.0));
+    const x = s * (ROAD_HALF + 4.2);
+    b.box('toon', x, 0, mid, 3.0, 0.8, L, shade(pal.deck, 1.0));
+    for (let z = 1.2; z < L; z += 1.6) {
+      b.cyl('glass', x, 0.8, -z, 0.26, 0.22, 0.8, 6, shade(pal.accentGlow, 1.15));
+      b.cyl('toon', x, 1.6, -z, 0.11, 0.11, 0.14, 6, shade(pal.lane, 1.0));
     }
   }
 }
