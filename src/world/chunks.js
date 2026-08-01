@@ -3,7 +3,7 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
-  springPad, glassVault, plantBed, bigFern, vaultBay, ringGate,
+  springPad, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
 import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
@@ -92,6 +92,14 @@ const FEATURES = {
     [{ lane: 2, z: 11, mode: 'high' }, { lane: 2, z: 22, mode: 'high' }, { lane: 1, z: 34, mode: 'low' }],
     [{ lane: 1, z: 15, mode: 'low' }, { lane: 0, z: 28, mode: 'low' }, { lane: 0, z: 40, mode: 'high' }],
   ],
+  // The Foundry: conveyor lanes. Every phrase offers at least one belt running
+  // with you, so the zone is a choice and never a tax.
+  belt: [
+    [{ lane: 0, from: 10, to: 34, dir: 1 }, { lane: 1, from: 10, to: 34, dir: -1 }],
+    [{ lane: 2, from: 8, to: 30, dir: 1 }, { lane: 1, from: 8, to: 30, dir: -1 }],
+    [{ lane: 1, from: 12, to: 38, dir: 1 }, { lane: 0, from: 12, to: 38, dir: -1 }],
+    [{ lane: 0, from: 6, to: 24, dir: -1 }, { lane: 2, from: 6, to: 24, dir: 1 }, { lane: 1, from: 30, to: 46, dir: 1 }],
+  ],
   hole: [
     [{ lane: 0, from: 12, to: 30 }],
     [{ lane: 2, from: 9, to: 27 }],
@@ -112,6 +120,7 @@ function conflicts(o, features) {
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
+    if (f.kind === 'belt') return o.lane === f.lane && o.z > f.from - 3 && o.z < f.to + 3;
     return o.lane === f.lane && o.z > f.from - 5 && o.z < f.to + 5;
   });
 }
@@ -510,9 +519,13 @@ export function buildChunk(rng, pattern, materials, zone) {
   const features = flight
     ? (pattern.rings || []).map((r) => ({ kind: 'ring', ...r }))
     : (kind && FEATURES[kind] ? FEATURES[kind][rng.int(0, FEATURES[kind].length - 1)] : []).map((f) => ({ kind, ...f }));
+  // The Arcade turns every block into a bumper, so the authored phrases carry
+  // straight over and the zone reads as the same track played by other rules.
   const kept = flight
     ? pattern.obstacles.map((o) => ({ ...o, spec: panelSpec(o.alt) }))
-    : pattern.obstacles.filter((o) => !conflicts(o, features));
+    : pattern.obstacles
+      .filter((o) => !conflicts(o, features))
+      .map((o) => (zone.props.bumpers && o.t === 'block' ? { ...o, t: 'bumper' } : o));
 
   // Road first, but it has to know the features: on The Docks the gaps are
   // holes in the deck, not markings on it.
@@ -548,6 +561,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     if (f.kind === 'swell') swell(b, pal, -f.z);
     else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
     else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
+    else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
   }
 

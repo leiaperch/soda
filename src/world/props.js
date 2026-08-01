@@ -488,6 +488,36 @@ export function ringGate(b, pal, x, z, mode, altY = null) {
   }
 }
 
+/**
+ * Conveyor belt for The Foundry. Colour and chevron direction carry the whole
+ * message: green pointing forward pushes you, red pointing back drags you.
+ * There is no other cue, so the two must never look alike.
+ */
+export function conveyor(b, pal, x, from, to, dir) {
+  const len = to - from;
+  const mid = -(from + len / 2);
+  const tint = dir > 0 ? new THREE.Color('#6fe08a') : new THREE.Color('#ff4a3a');
+
+  b.box('toon', x, 0.02, mid, 2.5, 0.16, len, shade(pal.road, 1.6));
+  for (const s of [-1, 1]) {
+    b.box('chrome', x + s * 1.28, 0.02, mid, 0.24, 0.3, len, shade(pal.chrome, 0.8));
+  }
+  // rollers at each end
+  for (const z of [from + 0.5, to - 0.5]) {
+    b.at(x, 0.16, -z, 0, 1, 1, 1);
+    b.cyl('chrome', 0, 0, 0, 0.22, 0.22, 2.4, 8, shade(pal.chrome, 0.9));
+    b.pop();
+  }
+  for (let z = from + 1.5; z < to - 0.5; z += 2.2) {
+    // a chevron: two bars meeting at a point, apex in the direction of travel
+    for (const s of [-1, 1]) {
+      b.at(x + s * 0.62, 0.19, -z, -s * 0.72 * dir);
+      b.box('emissive', 0, 0, 0, 0.34, 0.03, 1.7, shade(tint, 0.85));
+      b.pop();
+    }
+  }
+}
+
 /** Parked hover pod, floating just off the deck. */
 export function hoverPod(b, rng, pal, x, z) {
   const y = rng.range(1.1, 1.9);

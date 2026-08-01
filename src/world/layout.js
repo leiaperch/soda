@@ -25,4 +25,7 @@ export const OBSTACLE = {
   // Spans every lane and is taller than a normal jump apex. There is no way
   // around or over it except off a bloom pad, which is the entire point.
   hedge:   { w: 2.62, h: 3.2, d: 2.2, base: 0 },
+  // Hitting one is not a crash: it throws you sideways and pays out. Tall
+  // enough that jumping it is not the answer.
+  bumper:  { w: 2.2, h: 2.6, d: 1.6, base: 0 },
 };

@@ -233,6 +233,20 @@ function panel(b, pal, x, z, s) {
   }
 }
 
+// ---------- bumper: the only obstacle you are meant to hit ----------------
+
+function bumper(b, pal, x, z, s) {
+  const r = s.w * 0.5;
+  b.cyl('toon', x, 0, z, r * 1.15, r * 1.05, 0.4, 14, shade(pal.accent, 0.8));
+  b.cyl('chrome', x, 0.4, z, r, r * 0.92, s.h * 0.5, 14, shade(pal.chrome, 0.95));
+  b.dome('toon', x, 0.4 + s.h * 0.5, z, r * 0.94, r * 0.8, 14, 5, shade(pal.accentGlow, 0.95));
+  // lit rings, the arcade tell that this is a target and not a wall
+  for (let i = 0; i < 3; i++) {
+    b.cyl('emissive', x, 0.55 + i * 0.42, z, r * 1.02, r * 1.02, 0.11, 14, shade(pal.edge, 1.05 - i * 0.16));
+  }
+  b.dome('emissive', x, 0.4 + s.h * 0.5 + r * 0.8, z, r * 0.3, 0.26, 8, 3, shade(pal.lane, 1.1));
+}
+
 const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'hedge' };
 
 /**
@@ -243,6 +257,7 @@ export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
   const z = -o.z;
   if (o.t === 'panel') return panel(b, pal, x, z, spec);
   if (o.t === 'hedge') return hedge(b, pal, x, z, spec);
+  if (o.t === 'bumper') return bumper(b, pal, x, z, spec);
   const form = (kit && kit[o.t]) || DEFAULTS[o.t];
   const table = o.t === 'barrier' ? BARRIERS : o.t === 'gate' ? GATES : BLOCKS;
   (table[form] || table[DEFAULTS[o.t]])(b, pal, x, z, spec);

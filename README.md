@@ -69,8 +69,17 @@ because they play tidily. Measured on the current build with a scripted pilot:
 a player who touches nothing dies around 300 m, a player who dodges correctly
 passes 10 000 m and reaches top speed.
 
-**Zones.** All eight are built, and each is an ambience *and* a rule change
+**Zones.** All eleven are built, and each is an ambience *and* a rule change
 rather than a reskin.
+
+**Elevation.** Chunk geometry is baked once and recycled at many different z,
+so a height profile cannot be baked into it. Instead the road is displaced in
+the vertex shader from world z (`uHill`), and `hillAt()` reproduces the same
+curve on the CPU for the camera and the courier. Collision is untouched: the
+player and an obstacle at the same z get the same offset, so flat-space maths
+stays correct. Watch what else wears a bent material — the courier's outline
+hull was bent while her body was placed in JS, and it floated off into the sky
+over the first hill.
 
 **Obstacles are per zone too** (`world/obstacles.js`). The three obstacles keep
 the same *contract* everywhere — jump the barrier, slide under the gate, dodge
@@ -289,6 +298,19 @@ Every zone changes a rule, not just a colour.
   it, riding above barrier height and earning charge per second. Run into one
   on the ground and it is a wall. That is the bargain: it is only a shortcut
   if you commit to the jump.
+- **The Dunes** — the only zone where the road actually goes up and down.
+  Gravity does the rest: you bleed speed climbing and get it back falling,
+  measured swinging between 10.8 and 27 from the gradient alone. The camera
+  aims at the road sixteen metres ahead *at that road's height*, so cresting a
+  rise shows you the far side instead of the sky.
+- **The Arcade** — you are the ball. Every block in the authored phrases
+  becomes a bumper: hitting one throws you into a neighbouring lane and pays
+  charge instead of taking it. It inverts the reflex the other ten zones spend
+  their whole length training.
+- **The Foundry** — conveyor lanes. Green running with you, red against you,
+  and the colour plus the chevron direction are the only cues, so the two must
+  never look alike. Every phrase offers at least one lane running with you,
+  which keeps it a choice rather than a tax.
 - **The Docks** — the catwalk simply runs out. Gravity drops to 58% and top
   speed is capped at 30, which puts airtime at ~1.0 s and a jump at 18 to 30 m
   against 48 m between gaps. The first pass used 0.42 gravity with no speed

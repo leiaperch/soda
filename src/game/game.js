@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Track } from '../world/track.js';
 import { Player, PLAYER, GRAVITY, JUMP_V } from './player.js';
 import { records } from './records.js';
-import { bendUniforms } from '../render/materials.js';
+import { bendUniforms, hillAt, slopeAt } from '../render/materials.js';
 import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
 import { RAIL_H } from '../world/layout.js';
@@ -31,6 +31,11 @@ const TUNE = {
   splashCharge: -6,
   grindCharge: 9,     // per second while on a rail
   fallCharge: -32,    // off the catwalk, or off the bridge
+  slopePull: 34,      // how hard a gradient drags or pushes
+  bumperCharge: 6,
+  bumperCut: 0.95,
+  beltPush: 1.09,     // conveyor running with you
+  beltDrag: 0.94,     // conveyor running against you
   springBoost: 1.55,  // bloom pads, relative to a normal jump
   springCharge: 3,
   ringBoost: 1.08,    // threading a hoop in The Vault
@@ -83,6 +88,12 @@ export class Game {
     // Flight replaces the whole vertical model: no gravity, no ground, and up
     // and down become a second axis of lanes.
     this.player.flying = !!zone.props.flight;
+
+    // Elevation. The shader displaces the world; this keeps the courier and
+    // the camera on the same curve.
+    this.hill = zone.props.hill || 0;
+    this.player.hill = this.hill;
+    bendUniforms.uHill.value = this.hill;
     this.pace = {
       start: ph.startSpeed ?? TUNE.startSpeed,
       max: ph.maxSpeed ?? TUNE.maxSpeed,
@@ -138,6 +149,23 @@ export class Game {
     this.sfx.crash();
   }
 
+  /**
+   * A bumper is the one thing on the track you are supposed to run into. It
+   * throws you into a neighbouring lane and pays charge instead of taking it,
+   * which inverts the reflex the other zones spend their whole length
+   * training. Speed is barely touched: this is a ricochet, not a stop.
+   */
+  _bounce(o) {
+    const p = this.player;
+    const away = p.lane === 0 ? 1 : p.lane === 2 ? -1 : (o.x <= p.x ? 1 : -1);
+    p.lane = Math.max(0, Math.min(2, p.lane + away));
+    this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.bumperCharge);
+    this.speed = Math.max(this.pace.start * 0.9, this.speed * TUNE.bumperCut);
+    this.shake = 0.3;
+    this.hud.toast('BUMP', 'relay');
+    this.sfx.relay();
+  }
+
   _collisions() {
     const p = this.player;
     const pTop = p.y + p.height;
@@ -149,7 +177,8 @@ export class Game {
         const oTop = o.spec.base + o.spec.h;
         if (p.y < oTop && pTop > o.spec.base) {
           o.hit = true;
-          this._hit();
+          if (o.type === 'bumper') this._bounce(o);
+          else this._hit();
         }
       }
 
@@ -228,6 +257,18 @@ export class Game {
     if (edge && p.stunned <= 0 && Math.abs(p.x) > edge) this._fall('BLOWN OFF');
 
     for (const f of this.track.nearFeatures(p.z, 44)) {
+      if (f.kind === 'belt') {
+        // Continuous while you stand on it, so the lane you pick is a
+        // sustained decision rather than a one-off pickup.
+        const on = p.z <= f.startZ && p.z > f.endZ && p.lane === f.lane && !p.airborne;
+        if (on) {
+          const factor = f.dir > 0 ? TUNE.beltPush : TUNE.beltDrag;
+          const target = this.pace.max * (f.dir > 0 ? 1.15 : 0.6);
+          this.speed += (target - this.speed) * Math.min(1, Math.abs(1 - factor) * 12 * dt);
+        }
+        continue;
+      }
+
       if (f.kind === 'gap' || f.kind === 'hole') {
         const over = p.z <= f.startZ && p.z > f.endZ;
         const inIt = f.kind === 'gap' || p.lane === f.lane;
@@ -318,7 +359,8 @@ export class Game {
     const targetX = p.x * 0.55;
     // Flying, the camera has to track her altitude much more closely or she
     // leaves the frame the moment she climbs.
-    const targetY = p.flying ? 2.4 + p.y * 0.85 : 4.0 + p.y * 0.32;
+    const ground = hillAt(p.z, this.hill);
+    const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + p.y * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
     cam.position.y += (targetY - cam.position.y) * Math.min(1, 5 * dt);
     cam.position.z = p.z + 7.8;
@@ -329,7 +371,13 @@ export class Game {
       cam.position.y += (Math.random() - 0.5) * this.shake * 1.0;
     }
 
-    this._tmp.set(p.x * 0.3, p.flying ? 0.9 + p.y * 0.8 : 1.7 + p.y * 0.28, p.z - 16);
+    // Aim at the road 16 m ahead, at that road's height, so cresting a rise
+    // actually shows you the far side instead of the sky.
+    this._tmp.set(
+      p.x * 0.3,
+      hillAt(p.z - 16, this.hill) + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + p.y * 0.28),
+      p.z - 16,
+    );
     cam.lookAt(this._tmp);
 
     // Speed sells itself through FOV, not through numbers.
@@ -352,6 +400,18 @@ export class Game {
       this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * dt;
 
       this.player.update(dt, this.speed, this.time);
+
+      // Gravity does the rest of the work on a slope: you bleed speed on the
+      // way up and get it back on the way down. Nothing else needed to make a
+      // hill felt rather than just seen.
+      if (this.hill) {
+        const slope = slopeAt(this.player.z, this.hill);
+        this.speed = Math.max(
+          this.pace.start * 0.6,
+          Math.min(this.pace.max + 8, this.speed + slope * TUNE.slopePull * dt),
+        );
+      }
+
       this.run.distance = -this.player.z;
       this.run.time += dt;
       this._collisions();

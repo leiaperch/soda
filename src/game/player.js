@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Builder, disposeGroup } from '../core/builder.js';
 import { PALETTE } from '../render/materials.js';
 import { LANE_X, ALT_Y } from '../world/layout.js';
+import { hillAt } from '../render/materials.js';
 import { loadCourier } from './courier.js';
 import { Animator, loadClips } from './animator.js';
 
@@ -117,6 +118,7 @@ export class Player {
     this.animated = false;
     // Overridden per zone: low gravity on The Docks, crosswind on The Heights.
     this.physics = { gravity: GRAVITY, jump: JUMP_V, wind: 0 };
+    this.hill = 0;
 
     loadCourier(materials).then(async (rig) => {
       if (!rig) return;
@@ -242,7 +244,10 @@ export class Player {
     this.wasSliding = slidingNow;
     if (this.slideRecover > 0) this.slideRecover = Math.max(0, this.slideRecover - dt);
 
-    this.root.position.set(this.x, this.y, this.z);
+    // The shader lifts the world onto the hill; she has to ride the same curve
+    // or she walks straight through it. Collision stays in flat space, where
+    // she and every obstacle share the offset anyway.
+    this.root.position.set(this.x, this.y + hillAt(this.z, this.hill), this.z);
 
     // Lean into the lane change, tuck into the slide, squash on landing.
     // Skeletal clips own the jump and the crash when they are available, so

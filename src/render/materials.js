@@ -37,13 +37,40 @@ export const bendUniforms = {
   uPlayerZ: { value: 0 },
   uBendY: { value: 0.00085 },   // drop-off with distance
   uBendX: { value: 0.00042 },   // lateral curve of the ring
+  uHill: { value: 0 },          // elevation amplitude, 0 on a flat zone
   uTime: { value: 0 },
 };
+
+/**
+ * Elevation. Chunk geometry is baked once and recycled at many different z,
+ * so a height profile cannot be baked into it. Instead the road is displaced
+ * in the shader from world z, and `hillAt()` below reproduces the same curve
+ * on the CPU for the camera and the courier. Collision is untouched: the
+ * player and an obstacle at the same z get the same offset, so flat-space
+ * maths stays correct.
+ *
+ * The two periods are deliberately not multiples of each other, so the
+ * landscape does not visibly repeat every hill.
+ */
+export const HILL_A = 0.0449;   // 2*PI/140
+export const HILL_B = 0.0209;   // 2*PI/300
+
+export function hillAt(z, amp) {
+  if (!amp) return 0;
+  return amp * (Math.sin(z * HILL_A) * 0.65 + Math.sin(z * HILL_B) * 0.35);
+}
+
+/** Slope at z, i.e. the derivative. Positive means the road climbs ahead. */
+export function slopeAt(z, amp) {
+  if (!amp) return 0;
+  return amp * (Math.cos(z * HILL_A) * 0.65 * HILL_A + Math.cos(z * HILL_B) * 0.35 * HILL_B);
+}
 
 const BEND_PARS = /* glsl */`
   uniform float uPlayerZ;
   uniform float uBendY;
   uniform float uBendX;
+  uniform float uHill;
   uniform float uTime;
 `;
 
@@ -61,6 +88,7 @@ const BEND_PROJECT = /* glsl */`
   float sodaD2 = sodaD * sodaD;
   sodaWorld.y -= sodaD2 * uBendY;
   sodaWorld.x += sodaD2 * uBendX;
+  sodaWorld.y += uHill * (sin(sodaWorld.z * 0.0449) * 0.65 + sin(sodaWorld.z * 0.0209) * 0.35);
   mvPosition = viewMatrix * sodaWorld;
   gl_Position = projectionMatrix * mvPosition;
 `;
@@ -70,6 +98,7 @@ function applyBend(material, cacheKey) {
     shader.uniforms.uPlayerZ = bendUniforms.uPlayerZ;
     shader.uniforms.uBendY = bendUniforms.uBendY;
     shader.uniforms.uBendX = bendUniforms.uBendX;
+    shader.uniforms.uHill = bendUniforms.uHill;
     shader.uniforms.uTime = bendUniforms.uTime;
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', `${BEND_PARS}\nvoid main() {`)
@@ -183,7 +212,9 @@ export function createMaterials(renderer) {
     side: THREE.BackSide,
     toneMapped: false,
   });
-  applyBend(outline, 'soda-outline');
+  // Deliberately NOT bent. The outline is only ever worn by the courier, and
+  // her body is placed in JS, not by this shader. Bending only the hull made
+  // it float off her and hang in the sky over a hill.
 
   return { toon, chrome, emissive, glass, beam, outline };
 }
