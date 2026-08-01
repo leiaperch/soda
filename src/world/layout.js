@@ -4,6 +4,13 @@
  */
 
 export const LANE_X = [-2.6, 0, 2.6];
+
+/**
+ * Altitudes for flight zones. The same three-slot grammar as the lanes, one
+ * axis up: swipe left and right for lane, up and down for altitude, so a
+ * sealed tube becomes a 3x3 grid without teaching a single new control.
+ */
+export const ALT_Y = [0.4, 2.2, 4.0];
 export const ROAD_HALF = 5.6;
 export const CHUNK_LEN = 48;
 

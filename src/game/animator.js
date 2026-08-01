@@ -18,6 +18,7 @@ const CLIPS = {
   skate: 'anim/skate.fbx',
   jump: 'anim/jump.fbx',
   knocked: 'anim/knocked.fbx',
+  fly: 'anim/fly.fbx',
 };
 
 const FADE = 0.18;
@@ -101,6 +102,7 @@ export class Animator {
   syncTo(player) {
     if (!this.ready) return;
     if (player.stunned > 0) this.play('knocked');
+    else if (player.flying) this.play('fly');
     else if (player.airborne) this.play('jump');
     else this.play('skate');
   }

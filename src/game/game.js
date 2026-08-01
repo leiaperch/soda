@@ -80,6 +80,9 @@ export class Game {
       jump: JUMP_V * (ph.jumpScale ?? 1),
       wind: ph.wind ?? 0,
     };
+    // Flight replaces the whole vertical model: no gravity, no ground, and up
+    // and down become a second axis of lanes.
+    this.player.flying = !!zone.props.flight;
     this.pace = {
       start: ph.startSpeed ?? TUNE.startSpeed,
       max: ph.maxSpeed ?? TUNE.maxSpeed,
@@ -242,7 +245,9 @@ export class Game {
         if (f.done || p.z > f.z - 0.1) continue;
         f.done = true;
         if (p.lane !== f.lane) continue;
-        const threaded = f.mode === 'high' ? p.y > 1.15 : p.sliding > 0;
+        const threaded = f.alt !== undefined
+          ? p.alt === f.alt
+          : (f.mode === 'high' ? p.y > 1.15 : p.sliding > 0);
         if (threaded) {
           this.speed = Math.min(this.pace.max + 5, this.speed * TUNE.ringBoost);
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.ringCharge);
@@ -311,7 +316,9 @@ export class Game {
     const cam = this.stage.camera;
     const p = this.player;
     const targetX = p.x * 0.55;
-    const targetY = 4.0 + p.y * 0.32;
+    // Flying, the camera has to track her altitude much more closely or she
+    // leaves the frame the moment she climbs.
+    const targetY = p.flying ? 2.4 + p.y * 0.85 : 4.0 + p.y * 0.32;
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
     cam.position.y += (targetY - cam.position.y) * Math.min(1, 5 * dt);
     cam.position.z = p.z + 7.8;
@@ -322,7 +329,7 @@ export class Game {
       cam.position.y += (Math.random() - 0.5) * this.shake * 1.0;
     }
 
-    this._tmp.set(p.x * 0.3, 1.7 + p.y * 0.28, p.z - 16);
+    this._tmp.set(p.x * 0.3, p.flying ? 0.9 + p.y * 0.8 : 1.7 + p.y * 0.28, p.z - 16);
     cam.lookAt(this._tmp);
 
     // Speed sells itself through FOV, not through numbers.

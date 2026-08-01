@@ -257,7 +257,7 @@ export const ZONES = [
     id: 'vault',
     name: 'THE VAULT',
     subtitle: 'SEALED TRANSIT TUBE',
-    mechanic: 'Thread the hoops. High wants a jump, low wants a slide.',
+    mechanic: 'You fly. Up and down pick an altitude, not a jump.',
     built: true,
     length: 2600,
     track: 'audio/neon-tears-in-the-void.mp3',
@@ -288,7 +288,9 @@ export const ZONES = [
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0, stallChance: 0,
       skylineChance: 0, backRowChance: 0, waterSides: false, waterRoad: false,
-      lotMin: 6, lotMax: 10, towerStacks: [1, 2], feature: 'ring',
+      lotMin: 6, lotMax: 10, towerStacks: [1, 2], feature: null,
+      // The whole zone is the mechanic: a 3x3 grid of lanes and altitudes.
+      flight: true,
     },
   },
 

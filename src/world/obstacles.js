@@ -215,14 +215,33 @@ function hedge(b, pal, x, z, s) {
   b.box('emissive', x, 0.12, z + s.d * 0.5, s.w * 0.9, 0.1, 0.06, shade(pal.accentGlow, 0.9));
 }
 
+// ---------- panel: blocks one cell of a flight grid ------------------------
+
+function panel(b, pal, x, z, s) {
+  const y = s.base;
+  b.box('toon', x, y, z, s.w, s.h, s.d, shade(pal.road, 1.9));
+  b.box('chrome', x, y + s.h - 0.14, z, s.w + 0.14, 0.16, s.d + 0.14, shade(pal.chrome, 0.85));
+  b.box('chrome', x, y, z, s.w + 0.14, 0.16, s.d + 0.14, shade(pal.chrome, 0.85));
+  // hazard bars, angled so they read as "closed" instead of as a wall texture
+  for (let i = 0; i < 4; i++) {
+    b.at(x - s.w * 0.32 + i * (s.w * 0.22), y + s.h * 0.5, z + s.d * 0.5, 0, 1, 1, 1);
+    b.box('emissive', 0, 0, 0, 0.26, s.h * 0.78, 0.07, shade(pal.accentGlow, 1.1));
+    b.pop();
+  }
+  for (const side of [-1, 1]) {
+    b.cyl('chrome', x + side * (s.w / 2 + 0.08), y, z, 0.12, 0.12, s.h, 6, shade(pal.chrome, 0.7));
+  }
+}
+
 const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'hedge' };
 
 /**
  * @param {object} kit - `{ barrier, gate, block }` form names from the zone.
  */
 export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
-  const spec = OBSTACLE[o.t];
+  const spec = o.spec || OBSTACLE[o.t];
   const z = -o.z;
+  if (o.t === 'panel') return panel(b, pal, x, z, spec);
   if (o.t === 'hedge') return hedge(b, pal, x, z, spec);
   const form = (kit && kit[o.t]) || DEFAULTS[o.t];
   const table = o.t === 'barrier' ? BARRIERS : o.t === 'gate' ? GATES : BLOCKS;

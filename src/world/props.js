@@ -456,27 +456,35 @@ export function vaultBay(b, rng, pal, z, roadHalf, side) {
  * a slide, and the height alone has to say which: there is no other cue at
  * 50 km/h. Threading one is a reward, missing it only costs tempo.
  */
-export function ringGate(b, pal, x, z, mode) {
+export function ringGate(b, pal, x, z, mode, altY = null) {
+  // In a flight zone the hoop sits on a grid cell and there is no floor to
+  // stand a post on, so it hangs on its own.
+  const flying = altY !== null;
   const high = mode === 'high';
-  const cy = high ? 2.5 : 0.95;
-  const r = high ? 1.15 : 0.85;
-  const tint = high ? pal.accentGlow : pal.edge;
+  const cy = flying ? altY + 0.6 : (high ? 2.5 : 0.95);
+  const r = flying ? 1.05 : (high ? 1.15 : 0.85);
+  const tint = flying ? pal.accentGlow : (high ? pal.accentGlow : pal.edge);
 
   b.arch('chrome', x, cy, z, r, 0.16, 16, 6, shade(pal.chrome, 0.9), Math.PI * 2, 0);
   b.arch('emissive', x, cy, z, r - 0.16, 0.07, 16, 5, shade(tint, 1.15), Math.PI * 2, 0);
-  b.arch('beam', x, cy, z, r * 0.55, r * 0.5, 14, 4, shade(tint, 0.3), Math.PI * 2, 0);
+  // Faint: a whole tube of these stacks additively and floods the zone.
+  b.arch('beam', x, cy, z, r * 0.6, r * 0.42, 12, 4, shade(tint, flying ? 0.09 : 0.24), Math.PI * 2, 0);
 
   // mount: hung from the vault for a high ring, stood on the floor for a low one
-  if (high) {
+  if (flying) {
+    b.box('chrome', x, cy + r, z, 0.12, 3.4, 0.12, shade(pal.chrome, 0.55));
+    b.box('chrome', x, cy - r - 3.4, z, 0.12, 3.4, 0.12, shade(pal.chrome, 0.55));
+  } else if (high) {
     b.box('chrome', x, cy + r, z, 0.18, 2.6, 0.18, shade(pal.chrome, 0.7));
   } else {
     for (const s of [-1, 1]) {
       b.box('chrome', x + s * r * 0.8, 0, z, 0.16, cy * 0.65, 0.16, shade(pal.chrome, 0.7));
     }
   }
-  // approach marks on the floor, coded to the same colour as the hoop
+  // approach marks, on the floor when there is one, in the air when flying
   for (let i = 0; i < 3; i++) {
-    b.box('emissive', x, 0.04, z + 2.2 + i * 1.8, 1.5, 0.02, 0.5, shade(tint, 0.5 - i * 0.13));
+    const my = flying ? cy : 0.04;
+    b.box('emissive', x, my, z + 2.2 + i * 1.8, 1.5, 0.02, 0.5, shade(tint, (flying ? 0.3 : 0.5) - i * 0.09));
   }
 }
 

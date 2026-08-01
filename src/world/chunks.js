@@ -5,10 +5,10 @@ import {
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
   springPad, glassVault, plantBed, bigFern, vaultBay, ringGate,
 } from './props.js';
-import { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
+import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
 
-export { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE };
+export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE };
 
 /**
  * Authored obstacle patterns. Placement is never random: random obstacle
@@ -116,8 +116,29 @@ function conflicts(o, features) {
   });
 }
 
-export function pickPattern(rng, tier) {
-  const pool = PATTERNS.filter((p) => p.tier <= tier);
+/**
+ * Flight patterns for The Vault. A cell is (lane, altitude), so these read as
+ * a 3x3 grid with some cells closed. Every phrase always leaves at least one
+ * cell open at each z, and never closes a cell more than one move away from
+ * an open one.
+ */
+const FLIGHT_PATTERNS = [
+  { tier: 0, obstacles: [{ t: 'panel', lane: 1, alt: 0, z: 18 }], rings: [{ lane: 1, alt: 1, z: 32 }], cells: [{ lane: 1, alt: 1, z: 34, n: 4 }] },
+  { tier: 0, obstacles: [{ t: 'panel', lane: 1, alt: 2, z: 20 }], rings: [{ lane: 1, alt: 0, z: 34 }], cells: [{ lane: 1, alt: 0, z: 36, n: 4 }] },
+  { tier: 1, obstacles: [{ t: 'panel', lane: 0, alt: 1, z: 16 }, { t: 'panel', lane: 1, alt: 1, z: 16 }], rings: [{ lane: 2, alt: 1, z: 16 }, { lane: 1, alt: 2, z: 34 }], cells: [{ lane: 2, alt: 1, z: 20, n: 3 }] },
+  { tier: 1, obstacles: [{ t: 'panel', lane: 1, alt: 0, z: 14 }, { t: 'panel', lane: 1, alt: 1, z: 30 }], rings: [{ lane: 1, alt: 2, z: 30 }], cells: [{ lane: 1, alt: 2, z: 33, n: 4 }] },
+  { tier: 2, obstacles: [{ t: 'panel', lane: 0, alt: 0, z: 14 }, { t: 'panel', lane: 2, alt: 2, z: 14 }, { t: 'panel', lane: 1, alt: 1, z: 32 }], rings: [{ lane: 1, alt: 0, z: 32 }], cells: [{ lane: 1, alt: 0, z: 35, n: 3 }] },
+  { tier: 2, obstacles: [{ t: 'panel', lane: 0, alt: 2, z: 12 }, { t: 'panel', lane: 1, alt: 2, z: 12 }, { t: 'panel', lane: 1, alt: 0, z: 28 }, { t: 'panel', lane: 2, alt: 0, z: 28 }], rings: [{ lane: 2, alt: 0, z: 12 }, { lane: 0, alt: 1, z: 40 }], cells: [{ lane: 0, alt: 1, z: 42, n: 3 }] },
+];
+
+/** A panel fills one grid cell, so its vertical extent depends on its slot. */
+export function panelSpec(alt) {
+  return { w: 2.4, h: 1.5, d: 0.8, base: ALT_Y[alt] - 0.1 };
+}
+
+export function pickPattern(rng, tier, flight) {
+  const source = flight ? FLIGHT_PATTERNS : PATTERNS;
+  const pool = source.filter((p) => p.tier <= tier);
   return pool[rng.int(0, pool.length - 1)];
 }
 
@@ -481,18 +502,28 @@ function buildScenery(b, rng, pal, props) {
 export function buildChunk(rng, pattern, materials, zone) {
   const pal = resolvePalette(zone);
   const b = new Builder();
+  const flight = !!zone.props.flight;
 
-  const kind = zone.props.feature;
-  const set = kind && FEATURES[kind] ? FEATURES[kind][rng.int(0, FEATURES[kind].length - 1)] : [];
-  const features = set.map((f) => ({ kind, ...f }));
-  const kept = pattern.obstacles.filter((o) => !conflicts(o, features));
+  // In a flight zone the pattern carries its own grid cells and rings; there
+  // is no separate feature table because the whole zone is the feature.
+  const kind = flight ? 'ring' : zone.props.feature;
+  const features = flight
+    ? (pattern.rings || []).map((r) => ({ kind: 'ring', ...r }))
+    : (kind && FEATURES[kind] ? FEATURES[kind][rng.int(0, FEATURES[kind].length - 1)] : []).map((f) => ({ kind, ...f }));
+  const kept = flight
+    ? pattern.obstacles.map((o) => ({ ...o, spec: panelSpec(o.alt) }))
+    : pattern.obstacles.filter((o) => !conflicts(o, features));
 
   // Road first, but it has to know the features: on The Docks the gaps are
   // holes in the deck, not markings on it.
   const cells = [];
   for (const row of (pattern.cells || [])) {
     for (let i = 0; i < row.n; i++) {
-      cells.push({ lane: row.lane, z: -(row.z + i * 2.6) });
+      cells.push({
+        lane: row.lane,
+        z: -(row.z + i * 2.6),
+        y: row.alt !== undefined ? ALT_Y[row.alt] + 0.6 : undefined,
+      });
     }
   }
 
@@ -516,7 +547,7 @@ export function buildChunk(rng, pattern, materials, zone) {
   for (const f of features) {
     if (f.kind === 'swell') swell(b, pal, -f.z);
     else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
-    else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode);
+    else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
   }
 
@@ -525,7 +556,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     lane: o.lane,
     z: -o.z,
     type: o.t,
-    spec: OBSTACLE[o.t],
+    spec: o.spec || OBSTACLE[o.t],
   }));
   return { group, obstacles, cells, features };
 }

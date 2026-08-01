@@ -37,7 +37,7 @@ export class Track {
     this.zone = zone;
     this._disposeVariants();
     for (let i = 0; i < VARIANTS; i++) {
-      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2);
+      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, zone.props.flight);
       const chunk = buildChunk(this.rng, pattern, this.materials, zone);
       chunk.group.visible = false;
       this.scene.add(chunk.group);
@@ -105,7 +105,7 @@ export class Track {
         } else if (f.kind === 'spring') {
           slot.features.push({ kind: 'spring', lane: f.lane, x: LANE_X[f.lane], z: zStart - f.z, done: false });
         } else if (f.kind === 'ring') {
-          slot.features.push({ kind: 'ring', lane: f.lane, mode: f.mode, z: zStart - f.z, done: false });
+          slot.features.push({ kind: 'ring', lane: f.lane, mode: f.mode, alt: f.alt, z: zStart - f.z, done: false });
         } else if (f.kind === 'hole') {
           slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {

@@ -306,12 +306,17 @@ Every zone changes a rule, not just a colour.
   see through. They are long enough that jumping is not on the table: the
   answer is always "be in a lane that still exists". Standing still costs 19
   falls in two minutes.
-- **The Vault** — a sealed tube, walls and ceiling, and a slalom of hoops hung
-  in it. High hoops want a jump, low hoops want a slide, and the height is the
-  only cue. Threading one pays speed and charge, clipping one only costs
-  tempo. It is the same two verbs as everywhere else aimed at precision
-  instead of avoidance, which is the point: the zone rewards accuracy rather
-  than survival.
+- **The Vault** — **you fly.** No gravity and no floor to stand on: up and down
+  pick one of three altitudes instead of jumping and sliding, so a sealed tube
+  becomes a 3×3 grid of lanes and altitudes without teaching a single new
+  control. Hazard panels close individual cells, hoops hang on others, and
+  CELLS ride the altitude a hoop sits at. It is the only zone where the
+  vertical axis is a position rather than an event.
+
+  `props.flight` switches the player's whole vertical model (`Player.flying`),
+  and flight zones carry their own patterns in `FLIGHT_PATTERNS`, since a
+  ground obstacle means nothing in a grid. The Mixamo flying clip drives her,
+  banking into turns and pitching with the climb.
 - **The Core** — starts at 25 and tops out at 54 with a steeper ramp, plus a
   light crosswind and the rails from The Market. Everything at once.
 

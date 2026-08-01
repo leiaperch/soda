@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Builder, disposeGroup } from '../core/builder.js';
 import { PALETTE } from '../render/materials.js';
-import { LANE_X } from '../world/chunks.js';
+import { LANE_X, ALT_Y } from '../world/layout.js';
 import { loadCourier } from './courier.js';
 import { Animator, loadClips } from './animator.js';
 
@@ -18,7 +18,13 @@ export const PLAYER = {
   radius: 0.52,
   standHeight: 1.78,
   slideHeight: 0.9,
+  /** Flying she is tucked, so her body is shorter than when she stands. */
+  flightHeight: 1.3,
 };
+
+/** How fast she settles onto a new altitude. Slower than a lane change: the
+ *  climb has to be readable as a move you committed to. */
+const ALT_SPEED = 7;
 
 const _c = new THREE.Color();
 const shade = (color, m) => _c.copy(color).multiplyScalar(m).clone();
@@ -126,8 +132,9 @@ export class Player {
 
   reset() {
     this.lane = 1;
+    this.alt = 0;
     this.x = LANE_X[1];
-    this.y = 0;
+    this.y = this.flying ? ALT_Y[0] : 0;
     this.z = 0;
     this.vy = 0;
     this.airborne = false;
@@ -144,7 +151,12 @@ export class Player {
     if (this.stunned > 0) return;
     if (kind === 'left' && this.lane > 0) this.lane--;
     else if (kind === 'right' && this.lane < LANE_X.length - 1) this.lane++;
-    else if (kind === 'jump' && (!this.airborne || this.grinding)) {
+    else if (this.flying) {
+      // Up and down change altitude instead of jumping and sliding: same two
+      // gestures, second axis.
+      if (kind === 'jump' && this.alt < ALT_Y.length - 1) this.alt++;
+      else if (kind === 'slide' && this.alt > 0) this.alt--;
+    } else if (kind === 'jump' && (!this.airborne || this.grinding)) {
       // Hopping off a rail is a jump, not a fall.
       this.grinding = null;
       this.airborne = true;
@@ -157,7 +169,10 @@ export class Player {
     }
   }
 
-  get height() { return this.sliding > 0 ? PLAYER.slideHeight : PLAYER.standHeight; }
+  get height() {
+    if (this.flying) return PLAYER.flightHeight;
+    return this.sliding > 0 ? PLAYER.slideHeight : PLAYER.standHeight;
+  }
 
   update(dt, speed, time) {
     this.stunned = Math.max(0, this.stunned - dt);
@@ -173,7 +188,14 @@ export class Player {
     const dx = targetX - this.x;
     this.x += dx * Math.min(1, LANE_SPEED * dt);
 
-    if (this.grinding) {
+    if (this.flying) {
+      // No gravity, no ground: she settles onto the chosen altitude and stays.
+      this.y += (ALT_Y[this.alt] - this.y) * Math.min(1, ALT_SPEED * dt);
+      this.vy = 0;
+      this.airborne = false;
+      this.sliding = 0;
+      this.grinding = null;
+    } else if (this.grinding) {
       // Locked to the rail: no gravity, no fall, until the rail runs out or a
       // lane change takes her off it.
       this.y = this.grinding.y;
@@ -198,6 +220,18 @@ export class Player {
     const lean = THREE.MathUtils.clamp(dx * 0.5, -0.55, 0.55);
     this.tilt.rotation.z = THREE.MathUtils.lerp(this.tilt.rotation.z, -lean, 0.2);
     this.tilt.rotation.y = THREE.MathUtils.lerp(this.tilt.rotation.y, lean * 0.6, 0.2);
+
+    if (this.flying) {
+      // bank into the turn and pitch with the climb, which is all a flying
+      // silhouette needs to read as flying rather than as floating
+      const climb = (ALT_Y[this.alt] - this.y);
+      this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, -climb * 0.16, 0.15);
+      this.tilt.rotation.z = THREE.MathUtils.lerp(this.tilt.rotation.z, -lean * 1.5, 0.2);
+      this.tilt.position.y = 0;
+      this.tilt.scale.y = 1;
+      if (this.animated) { this.animator.syncTo(this); this.animator.update(dt); }
+      return;
+    }
 
     if (this.animated) {
       this.animator.syncTo(this);
