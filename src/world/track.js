@@ -102,6 +102,10 @@ export class Track {
           slot.features.push({ kind: 'swell', z: zStart - f.z, done: false });
         } else if (f.kind === 'gap') {
           slot.features.push({ kind: 'gap', startZ: zStart - f.from, endZ: zStart - f.to, done: false });
+        } else if (f.kind === 'spring') {
+          slot.features.push({ kind: 'spring', lane: f.lane, x: LANE_X[f.lane], z: zStart - f.z, done: false });
+        } else if (f.kind === 'hole') {
+          slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {
           slot.features.push({ kind: 'rail', lane: f.lane, x: LANE_X[f.lane], startZ: zStart - f.from, endZ: zStart - f.to, hit: false });
         }
@@ -150,7 +154,7 @@ export class Track {
     const out = [];
     for (const s of this.slots) {
       for (const f of s.features) {
-        const z = f.kind === 'swell' ? f.z : f.startZ;
+        const z = (f.kind === 'swell' || f.kind === 'spring') ? f.z : f.startZ;
         if (Math.abs(z - playerZ) < range) out.push(f);
       }
     }

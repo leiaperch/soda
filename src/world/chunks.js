@@ -3,8 +3,10 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
+  springPad,
 } from './props.js';
 import { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
+import { buildObstacle } from './obstacles.js';
 
 export { LANE_X, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE };
 
@@ -60,14 +62,33 @@ const FEATURES = {
     [{ from: 22, to: 31 }],
     [{ from: 10, to: 16 }, { from: 26, to: 32 }, { from: 40, to: 45 }],
   ],
+  // The Heights: whole lane panels are missing. Long enough that jumping them
+  // is not on the table, so the answer is always "be in another lane".
+  // The Greenhouse: bloom pads that fire you up. Chained close enough that a
+  // clean run reads as bouncing rather than as jumping.
+  spring: [
+    [{ lane: 1, z: 14 }, { lane: 1, z: 26 }, { lane: 1, z: 38 }],
+    [{ lane: 0, z: 12 }, { lane: 1, z: 24 }, { lane: 2, z: 36 }],
+    [{ lane: 2, z: 16 }, { lane: 1, z: 30 }],
+    [{ lane: 0, z: 18 }, { lane: 0, z: 32 }, { lane: 1, z: 44 }],
+  ],
+  hole: [
+    [{ lane: 0, from: 12, to: 30 }],
+    [{ lane: 2, from: 9, to: 27 }],
+    [{ lane: 1, from: 14, to: 33 }],
+    [{ lane: 0, from: 6, to: 22 }, { lane: 2, from: 28, to: 45 }],
+    [{ lane: 1, from: 8, to: 24 }, { lane: 0, from: 30, to: 46 }],
+  ],
 };
 
 /** True when an obstacle sits close enough to a feature to make it unfair. */
 function conflicts(o, features) {
   return features.some((f) => {
     if (f.kind === 'swell') return Math.abs(o.z - f.z) < 5.5;
+    if (f.kind === 'spring') return o.lane === f.lane && Math.abs(o.z - f.z) < 7;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
+    if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
     return o.lane === f.lane && o.z > f.from - 5 && o.z < f.to + 5;
   });
 }
@@ -90,7 +111,8 @@ function buildRoad(b, pal, props, features = []) {
   switch (props.road) {
     case 'sea': return buildSea(b, pal, props);
     case 'catwalk': return buildCatwalk(b, pal, props, features);
-    case 'skybridge': return buildSkybridge(b, pal, props);
+    case 'skybridge': return buildSkybridge(b, pal, props, features);
+    case 'tube': return buildTube(b, pal, props);
     default: return buildStreet(b, pal, props);
   }
 }
@@ -184,15 +206,44 @@ function buildCatwalk(b, pal, props, gaps = []) {
 }
 
 /** A bare bridge above the clouds. The lack of railings is the mechanic. */
-function buildSkybridge(b, pal, props) {
+function buildSkybridge(b, pal, props, features = []) {
   const L = CHUNK_LEN;
   const mid = -L / 2;
-  // Narrower than a street on purpose: the outer lane sits close enough to the
-  // drop that a gust can take you over it.
   const half = props.deckHalf ?? ROAD_HALF;
 
-  b.box('toon', 0, -0.9, mid, half * 2 + 0.6, 0.9, L, shade(pal.road, 0.72));
-  b.slab('toon', 0, 0.02, mid, half * 2, L, pal.road);
+  // The deck is three lane panels, not one slab, because panels are what go
+  // missing. A hole has to be a hole you can see through, not a texture.
+  const laneW = 2.6;
+  for (let lane = 0; lane < 3; lane++) {
+    const holes = features
+      .filter((f) => f.kind === 'hole' && f.lane === lane)
+      .sort((a, b2) => a.from - b2.from);
+    const spans = [];
+    let cursor = 0;
+    for (const h of holes) {
+      if (h.from > cursor) spans.push([cursor, h.from]);
+      cursor = Math.max(cursor, h.to);
+    }
+    if (cursor < L) spans.push([cursor, L]);
+
+    for (const [from, to] of spans) {
+      const len = to - from;
+      if (len <= 0.2) continue;
+      const cz = -(from + len / 2);
+      b.box('toon', LANE_X[lane], -0.9, cz, laneW, 0.92, len, shade(pal.road, 0.72));
+      b.slab('toon', LANE_X[lane], 0.02, cz, laneW, len, pal.road);
+      // lit lip at each broken end, so the hole is legible from a long way off
+      for (const edgeZ of [from, to]) {
+        if (edgeZ <= 0.01 || edgeZ >= L - 0.01) continue;
+        b.box('emissive', LANE_X[lane], 0.03, -edgeZ, laneW * 0.94, 0.06, 0.55, shade(pal.accentGlow, 1.2));
+      }
+    }
+  }
+  // the strips of deck outside the lanes are always intact
+  for (const s of [-1, 1]) {
+    b.box('toon', s * (half - (half - 3.9) / 2 - 0.55), -0.9, mid, Math.max(0.4, half - 3.9 + 1.1), 0.92, L, shade(pal.road, 0.72));
+    b.slab('toon', s * (half - (half - 3.9) / 2 - 0.55), 0.02, mid, Math.max(0.4, half - 3.9 + 1.1), L, pal.road);
+  }
 
   // The edge is the danger, so it is the brightest thing on the deck.
   for (const s of [-1, 1]) {
@@ -210,6 +261,45 @@ function buildSkybridge(b, pal, props) {
       b.box('emissive', s * (half + 0.9), 14, -z, 0.5, 0.4, 0.5, shade(pal.accentGlow, 1.2));
     }
     b.box('chrome', 0, 15.2, -z, half * 2 + 2.2, 0.5, 0.6, shade(pal.chrome, 0.9));
+  }
+}
+
+/**
+ * A sealed chrome tube. Walls AND a ceiling, which is the point: with a roof
+ * overhead there is no sky and no skyline, so the only thing to read is the
+ * track. It makes the same three obstacles feel completely different.
+ */
+function buildTube(b, pal, props) {
+  const L = CHUNK_LEN;
+  const mid = -L / 2;
+  const half = ROAD_HALF;
+  // Just under the rib apex (radius half + 0.9), or daylight shows through the
+  // top of a tube that is supposed to be sealed.
+  const top = 6.2;
+
+  b.box('toon', 0, -1.0, mid, half * 2 + 2, 1.0, L, shade(pal.road, 0.6));
+  b.slab('toon', 0, 0.02, mid, half * 2, L, pal.road);
+
+  const rings = 16;
+  const step = L / rings;
+  for (let i = 0; i < rings; i++) {
+    const z = -(i + 0.5) * step;
+    // ribs, alternating chrome and lit, which is what gives speed a beat
+    const lit = i % 2 === 0;
+    b.arch(lit ? 'emissive' : 'chrome', 0, 0.02, z, half + 0.9, lit ? 0.16 : 0.42, 14, 6,
+      lit ? shade(pal.accentGlow, 1.15) : shade(pal.chrome, 0.9), Math.PI, 0);
+  }
+  for (const s of [-1, 1]) {
+    b.box('toon', s * (half + 1.3), 0, mid, 1.4, top, L, shade(pal.road, 1.6));
+    b.box('emissive', s * (half + 0.62), 1.5, mid, 0.14, 0.22, L, shade(pal.edge, 0.9));
+    b.box('emissive', s * (half + 0.62), 4.6, mid, 0.14, 0.16, L, shade(pal.accentGlow, 0.7));
+  }
+  b.box('toon', 0, top, mid, half * 2 + 3, 1.2, L, shade(pal.road, 1.3));
+  b.box('emissive', 0, top - 0.12, mid, half * 2 * 0.5, 0.12, L, shade(pal.lane, 0.55));
+  for (let z = 1; z < L; z += 4) {
+    for (const x of [-1.3, 1.3]) {
+      b.box('emissive', x, 0.03, -z, 0.16, 0.02, 2.0, shade(pal.lane, 1.0));
+    }
   }
 }
 
@@ -290,33 +380,7 @@ function buildStreet(b, pal, props) {
   }
 }
 
-function buildObstacle(b, pal, o) {
-  const spec = OBSTACLE[o.t];
-  const x = LANE_X[o.lane];
-  const z = -o.z;
-
-  if (o.t === 'barrier') {
-    b.box('toon', x, spec.base, z, spec.w, spec.h, spec.d, shade(pal.accent, 0.9));
-    b.box('chrome', x, spec.base + spec.h, z, spec.w + 0.16, 0.16, spec.d + 0.16, shade(pal.chrome, 0.95));
-    b.box('emissive', x, spec.base + spec.h * 0.55, z, spec.w * 0.8, 0.16, spec.d + 0.05, shade(pal.accentGlow, 1.3));
-    for (const s of [-1, 1]) {
-      b.cyl('chrome', x + s * spec.w / 2, 0, z, 0.14, 0.12, spec.h, 6, shade(pal.chrome, 0.9));
-    }
-  } else if (o.t === 'gate') {
-    b.box('toon', x, spec.base, z, spec.w, spec.h, spec.d, shade(pal.deck, 1.2));
-    b.box('chrome', x, spec.base - 0.18, z, spec.w + 0.2, 0.2, spec.d + 0.2, shade(pal.chrome, 0.95));
-    b.box('emissive', x, spec.base - 0.16, z, spec.w * 0.85, 0.1, spec.d + 0.06, shade(pal.edge, 1.35));
-    for (const s of [-1, 1]) {
-      b.cyl('chrome', x + s * (spec.w / 2 + 0.1), 0, z, 0.16, 0.14, spec.base + spec.h, 6, shade(pal.chrome, 0.85));
-    }
-  } else {
-    b.taper('toon', x, 0, z, spec.w, spec.h, spec.d, 0.25, shade(pal.accentGlow, 0.7));
-    b.box('chrome', x, spec.h, z, spec.w * 0.9, 0.22, spec.d * 0.9, shade(pal.chrome, 0.95));
-    for (let i = 0; i < 4; i++) {
-      b.box('emissive', x, 0.5 + i * 0.85, z, spec.w * 0.95, 0.12, spec.d + 0.06, shade(pal.lane, 1.15));
-    }
-  }
-}
+// Obstacle shapes live in obstacles.js, one family per zone.
 
 function buildScenery(b, rng, pal, props) {
   const L = CHUNK_LEN;
@@ -396,9 +460,10 @@ export function buildChunk(rng, pattern, materials, zone) {
   // holes in the deck, not markings on it.
   buildRoad(b, pal, zone.props, features);
   buildScenery(b, rng, pal, zone.props);
-  for (const o of kept) buildObstacle(b, pal, o);
+  for (const o of kept) buildObstacle(b, pal, o, LANE_X[o.lane], zone.props.obstacleKit);
   for (const f of features) {
     if (f.kind === 'swell') swell(b, pal, -f.z);
+    else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
   }
 

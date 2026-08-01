@@ -31,6 +31,8 @@ const TUNE = {
   splashCharge: -6,
   grindCharge: 9,     // per second while on a rail
   fallCharge: -32,    // off the catwalk, or off the bridge
+  springBoost: 1.55,  // bloom pads, relative to a normal jump
+  springCharge: 3,
 };
 
 /** Lets the game run headless in tests without branching on `if (sfx)`. */
@@ -220,11 +222,29 @@ export class Game {
     if (edge && p.stunned <= 0 && Math.abs(p.x) > edge) this._fall('BLOWN OFF');
 
     for (const f of this.track.nearFeatures(p.z, 44)) {
-      if (f.kind === 'gap') {
+      if (f.kind === 'gap' || f.kind === 'hole') {
         const over = p.z <= f.startZ && p.z > f.endZ;
-        if (over && !f.done && !p.grinding && p.y < 0.4) {
+        const inIt = f.kind === 'gap' || p.lane === f.lane;
+        if (over && inIt && !f.done && !p.grinding && p.y < 0.4) {
           f.done = true;
-          this._fall('MISSED IT');
+          this._fall(f.kind === 'gap' ? 'MISSED IT' : 'NO DECK');
+        }
+        continue;
+      }
+
+      if (f.kind === 'spring') {
+        // Fires you up whether you were running or already falling onto it,
+        // which is what lets pads chain into a bounce instead of a stutter.
+        if (f.done || p.z > f.z - 0.1 || p.lane !== f.lane) continue;
+        f.done = true;
+        if (p.y < 1.6) {
+          p.grinding = null;
+          p.airborne = true;
+          p.sliding = 0;
+          p.vy = Math.abs(p.physics.jump) * TUNE.springBoost;
+          this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.springCharge);
+          this.hud.toast('BOING', 'relay');
+          this.sfx.jump();
         }
         continue;
       }

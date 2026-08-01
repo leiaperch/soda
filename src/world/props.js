@@ -334,6 +334,29 @@ export function cloudBank(b, rng, pal, x, z) {
   }
 }
 
+/**
+ * Bloom pad for The Greenhouse: a fat flower that fires you upward. Built low
+ * and wide so it never reads as something to avoid, which is the opposite of
+ * every other object on the track.
+ */
+export function springPad(b, pal, x, z) {
+  const petals = 7;
+  for (let i = 0; i < petals; i++) {
+    const a = (i / petals) * Math.PI * 2;
+    b.at(x + Math.cos(a) * 1.15, 0.06, z + Math.sin(a) * 1.15, a);
+    b.dome('toon', 0, 0, 0, 0.85, 0.34, 7, 3, shade(pal.accentGlow, 0.9 + (i % 2) * 0.2));
+    b.pop();
+  }
+  b.cyl('toon', x, 0.02, z, 1.35, 1.15, 0.28, 12, shade(pal.accent, 1.0));
+  b.dome('emissive', x, 0.3, z, 0.95, 0.4, 12, 4, shade(pal.lane, 0.85));
+  b.cyl('emissive', x, 0.68, z, 0.28, 0.16, 0.5, 8, shade(pal.accentGlow, 1.3));
+  // A hint of updraft, kept small: at full size these read as yellow walls
+  // standing in the lane, which is the opposite of "safe to touch".
+  for (let i = 0; i < 3; i++) {
+    b.box('beam', x, 1.1 + i * 1.4, z, 0.8 - i * 0.16, 0.4, 0.05, shade(pal.accentGlow, 0.22 - i * 0.05));
+  }
+}
+
 /** Parked hover pod, floating just off the deck. */
 export function hoverPod(b, rng, pal, x, z) {
   const y = rng.range(1.1, 1.9);

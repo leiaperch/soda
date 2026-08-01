@@ -69,8 +69,16 @@ because they play tidily. Measured on the current build with a scripted pilot:
 a player who touches nothing dies around 300 m, a player who dodges correctly
 passes 10 000 m and reaches top speed.
 
-**Zones.** All six are built, and each is an ambience *and* a rule change
+**Zones.** All eight are built, and each is an ambience *and* a rule change
 rather than a reskin.
+
+**Obstacles are per zone too** (`world/obstacles.js`). The three obstacles keep
+the same *contract* everywhere — jump the barrier, slide under the gate, dodge
+the block — because relearning the grammar every zone would be hostile. What
+changes is what they are made of: rocks and fishing nets on The Shore, crates
+and crane loads on The Docks, fallen trunks and hanging vines in The
+Greenhouse, heaved floor slabs and vent pipes in The Core. A concrete pillar
+standing in the open sea was the loudest remaining sign of a repaint.
 
 Everything a zone changes lives in `world/zones.js`: sky gradient, fog, key and
 fill light, backdrop tints, road and kerb colours, facade palette, and a prop
@@ -275,12 +283,17 @@ Every zone changes a rule, not just a colour.
   if you commit to the jump.
 - **The Docks** — the catwalk simply runs out. Gravity drops to 42% so the
   jump arc roughly doubles, and gap widths are tuned to it. Miss and you fall.
-- **The Heights** — no railings. The crosswind shifts your target off the lane
-  centre rather than nudging x directly, so it is something you steer against
-  instead of a stutter you cannot read, and `edgeX` sits just outside the
-  outer lane. Sitting in an outer lane through a gust puts you over the side:
-  measured at 17 falls in 90 seconds if you never move, none if you stay
-  central. That is the decision the zone is about.
+- **The Greenhouse** — bloom pads fire you upward, harder than your own jump
+  and whether you were running or already falling onto one, so pads chain into
+  a bounce instead of a stutter. Gravity is slightly low to hold the arc.
+- **The Heights** — whole lane panels of the bridge are missing. The deck is
+  built as three lane strips rather than one slab, so a hole is a hole you can
+  see through. They are long enough that jumping is not on the table: the
+  answer is always "be in a lane that still exists". Standing still costs 19
+  falls in two minutes.
+- **The Vault** — a sealed tube, walls and ceiling. With no sky and no skyline
+  there is nothing to read but the track and the rib beat, which makes the
+  same three obstacles feel completely different.
 - **The Core** — starts at 25 and tops out at 54 with a steeper ramp, plus a
   light crosswind and the rails from The Market. Everything at once.
 
@@ -303,11 +316,8 @@ matte now.
 ## Not done yet
 
 - Ghost replay and the Daily Run leaderboard.
-- **The obstacle vocabulary is still shared.** Barrier, gate and block are the
-  same three objects in all six zones, so a block sitting in the open sea or
-  on a vacuum catwalk reads as borrowed. Each zone wants its own set: a wreck
-  or a breaker on The Shore, a swinging crane load on The Docks, a snapped
-  cable on The Heights. That is the next real novelty gain after this pass.
+- Moving obstacles. Everything is baked into the chunk mesh, so nothing can
+  slide across lanes yet. That is the next mechanic the engine cannot express.
 - Never tested on a real phone. Everything so far is a desktop browser at a
   mobile viewport, so touch latency and sustained frame rate on low-end
   Android are unverified.

@@ -37,6 +37,7 @@ export const ZONES = [
     facades: ['#ffc2e2', '#c9b6ff', '#a8ecda', '#ffd9b0', '#e9d5ff', '#bfe3ff'],
     props: {
       road: 'street',
+      obstacleKit: { barrier: 'fence', gate: 'gantry', block: 'pillar' },
       arches: 'round', archEvery: 24, archTint: ['#ff7ac6', '#7ff0d4', '#b79bff'],
       lampEvery: 12, streetEvery: 16, billboardChance: 0.7,
       palmChance: 0.5, podChance: 0.5, stallChance: 0,
@@ -74,6 +75,7 @@ export const ZONES = [
       // Open sea: no kerb, no deck, no rail, no lamps. Everything that made it
       // read as "a road with water on it" is simply not emitted.
       road: 'sea',
+      obstacleKit: { barrier: 'rock', gate: 'net', block: 'wreck' },
       arches: 'none', archEvery: 0, archTint: ['#7fe6ff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0, stallChance: 0,
@@ -109,11 +111,50 @@ export const ZONES = [
     facades: ['#2c1740', '#3a1d33', '#241a44', '#40203a', '#1e1436', '#35163f'],
     props: {
       road: 'street',
+      obstacleKit: { barrier: 'crate', gate: 'gantry', block: 'pillar' },
       arches: 'gantry', archEvery: 16, archTint: ['#ff2e93', '#ffb02e', '#7fdcff'],
       lampEvery: 8, streetEvery: 6, billboardChance: 1,
       palmChance: 0.1, podChance: 0.3, stallChance: 0.9,
       skylineChance: 0.95, backRowChance: 0.85, waterSides: false,
       lotMin: 5, lotMax: 10, towerStacks: [3, 5], feature: 'rail',
+    },
+  },
+
+  {
+    id: 'greenhouse',
+    name: 'THE GREENHOUSE',
+    subtitle: 'THE BIODOME WENT FERAL',
+    mechanic: 'Bloom pads fire you up. Chain them.',
+    built: true,
+    length: 2100,
+    track: 'audio/glitter-and-grit.mp3',
+    physics: { gravityScale: 0.72 },
+    sky: [
+      [0.00, '#0f3a24'], [0.26, '#1f6b3f'], [0.48, '#7fd06a'],
+      [0.66, '#ffe9a0'], [0.82, '#ffd0e4'], [1.00, '#2a5a3a'],
+    ],
+    fog: { color: '#9fd8a0', near: 160, far: 310 },
+    sun: { color: '#fff6d0', intensity: 2.5 },
+    hemi: { sky: '#cfffd0', ground: '#1a3d22', intensity: 0.5 },
+    backdrop: { sun: '#fff8d8', halo: '#a8e86a', arc: '#cfeeb0', planet: '#4a8a4a' },
+    colors: {
+      road: '#2c4a30',
+      kerb: '#d8c8a0',
+      deck: '#3f6b42',
+      edge: '#6fe08a',
+      lane: '#fff6d0',
+      accent: '#ffb0e0',
+      accentGlow: '#ffe066',
+    },
+    facades: ['#4f8a52', '#6aa85e', '#3f7a48', '#88bd6a', '#5c9a5a', '#7ab070'],
+    props: {
+      road: 'street',
+      obstacleKit: { barrier: 'log', gate: 'vine', block: 'tree' },
+      arches: 'round', archEvery: 20, archTint: ['#6fe08a', '#ffe066', '#ffb0e0'],
+      lampEvery: 14, streetEvery: 8, billboardChance: 0,
+      palmChance: 0.9, podChance: 0.1, stallChance: 0,
+      skylineChance: 0.85, backRowChance: 0.6, waterSides: false, waterRoad: false,
+      lotMin: 6, lotMax: 12, towerStacks: [1, 2], feature: 'spring',
     },
   },
 
@@ -149,6 +190,7 @@ export const ZONES = [
     props: {
       // A catwalk in vacuum with holes in it. No kerb, no deck, no ground.
       road: 'catwalk',
+      obstacleKit: { barrier: 'crate', gate: 'beam', block: 'container' },
       arches: 'gantry', archEvery: 26, archTint: ['#7fd0ff', '#ffb02e'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0.2,
       palmChance: 0, podChance: 0.7, stallChance: 0,
@@ -162,11 +204,11 @@ export const ZONES = [
     id: 'heights',
     name: 'THE HEIGHTS',
     subtitle: 'ABOVE THE WEATHER',
-    mechanic: 'No railings. The gusts will take you over the edge.',
+    mechanic: 'The deck is missing. Be in a lane that still exists.',
     built: true,
     length: 3200,
     track: 'audio/the-heights.mp3',
-    physics: { wind: 1.15 },
+    physics: {},
     sky: [
       [0.00, '#2c6fd0'], [0.24, '#7fb8f0'], [0.44, '#cfe8ff'],
       [0.60, '#ffe6f2'], [0.78, '#ffd0e4'], [1.00, '#ffffff'],
@@ -190,13 +232,52 @@ export const ZONES = [
       // deckHalf and edgeX are a pair: the drop has to be where it looks.
       road: 'skybridge',
       deckHalf: 3.9,
-      edgeX: 3.55,
+      obstacleKit: { barrier: 'fence', gate: 'beam', block: 'pillar' },
       arches: 'none', archEvery: 0, archTint: ['#ff7ac6', '#ffffff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0.2, stallChance: 0,
       skylineChance: 0.3, backRowChance: 0.2, waterSides: false, waterRoad: false,
-      lotMin: 14, lotMax: 24, towerStacks: [3, 5], feature: null,
+      lotMin: 14, lotMax: 24, towerStacks: [3, 5], feature: 'hole',
       cloudChance: 1,
+    },
+  },
+
+  {
+    id: 'vault',
+    name: 'THE VAULT',
+    subtitle: 'SEALED TRANSIT TUBE',
+    mechanic: 'No sky, no horizon. Only the ribs and the beat.',
+    built: true,
+    length: 2600,
+    track: 'audio/sugar-crash-core.mp3',
+    physics: { startSpeed: 22, maxSpeed: 50, speedRamp: 0.3 },
+    sky: [
+      [0.00, '#0a0614'], [0.4, '#160c28'], [0.7, '#2a1450'], [1.00, '#08040f'],
+    ],
+    fog: { color: '#1a1030', near: 90, far: 210 },
+    sun: { color: '#dcd0ff', intensity: 1.5 },
+    hemi: { sky: '#b09fff', ground: '#0a0614', intensity: 0.4 },
+    backdrop: { sun: '#1a1030', halo: '#1a1030', arc: '#1a1030', planet: '#120a22' },
+    colors: {
+      road: '#211538',
+      kerb: '#8a7fc0',
+      deck: '#2e1f4d',
+      edge: '#8f6fff',
+      lane: '#e8dcff',
+      accent: '#c0a8ff',
+      accentGlow: '#00e5ff',
+    },
+    facades: ['#2e1f4d', '#3a2560', '#241a44', '#422a6e', '#1e1436', '#352060'],
+    props: {
+      // A sealed tube: walls and a ceiling. With no sky and no skyline the
+      // only thing left to read is the track, which changes everything.
+      road: 'tube',
+      obstacleKit: { barrier: 'slab', gate: 'pipe', block: 'container' },
+      arches: 'none', archEvery: 0, archTint: ['#00e5ff', '#8f6fff'],
+      lampEvery: 0, streetEvery: 0, billboardChance: 0,
+      palmChance: 0, podChance: 0, stallChance: 0,
+      skylineChance: 0, backRowChance: 0, waterSides: false, waterRoad: false,
+      lotMin: 6, lotMax: 10, towerStacks: [1, 2], feature: 'rail',
     },
   },
 
@@ -208,7 +289,7 @@ export const ZONES = [
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
-    physics: { wind: 0.55, startSpeed: 25, maxSpeed: 54, speedRamp: 0.34 },
+    physics: { startSpeed: 25, maxSpeed: 54, speedRamp: 0.34 },
     sky: [
       [0.00, '#120206'], [0.26, '#3d0812'], [0.48, '#8e1a1a'],
       [0.66, '#e0521a'], [0.82, '#ffa53a'], [1.00, '#2a0608'],
@@ -230,6 +311,7 @@ export const ZONES = [
     props: {
       road: 'street',
       walls: true,
+      obstacleKit: { barrier: 'slab', gate: 'pipe', block: 'press' },
       arches: 'gantry', archEvery: 14, archTint: ['#ff5a1a', '#ff2e5a', '#ffd98a'],
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
       palmChance: 0, podChance: 0.3, stallChance: 0.4,
