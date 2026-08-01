@@ -197,10 +197,50 @@ authored by hand in `PATTERNS` in `world/chunks.js` and picked by tier as the
 run gets faster — placement is never random, which is what keeps stretches from
 being unfair or trivial.
 
+## Sound effects
+
+`game/sfx.js` synthesises every cue at runtime with the Web Audio API. No
+files on purpose: each one is under half a second, so shipping them as audio
+would add megabytes and a load order for sounds that are cheaper to generate
+than to decode. It also lets pitch follow state — the CELL chime climbs a
+semitone per pickup while a streak holds, then resets — without pre-baking
+variants. The context is created lazily on the first cue, same gesture gate as
+the music, and everything respects the mute toggle.
+
+## Zone verbs
+
+Each built zone now has its own verb, not just its own light.
+
+- **The Ring** — the base grammar: jump, slide, switch lane.
+- **The Shore** — swells cross the road. Clear one in the air and you get
+  SURF: a speed boost and charge back. Plough into it grounded and you get
+  SPLASH: a speed cut and charge lost. It is a timing reward, not an obstacle,
+  so getting it wrong costs tempo rather than your run.
+- **The Market** — grind rails run along a lane. Land on one and you lock to
+  it, riding above barrier height and earning charge per second, until it ends
+  or you jump off. Rail height sits deliberately above a barrier's, so a grind
+  clears barriers for free — that is the whole payoff.
+
+Feature layouts are authored per zone in `world/chunks.js` for the same reason
+the obstacle phrases are: a swell you cannot see coming, or a rail that starts
+under a gate, is not difficulty, it is a bug the player blames themselves for.
+Obstacles that would conflict with a feature are dropped at build time.
+
+**Bloom gotcha worth remembering.** The first pass built rails from chrome.
+A twenty-metre polished bar running to the horizon mirrors the whole
+environment map, and the bloom turned that into a sheet of gold across the
+entire zone. Rendering once with the bloom pass disabled proved the geometry
+was fine and the post was the problem. Long thin props in the play space are
+matte now.
+
 ## Not done yet
 
-- Sound effects. Music is in; jump, land, pickup and crash are still silent.
-- Ghost replay, Daily Run leaderboard, the other five zones.
+- Ghost replay, Daily Run leaderboard, the three unbuilt zones.
+- Never tested on a real phone. Everything so far is a desktop browser at a
+  mobile viewport, so touch latency and sustained frame rate on low-end
+  Android are unverified.
+- Balance is measured with a scripted pilot, never by a human. Zone lengths in
+  particular are a guess.
 - Capacitor wrapper for the Play Store, plus a pass on asset budgets for
   low-end Android.
 - Confirm the Suno commercial licence covers distribution before publishing.
