@@ -4,6 +4,7 @@ import { createInput } from './core/input.js';
 import { createHud } from './ui/hud.js';
 import { createAudio } from './game/audio.js';
 import { createSfx } from './game/sfx.js';
+import { keepAwake, createPauser, describeViewport } from './core/device.js';
 import { Game } from './game/game.js';
 import { records } from './game/records.js';
 import { ZONES } from './world/zones.js';
@@ -34,25 +35,29 @@ for (const evt of ['pointerdown', 'touchstart', 'keydown']) {
   window.addEventListener(evt, () => { audio.unlock(); sfx.unlock(); }, { once: true });
 }
 
+// Phone plumbing: keep the screen alive during a run, and freeze rather than
+// fast-forward when a notification steals the tab.
+keepAwake();
 let last = performance.now();
+const pauser = createPauser(() => { last = performance.now(); });
+
 function frame(now) {
-  // Clamp dt: a background tab or a slow first compile must never teleport the
-  // player through an obstacle.
+  requestAnimationFrame(frame);
+  if (pauser.paused) { last = now; return; }
+  // Clamp dt: a slow first shader compile must never teleport the player
+  // through an obstacle.
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   game.update(dt);
   stage.render();
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-
-document.addEventListener('visibilitychange', () => { last = performance.now(); });
 
 // Expose the running scene for debugging captures. `capture` forces a fixed
 // viewport, steps the simulation deterministically and POSTs a PNG to the dev
 // server, because reading a live WebGL canvas over the automation bridge stalls.
 window.__soda = {
-  stage, game, audio, sfx, THREE,
+  stage, game, audio, sfx, THREE, describeViewport,
   async capture(name, { w = 900, h = 1600, steps = 0, dt = 1 / 60 } = {}) {
     const canvas = stage.renderer.domElement;
     stage.renderer.setPixelRatio(1);

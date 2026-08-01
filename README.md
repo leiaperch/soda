@@ -15,6 +15,43 @@ npm run dev
 
 Open http://localhost:5184. Swipe or use the arrow keys.
 
+## Testing on a phone
+
+The dev server binds to the LAN, so it prints a second URL like
+`http://10.143.236.132:5184/`. Open that on a phone on the same Wi-Fi.
+
+Then **add it to the home screen**. The manifest sets `display: fullscreen`
+and locks portrait, so launched from the home screen it runs without the
+address bar. That matters more than it sounds: the address bar eats a chunk
+of the viewport and shrinks or grows as you scroll, so a browser tab is not
+the real playfield and thumb reach reads wrong.
+
+Two things that fail silently on a LAN IP:
+
+- **Wake Lock needs a secure context.** Over plain `http://` to an IP the
+  screen still sleeps mid-run. Over `https` or `localhost` it holds.
+- **Guest and campus Wi-Fi usually isolate clients**, so the phone often
+  cannot reach the laptop at all no matter what the firewall says.
+
+When either bites, tunnel it:
+
+```bash
+npm run tunnel
+```
+
+That publishes the dev server over HTTPS on a temporary public URL. It is a
+public URL, so treat it as publishing rather than as a local test.
+
+For something durable, `.github/workflows/pages.yml` builds and deploys to
+GitHub Pages. It is `workflow_dispatch` only, on purpose: publishing the build
+means publishing the soundtrack, which should be a decision rather than a side
+effect of a push. It needs the repository to be public and Pages set to
+"GitHub Actions".
+
+Icons and the manifest are generated, not drawn: `node tools/make-icons.mjs`
+writes the PWA icons straight from maths, with a hand-rolled PNG encoder over
+`node:zlib` rather than an image dependency.
+
 ## Design
 
 **Core loop.** CHARGE drains continuously and always faster than you would
