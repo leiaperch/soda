@@ -94,11 +94,16 @@ const FEATURES = {
   ],
   // The Foundry: conveyor lanes. Every phrase offers at least one belt running
   // with you, so the zone is a choice and never a tax.
+  // The middle lane is always the bad belt.
+  //
+  // With green sometimes landing under the default line, doing nothing was a
+  // winning strategy and the lane choice was decorative. Putting the drag
+  // where a player starts means the good lane always has to be gone and got.
   belt: [
-    [{ lane: 0, from: 10, to: 34, dir: 1 }, { lane: 1, from: 10, to: 34, dir: -1 }],
-    [{ lane: 2, from: 8, to: 30, dir: 1 }, { lane: 1, from: 8, to: 30, dir: -1 }],
-    [{ lane: 1, from: 12, to: 38, dir: 1 }, { lane: 0, from: 12, to: 38, dir: -1 }],
-    [{ lane: 0, from: 6, to: 24, dir: -1 }, { lane: 2, from: 6, to: 24, dir: 1 }, { lane: 1, from: 30, to: 46, dir: 1 }],
+    [{ lane: 1, from: 8, to: 34, dir: -1 }, { lane: 0, from: 8, to: 34, dir: 1 }],
+    [{ lane: 1, from: 6, to: 32, dir: -1 }, { lane: 2, from: 6, to: 32, dir: 1 }],
+    [{ lane: 1, from: 10, to: 40, dir: -1 }, { lane: 2, from: 10, to: 24, dir: 1 }, { lane: 0, from: 26, to: 40, dir: 1 }],
+    [{ lane: 1, from: 5, to: 44, dir: -1 }, { lane: 0, from: 5, to: 22, dir: 1 }, { lane: 2, from: 24, to: 44, dir: 1 }],
   ],
   hole: [
     [{ lane: 0, from: 12, to: 30 }],
@@ -360,11 +365,34 @@ function buildTube(b, pal, props, rng) {
   }
 }
 
+/**
+ * A box that follows the hill.
+ *
+ * The elevation shader displaces vertices from world z, so anything built as
+ * one long box only gets its two ends displaced and the middle is a straight
+ * chord. Over a 48 m chunk against a 140 m wavelength that chord cuts clean
+ * through the road. Slicing it gives the shader something to bend.
+ */
+function longBox(b, key, x, y, from, to, w, h, color, slice) {
+  const len = to - from;
+  if (!slice || slice >= len) {
+    b.box(key, x, y, -(from + len / 2), w, h, len, color);
+    return;
+  }
+  const n = Math.ceil(len / slice);
+  const step = len / n;
+  for (let i = 0; i < n; i++) {
+    b.box(key, x, y, -(from + step * (i + 0.5)), w, h, step * 1.02, color);
+  }
+}
+
 function buildStreet(b, pal, props) {
   const L = CHUNK_LEN;
   const mid = -L / 2;
+  // On a flat zone one box per run is cheaper and identical.
+  const slice = props.hill ? 2.4 : 0;
 
-  b.box('toon', 0, -1.2, mid, ROAD_HALF * 2 + 9, 1.2, L, shade(pal.road, 0.6));
+  longBox(b, 'toon', 0, -1.2, 0, L, ROAD_HALF * 2 + 9, 1.2, shade(pal.road, 0.6), slice);
 
   if (props.waterRoad) {
     // On The Shore there is no asphalt at all: the lane IS the sea. Rolling
@@ -384,14 +412,16 @@ function buildStreet(b, pal, props) {
         b.box('emissive', 0, 0.02 + h, z + step * 0.4, ROAD_HALF * 2 * 0.8, 0.035, step * 0.26, shade(pal.lane, 0.32));
       }
     }
+  } else if (slice) {
+    longBox(b, 'toon', 0, -0.06, 0, L, ROAD_HALF * 2, 0.1, pal.road, slice);
   } else {
     b.slab('toon', 0, 0.02, mid, ROAD_HALF * 2, L, pal.road);
   }
 
   for (const s of [-1, 1]) {
-    b.box('toon', s * (ROAD_HALF + 0.35), 0, mid, 0.7, 0.42, L, shade(pal.kerb, 0.95));
-    b.box('emissive', s * (ROAD_HALF + 0.35), 0.42, mid, 0.5, 0.07, L, shade(pal.edge, 1.15));
-    b.box('toon', s * (ROAD_HALF + 3.2), 0, mid, 5.4, 0.4, L, pal.deck);
+    longBox(b, 'toon', s * (ROAD_HALF + 0.35), 0, 0, L, 0.7, 0.42, shade(pal.kerb, 0.95), slice);
+    longBox(b, 'emissive', s * (ROAD_HALF + 0.35), 0.42, 0, L, 0.5, 0.07, shade(pal.edge, 1.15), slice);
+    longBox(b, 'toon', s * (ROAD_HALF + 3.2), 0, 0, L, 5.4, 0.4, pal.deck, slice);
   }
 
   // Dashed lane dividers. Lifted clear of the swell on a water road, or they
@@ -409,7 +439,7 @@ function buildStreet(b, pal, props) {
     for (let z = 2; z < L; z += 6) {
       b.cyl('chrome', x, 0.4, -z, 0.13, 0.11, 1.0, 6, shade(pal.chrome, 0.9));
     }
-    b.box('chrome', x, 1.3, mid, 0.18, 0.16, L, shade(pal.chrome, 0.95));
+    longBox(b, 'chrome', x, 1.3, 0, L, 0.18, 0.16, shade(pal.chrome, 0.95), slice);
   }
 
   // The Shore replaces the far deck with open water and a strip of sand.
@@ -428,8 +458,8 @@ function buildStreet(b, pal, props) {
   // chute, which is most of why it feels like a descent rather than a street.
   if (props.walls) {
     for (const s of [-1, 1]) {
-      b.box('toon', s * (ROAD_HALF + 2.4), 0, mid, 3.4, 18, L, shade(pal.road, 0.45));
-      b.box('emissive', s * (ROAD_HALF + 0.72), 2.4, mid, 0.14, 0.34, L, shade(pal.edge, 0.75));
+      longBox(b, 'toon', s * (ROAD_HALF + 2.4), 0, 0, L, 3.4, 18, shade(pal.road, 0.45), slice);
+      longBox(b, 'emissive', s * (ROAD_HALF + 0.72), 2.4, 0, L, 0.14, 0.34, shade(pal.edge, 0.75), slice);
       for (let z = 4; z < L; z += 6) {
         b.box('emissive', s * (ROAD_HALF + 0.72), 5.5, -z, 0.14, 1.6, 1.2, shade(pal.accentGlow, 0.8));
       }

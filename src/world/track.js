@@ -7,6 +7,18 @@ const ACTIVE = 8;         // slots alive at once (~380 units of visible road)
 const RELAY_EVERY = 3;    // one checkpoint every three chunks (~144 m)
 
 /**
+ * Checkpoint spacing is the real difficulty dial.
+ *
+ * A RELAY refills to full, so any drain-based mechanic is only as sharp as
+ * the distance between them: at 144 m a doubled drain is something a player
+ * can simply eat. A zone whose mechanic IS the charge economy has to push
+ * them apart or the decision is decorative.
+ */
+function relayEvery(zone) {
+  return (zone && zone.props.relayEvery) || RELAY_EVERY;
+}
+
+/**
  * Streams a zone. Chunk geometry is built once per zone and then recycled by
  * repositioning, so a run never allocates geometry mid-flight and never
  * hitches. Changing zone throws the geometry away and rebuilds, which only
@@ -122,7 +134,7 @@ export class Track {
     // to be run on whatever charge you arrive with.
     const relayZ = zStart - CHUNK_LEN * 0.5;
     const clearOfFinish = this.finishZ === null || relayZ > this.finishZ + 90;
-    if (index > 0 && index % RELAY_EVERY === 0 && clearOfFinish) {
+    if (index > 0 && index % relayEvery(this.zone) === 0 && clearOfFinish) {
       this.relays.push({ z: relayZ, slot: index, used: false });
     }
     this.slots.push(slot);

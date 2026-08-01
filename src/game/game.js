@@ -34,8 +34,12 @@ const TUNE = {
   slopePull: 34,      // how hard a gradient drags or pushes
   bumperCharge: 6,
   bumperCut: 0.95,
+  comboWindow: 2.6,
   beltPush: 1.09,     // conveyor running with you
   beltDrag: 0.94,     // conveyor running against you
+  // Steep, because RELAYs refill to full: a gentle tax between checkpoints is
+  // something a player can simply ignore, and then the lane choice is fake.
+  beltDrainFactor: 3.4,
   springBoost: 1.55,  // bloom pads, relative to a normal jump
   springCharge: 3,
   ringBoost: 1.08,    // threading a hoop in The Vault
@@ -111,6 +115,8 @@ export class Game {
     this.speed = this.pace.start;
     this.charge = TUNE.maxCharge;
     this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false };
+    this.combo = 0;
+    this.lastBump = -99;
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.toast('GO!');
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
@@ -159,10 +165,20 @@ export class Game {
     const p = this.player;
     const away = p.lane === 0 ? 1 : p.lane === 2 ? -1 : (o.x <= p.x ? 1 : -1);
     p.lane = Math.max(0, Math.min(2, p.lane + away));
-    this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.bumperCharge);
+
+    // Chaining is the mechanic. One bumper is a nudge; a run of them is the
+    // only thing that keeps the bar alive at this zone's drain rate, so you
+    // steer INTO them and the ricochet lines up the next one.
+    this.combo = (this.time - this.lastBump < TUNE.comboWindow) ? Math.min(this.combo + 1, 6) : 1;
+    this.lastBump = this.time;
+    // A lone bump pays almost nothing. Bumpers sit in your path, so incidental
+    // hits are free and would sustain a player who never engages; only the
+    // chain is worth anything, and a chain has to be steered for.
+    const payout = TUNE.bumperCharge * (this.combo === 1 ? 0.3 : this.combo);
+    this.charge = Math.min(TUNE.maxCharge, this.charge + payout);
     this.speed = Math.max(this.pace.start * 0.9, this.speed * TUNE.bumperCut);
     this.shake = 0.3;
-    this.hud.toast('BUMP', 'relay');
+    this.hud.toast(this.combo > 1 ? `BUMP x${this.combo}` : 'BUMP', 'relay');
     this.sfx.relay();
   }
 
@@ -250,6 +266,7 @@ export class Game {
 
   _features(dt) {
     const p = this.player;
+    this.onBadBelt = false;
 
     // The Heights has no railings, and the gusts are strong enough to carry
     // the outer lane over the edge. Standing still is not a strategy.
@@ -259,12 +276,19 @@ export class Game {
     for (const f of this.track.nearFeatures(p.z, 44)) {
       if (f.kind === 'belt') {
         // Continuous while you stand on it, so the lane you pick is a
-        // sustained decision rather than a one-off pickup.
+        // sustained decision rather than a one-off pickup. The wrong belt
+        // also burns charge, which is what makes staying on it a real cost
+        // rather than a mild slowdown you can ignore.
         const on = p.z <= f.startZ && p.z > f.endZ && p.lane === f.lane && !p.airborne;
         if (on) {
           const factor = f.dir > 0 ? TUNE.beltPush : TUNE.beltDrag;
-          const target = this.pace.max * (f.dir > 0 ? 1.15 : 0.6);
+          const target = this.pace.max * (f.dir > 0 ? 1.15 : 0.55);
           this.speed += (target - this.speed) * Math.min(1, Math.abs(1 - factor) * 12 * dt);
+          if (f.dir < 0) this.onBadBelt = true;
+          else if (!this.beltToast || this.time - this.beltToast > 2.5) {
+            this.beltToast = this.time;
+            this.hud.toast('CARRIED', 'relay');
+          }
         }
         continue;
       }
@@ -359,7 +383,10 @@ export class Game {
     const targetX = p.x * 0.55;
     // Flying, the camera has to track her altitude much more closely or she
     // leaves the frame the moment she climbs.
-    const ground = hillAt(p.z, this.hill);
+    // Sample the hill under the CAMERA, not under the player. The camera sits
+    // eight metres back, and on a slope that difference is exactly enough to
+    // bury it in the road or fling it into the air.
+    const ground = hillAt(p.z + 7.8, this.hill);
     const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + p.y * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
     cam.position.y += (targetY - cam.position.y) * Math.min(1, 5 * dt);
@@ -397,7 +424,9 @@ export class Game {
     if (this.state === 'running') {
       this.speed = Math.min(this.pace.max, this.speed + this.pace.ramp * dt);
       const speedRatio = (this.speed - this.pace.start) / (this.pace.max - this.pace.start);
-      this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * dt;
+      const beltTax = this.onBadBelt ? TUNE.beltDrainFactor : 1;
+      const zoneTax = this.zone.props.drain || 1;
+      this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * dt;
 
       this.player.update(dt, this.speed, this.time);
 

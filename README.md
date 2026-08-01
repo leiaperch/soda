@@ -298,19 +298,33 @@ Every zone changes a rule, not just a colour.
   it, riding above barrier height and earning charge per second. Run into one
   on the ground and it is a wall. That is the bargain: it is only a shortcut
   if you commit to the jump.
-- **The Dunes** — the only zone where the road actually goes up and down.
+- **The Sugar Flats** — the only zone where the road actually goes up and down.
   Gravity does the rest: you bleed speed climbing and get it back falling,
-  measured swinging between 10.8 and 27 from the gradient alone. The camera
-  aims at the road sixteen metres ahead *at that road's height*, so cresting a
-  rise shows you the far side instead of the sky.
-- **The Arcade** — you are the ball. Every block in the authored phrases
-  becomes a bumper: hitting one throws you into a neighbouring lane and pays
-  charge instead of taking it. It inverts the reflex the other ten zones spend
-  their whole length training.
-- **The Foundry** — conveyor lanes. Green running with you, red against you,
-  and the colour plus the chevron direction are the only cues, so the two must
-  never look alike. Every phrase offers at least one lane running with you,
-  which keeps it a choice rather than a tax.
+  swinging between 10.8 and 27 from the gradient alone. The camera aims at the
+  road sixteen metres ahead *at that road's height*, so cresting a rise shows
+  you the far side instead of the sky, and it samples the hill under **itself**
+  rather than under the player, or on a slope it buries in the road.
+- **The Arcade** — you are the ball. Every block becomes a bumper: hitting one
+  throws you into a neighbouring lane and pays charge instead of taking it.
+  A lone bump pays almost nothing, because bumpers sit in your path and
+  incidental hits would carry a player who never engages; only the chain is
+  worth anything. Measured: no chaining dies at 1990 m, chaining clears 2200.
+- **The Bottling Plant** — belt lanes, mint with you and red syrup against
+  you, colour and chevron direction the only cues. The middle lane is always
+  the bad belt, because with green sometimes landing under the default line
+  doing nothing was a winning strategy. Measured: staying central dies at
+  218 m, seeking mint clears 2900.
+
+**Checkpoint spacing is the real difficulty dial.** A RELAY refills to full,
+so any drain-based mechanic is only as sharp as the distance between them. The
+Arcade doubles the gap (`props.relayEvery`) or the chain is decorative: at the
+normal 144 m a competent player clears it without ever chaining.
+
+**Palette is part of the brief, not decoration.** The Dunes shipped as a brown
+desert and the Foundry as a rust industrial estate. Both were perfectly decent
+and completely off-brief, and they are what made the game stop looking Y2K.
+Pink sand under a mint sky is the same landform in the right language, and a
+foundry became the factory the drink is made in.
 - **The Docks** — the catwalk simply runs out. Gravity drops to 58% and top
   speed is capped at 30, which puts airtime at ~1.0 s and a jump at 18 to 30 m
   against 48 m between gaps. The first pass used 0.42 gravity with no speed
