@@ -353,9 +353,18 @@ kerb, which put a picket fence of upright shapes at the edge of vision: they
 read as obstacles and then you sailed straight through them. Either something
 is in the lane and solid, or it is well clear and obviously scenery.
 
-**`Builder.at()` only rotates around Y.** A `cyl()` inside it stands up. Two
-"horizontal pipes" and a whole deck of "rollers" shipped as a forest of posts
-in the middle of the track. Use boxes for anything meant to lie down.
+**`Builder.at()` only rotates around Y, so a `cyl()` inside it stands up.**
+This one shipped four separate times before it was hunted down properly:
+"horizontal pipes" over the bottling line, deck "rollers", the drive rollers
+at each end of every conveyor, the `pipe` gate in two zones, and the
+Greenhouse's "fallen trunk". Each was a post planted in the lane whose
+collision box was somewhere else entirely, so you walked through a solid-
+looking object — which is exactly what it looks like when a game is broken.
+
+**Use boxes for anything meant to lie down**, and when a visual bug turns up,
+grep the whole codebase for the pattern rather than fixing the one instance in
+front of you. The first three fixes here each addressed a real occurrence and
+left the one the player was actually looking at.
 
 **Palette is part of the brief, not decoration.** The Dunes shipped as a brown
 desert and the Foundry as a rust industrial estate. Both were perfectly decent

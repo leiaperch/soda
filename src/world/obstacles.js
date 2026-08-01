@@ -60,15 +60,28 @@ const BARRIERS = {
     b.pop();
   },
 
-  /** Fallen trunk with moss on top. */
+  /**
+   * Fallen trunk with moss on top.
+   *
+   * Boxes and domes, never a `cyl()` inside an `at()`: the matrix stack only
+   * rotates around Y, so the cylinder this used to use stood on end as a
+   * three-metre stump you then jumped through at one metre.
+   */
   log(b, pal, x, z, s) {
     const bark = new THREE.Color('#6b4a2f');
-    b.at(x, s.h * 0.5, z, 0, 1, 1, 1);
-    b.cyl('toon', 0, 0, 0, s.h * 0.5, s.h * 0.5, s.w, 8, shade(bark, 1.0));
-    b.pop();
-    b.box('toon', x, s.h * 0.82, z, s.w * 0.92, s.h * 0.22, s.d * 0.7, shade(pal.edge, 0.9));
-    b.dome('emissive', x - s.w * 0.22, s.h, z, 0.22, 0.2, 6, 2, shade(pal.accentGlow, 1.2));
-    b.dome('emissive', x + s.w * 0.26, s.h, z + 0.1, 0.16, 0.15, 6, 2, shade(pal.accentGlow, 1.0));
+    const r = s.h * 0.5;
+    // faceted barrel, built from stacked slabs so it lies across the lane
+    for (const [dy, w] of [[0.16, 1.0], [0.5, 0.92], [0.82, 0.66]]) {
+      b.box('toon', x, dy * s.h - 0.08, z, s.w * 1.02, s.h * 0.36, s.d * (0.55 + w * 0.5),
+        shade(bark, 0.9 + dy * 0.35));
+    }
+    for (const side of [-1, 1]) {
+      b.dome('toon', x + side * s.w * 0.5, s.h * 0.5, z, r * 0.95, side * 0.28, 8, 3, shade(bark, 1.15));
+    }
+    // moss and a couple of glowing caps along the top
+    b.box('toon', x, s.h * 0.86, z, s.w * 0.9, s.h * 0.2, s.d * 0.72, shade(pal.edge, 0.9));
+    b.dome('emissive', x - s.w * 0.22, s.h * 1.02, z, 0.22, 0.2, 6, 2, shade(pal.accentGlow, 1.2));
+    b.dome('emissive', x + s.w * 0.26, s.h * 1.02, z + 0.1, 0.16, 0.15, 6, 2, shade(pal.accentGlow, 1.0));
   },
 };
 
@@ -126,15 +139,23 @@ const GATES = {
     b.box('emissive', x, s.base - 0.1, z, s.w * 0.9, 0.1, 0.2, shade(pal.accentGlow, 1.1));
   },
 
-  /** Overhead pipe run, venting. */
+  /**
+   * Overhead pipe run, venting.
+   *
+   * Built from boxes: `Builder.at()` only rotates around Y, so the `cyl()`
+   * this used to use stood up as a 5.6 m column planted in the lane while the
+   * collision stayed overhead. You slid straight through a visible post.
+   */
   pipe(b, pal, x, z, s) {
-    b.at(x, s.base + s.h * 0.45, z, Math.PI / 2, 1, 1, 1);
-    b.cyl('chrome', 0, -(s.w / 2 + 1.6), 0, 0.62, 0.62, s.w + 3.2, 10, shade(pal.chrome, 0.85));
-    b.pop();
+    const y = s.base + s.h * 0.45;
+    b.box('chrome', x, y, z, s.w + 3.6, 1.15, 1.15, shade(pal.chrome, 0.85));
+    b.box('chrome', x, y - 0.1, z, s.w + 4.0, 0.28, 1.35, shade(pal.chrome, 0.7));
     b.box('toon', x, s.base, z, s.w * 0.85, s.h * 0.5, s.d, shade(pal.road, 2.0));
     b.box('emissive', x, s.base - 0.14, z, s.w * 0.8, 0.14, s.d + 0.06, shade(pal.accentGlow, 1.3));
+    // valve wheels on the run, so it reads as plumbing rather than a girder
     for (const side of [-1, 1]) {
-      b.cyl('chrome', x + side * (s.w / 2 + 0.5), 0, z, 0.26, 0.22, s.base + s.h * 0.45, 6, shade(pal.chrome, 0.7));
+      b.cyl('chrome', x + side * (s.w * 0.5 + 1.1), y + 0.55, z, 0.42, 0.42, 0.22, 8, shade(pal.chrome, 0.95));
+      b.box('emissive', x + side * (s.w * 0.5 + 0.4), y - 0.6, z, 0.5, 0.16, 0.5, shade(pal.edge, 1.0));
     }
   },
 };

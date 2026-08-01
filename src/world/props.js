@@ -502,11 +502,14 @@ export function conveyor(b, pal, x, from, to, dir) {
   for (const s of [-1, 1]) {
     b.box('chrome', x + s * 1.28, 0.02, mid, 0.24, 0.3, len, shade(pal.chrome, 0.8));
   }
-  // rollers at each end
+  // Drive rollers at each end.
+  //
+  // Boxes, not cylinders. `Builder.at()` only rotates around Y, so the cyl()
+  // this used to use stood on end: every belt had a 2.4 m chrome post planted
+  // at each end, right in the lane, that you walked straight through.
   for (const z of [from + 0.5, to - 0.5]) {
-    b.at(x, 0.16, -z, 0, 1, 1, 1);
-    b.cyl('chrome', 0, 0, 0, 0.22, 0.22, 2.4, 8, shade(pal.chrome, 0.9));
-    b.pop();
+    b.box('chrome', x, 0.06, -z, 2.4, 0.34, 0.44, shade(pal.chrome, 0.9));
+    b.box('chrome', x, 0.06, -z, 2.5, 0.2, 0.28, shade(pal.chrome, 1.0));
   }
   for (let z = from + 1.5; z < to - 0.5; z += 2.2) {
     // a chevron: two bars meeting at a point, apex in the direction of travel
