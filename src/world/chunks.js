@@ -425,15 +425,26 @@ function buildPlant(b, pal, props) {
     b.box('chrome', 0, 6.2, -z, ROAD_HALF * 2 + 6, 1.0, 1.0, shade(pal.chrome, 0.9));
     b.box('emissive', 0, 6.1, -z, ROAD_HALF * 2, 0.12, 1.1, shade(pal.accentGlow, 0.75));
   }
-  for (let z = 6; z < L; z += 16) {
+  // Syrup vats.
+  //
+  // Squat and banded on purpose. The first pass was a tall thin chrome
+  // cylinder, and chrome reflecting a pink sky is simply a pink post: a row
+  // of them read as a colonnade of poles standing beside the track. A vat has
+  // to be wider than it is tall, and it has to be made of something.
+  for (let z = 8; z < L; z += 26) {
     for (const s of [-1, 1]) {
-      // Beyond the bottle racks, which now occupy the near shoulder.
-      const x = s * (ROAD_HALF + 9.5);
-      b.cyl('chrome', x, 3.4, -z, 2.6, 2.4, 5.5, 12, shade(pal.chrome, 0.95));
-      b.cyl('glass', x, 3.6, -z, 2.2, 2.2, 4.2, 12, shade(pal.accentGlow, 1.1));
-      b.dome('chrome', x, 8.9, -z, 2.7, 1.3, 12, 4, shade(pal.chrome, 0.9));
-      b.cyl('toon', x, 0, -z, 3.0, 2.8, 3.4, 12, shade(pal.deck, 1.1));
-      b.box('emissive', x, 2.2, -z, 5.4, 0.14, 0.5, shade(pal.edge, 0.9));
+      const x = s * (ROAD_HALF + 10.5);
+      b.cyl('toon', x, 0, -z, 4.0, 3.9, 0.5, 14, shade(pal.deck, 0.9));
+      b.cyl('toon', x, 0.5, -z, 3.7, 3.6, 3.0, 14, shade(pal.facades[0], 1.0));
+      // a window band with the syrup level showing through
+      b.cyl('glass', x, 1.1, -z, 3.75, 3.75, 1.5, 14, shade(pal.accentGlow, 1.15));
+      b.cyl('emissive', x, 1.1, -z, 3.5, 3.5, 0.9, 14, shade(pal.accentGlow, 0.55));
+      for (const y of [0.5, 2.5, 3.5]) {
+        b.cyl('chrome', x, y, -z, 3.85, 3.85, 0.28, 14, shade(pal.chrome, 0.9));
+      }
+      b.dome('toon', x, 3.5, -z, 3.6, 1.5, 14, 4, shade(pal.facades[1], 1.0));
+      b.cyl('chrome', x, 5.0, -z, 0.4, 0.34, 1.4, 8, shade(pal.chrome, 0.85));
+      b.box('emissive', x, 2.9, -z + 3.5, 2.2, 0.16, 0.12, shade(pal.edge, 0.95));
     }
   }
   // Bottle racks, well clear of the lanes. Sitting them just off the kerb made

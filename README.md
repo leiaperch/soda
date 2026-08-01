@@ -342,6 +342,12 @@ every belt was buried inside the deck and the zone's single mechanic was
 invisible. The decks are 0.1 now. Anything a zone is *about* has to be the
 thing you cannot miss.
 
+**Chrome plus a pink sky equals a pink post.** The syrup vats were tall thin
+chrome cylinders, and a row of them read as a colonnade of plain pink poles
+beside the track, not as machinery. They are squat now, wider than they are
+tall, in toon with chrome bands and a lit window band. Proportion carries more
+of a silhouette than material does: a vat is wide, a post is thin.
+
 **Keep set dressing out of the play space.** The bottle racks sat just off the
 kerb, which put a picket fence of upright shapes at the edge of vision: they
 read as obstacles and then you sailed straight through them. Either something
