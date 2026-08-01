@@ -172,12 +172,11 @@ Autoplay is blocked until a real gesture, so the menu track is queued at boot
 and released by whichever interaction happens first. Run tracks are drawn from
 a shuffled bag so the same one never repeats back to back. Mute is persisted.
 
-**The tempo rides the run.** `playbackRate` is driven off the same speed ratio
-the camera FOV uses, from 1.0 at the start line to 1.34 at top speed, smoothed
-so it never clicks. `preservesPitch` is switched off on purpose: time-stretched
-audio at constant pitch sounds correct and feels like nothing, while letting
-the track climb in pitch is what makes the acceleration physical. Past about
-1.34 pop punk starts sounding like a wasp, hence the ceiling.
+**The music never changes tempo.** An earlier version tied `playbackRate` to
+the run speed with the pitch left free to climb. It is a great ten seconds and
+unbearable after a minute: the pitch rise never resolves, so the ear stops
+hearing acceleration and starts hearing a song going wrong. Speed is sold by
+the camera FOV, the world going past and the SFX. Leave the track alone.
 
 **The courier** is `public/models/courier.gltf`. Three fixes are applied at
 load time in `game/courier.js` and none are optional:

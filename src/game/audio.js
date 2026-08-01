@@ -23,8 +23,6 @@ const TRACKS = {
 const FADE_MS = 700;
 const MENU_VOLUME = 0.42;
 const RUN_VOLUME = 0.72;
-const MIN_RATE = 1.0;
-const MAX_RATE = 1.34;   // beyond this pop punk starts sounding like a wasp
 
 export function createAudio() {
   const decks = [makeDeck(), makeDeck()];
@@ -32,7 +30,6 @@ export function createAudio() {
   let unlocked = false;
   let pending = null;
   let muted = readMuted();
-  let rate = 1;
   let order = [];
   const listeners = new Set();
 
@@ -41,12 +38,10 @@ export function createAudio() {
     el.loop = true;
     el.preload = 'none';
     el.volume = 0;
-    // Pitch rides with the tempo on purpose. Time-stretching at a constant
-    // pitch sounds correct and feels like nothing; letting the track climb is
-    // what makes the speed physical.
-    el.preservesPitch = false;
-    el.mozPreservesPitch = false;
-    el.webkitPreservesPitch = false;
+    // The track plays at its own tempo, always. Tying playbackRate to the run
+    // speed was a neat trick for ten seconds and exhausting after a minute:
+    // the pitch climb never resolves, so it reads as the song going wrong.
+    // Speed is sold by the camera and the world, not by detuning the music.
     return el;
   }
 
@@ -122,22 +117,6 @@ export function createAudio() {
     /** Drop the music back without stopping it, for the end screens. */
     duck() { fade(decks[active], muted ? 0 : MENU_VOLUME * 0.6, FADE_MS); },
 
-    /**
-     * Tie the tempo to the run. Smoothed towards the target rather than set
-     * outright, because playbackRate jumps are audible as clicks.
-     */
-    setRate(target) {
-      const wanted = Math.max(MIN_RATE, Math.min(MAX_RATE, target));
-      rate += (wanted - rate) * 0.08;
-      for (const d of decks) {
-        if (Math.abs(d.playbackRate - rate) > 0.002) d.playbackRate = rate;
-      }
-    },
-
-    resetRate() {
-      rate = 1;
-      for (const d of decks) d.playbackRate = 1;
-    },
 
     get muted() { return muted; },
 
@@ -157,7 +136,6 @@ export function createAudio() {
         unlocked,
         muted,
         queued: pending ? pending.src : null,
-        rate: +rate.toFixed(3),
         decks: decks.map((d, i) => ({
           active: i === active,
           track: d.src ? d.src.split('/').pop() : null,

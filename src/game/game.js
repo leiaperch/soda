@@ -102,7 +102,7 @@ export class Game {
     this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false };
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.toast('GO!');
-    if (this.audio) { this.audio.unlock(); this.audio.resetRate(); this.audio.playRun(this.zone); }
+    if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
   }
 
   _finish() {
@@ -111,7 +111,7 @@ export class Game {
     const beat = records.submit(this.zone.id, this.run);
     this.hud.showClear(this.run, beat, this.zone, this.nextZone());
     this.sfx.finish();
-    if (this.audio) { this.audio.resetRate(); this.audio.duck(); }
+    if (this.audio) this.audio.duck();
   }
 
   /** Next built zone after this one, or null at the end of what exists. */
@@ -361,9 +361,6 @@ export class Game {
       if (this._wasAirborne && !this.player.airborne) this.sfx.land();
       this._wasAirborne = this.player.airborne;
 
-      // The track climbs, and so does the music with it.
-      if (this.audio) this.audio.setRate(1 + speedRatio * 0.34);
-
       if (this.zone.length && this.run.distance >= this.zone.length) {
         this.run.distance = this.zone.length;
         this._finish();
@@ -372,7 +369,7 @@ export class Game {
         this.state = 'over';
         const beat = records.submit(this.zone.id, this.run);
         this.hud.showOver(this.run, beat, this.zone);
-        if (this.audio) { this.audio.resetRate(); this.audio.duck(); }
+        if (this.audio) this.audio.duck();
       } else {
         this.hud.update(this.charge, TUNE.maxCharge, this.run.distance, this.speed, this.zone.length);
       }
