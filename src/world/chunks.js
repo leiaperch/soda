@@ -52,13 +52,24 @@ const FEATURES = {
     [{ lane: 1, from: 9, to: 25 }, { lane: 2, from: 31, to: 44 }],
     [{ lane: 0, from: 8, to: 22 }, { lane: 1, from: 28, to: 43 }],
   ],
+  // The Docks: the catwalk simply stops. Widths are tuned to the low-gravity
+  // jump arc, which is roughly twice as long as everywhere else.
+  gap: [
+    [{ from: 18, to: 25 }],
+    [{ from: 12, to: 18 }, { from: 32, to: 39 }],
+    [{ from: 22, to: 31 }],
+    [{ from: 10, to: 16 }, { from: 26, to: 32 }, { from: 40, to: 45 }],
+  ],
 };
 
 /** True when an obstacle sits close enough to a feature to make it unfair. */
 function conflicts(o, features) {
-  return features.some((f) => (f.kind === 'swell'
-    ? Math.abs(o.z - f.z) < 5.5
-    : o.lane === f.lane && o.z > f.from - 5 && o.z < f.to + 5));
+  return features.some((f) => {
+    if (f.kind === 'swell') return Math.abs(o.z - f.z) < 5.5;
+    // A gap spans every lane, so nothing may sit near either lip.
+    if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
+    return o.lane === f.lane && o.z > f.from - 5 && o.z < f.to + 5;
+  });
 }
 
 export function pickPattern(rng, tier) {
@@ -69,7 +80,140 @@ export function pickPattern(rng, tier) {
 const _c = new THREE.Color();
 const shade = (color, m) => _c.copy(color).multiplyScalar(m).clone();
 
-function buildRoad(b, pal, props) {
+/**
+ * Track structure, not decoration. Each style emits a different *shape* of
+ * track: what is underfoot, whether there are edges, whether there is even
+ * ground beside you. Repainting a street was the thing that made every zone
+ * feel like the first one.
+ */
+function buildRoad(b, pal, props, features = []) {
+  switch (props.road) {
+    case 'sea': return buildSea(b, pal, props);
+    case 'catwalk': return buildCatwalk(b, pal, props, features);
+    case 'skybridge': return buildSkybridge(b, pal, props);
+    default: return buildStreet(b, pal, props);
+  }
+}
+
+/** Open water to the horizon. No kerb, no deck, no rail, no edge at all. */
+function buildSea(b, pal, props) {
+  const L = CHUNK_LEN;
+  const wide = 150;
+
+  // Shallow and low-contrast on purpose: step the height or the shade too far
+  // and rolling water reads as a flight of stairs.
+  const rows = 64;
+  const step = L / rows;
+  for (let i = 0; i < rows; i++) {
+    const z = -(i + 0.5) * step;
+    const phase = i * 0.42;
+    const h = 0.07 + Math.sin(phase) * 0.035 + Math.sin(phase * 0.31) * 0.025;
+    b.box('toon', 0, 0.02, z, wide, h, step * 1.02, shade(pal.road, 0.95 + Math.sin(phase) * 0.07));
+    if (Math.sin(phase) > 0.86) {
+      b.box('emissive', 0, 0.02 + h, z + step * 0.4, wide * 0.7, 0.035, step * 0.26, shade(pal.lane, 0.28));
+    }
+  }
+
+  // Lanes are marked by buoys, because painted lines on the sea make no sense
+  // and were the main thing still reading as "road".
+  for (let z = 4; z < L; z += 7) {
+    for (const s of [-1, 1]) {
+      const x = s * (ROAD_HALF + 0.4);
+      b.dome('toon', x, 0.06, -z, 0.55, 0.75, 8, 3, shade(pal.accent, 1.0));
+      b.cyl('emissive', x, 0.78, -z, 0.16, 0.16, 0.5, 6, shade(pal.accentGlow, 1.25));
+      b.dome('toon', x, 0.06, -z, 0.75, -0.12, 8, 2, shade(pal.lane, 0.7));
+    }
+  }
+  for (let z = 2; z < L; z += 5) {
+    for (const x of [-1.3, 1.3]) {
+      b.dome('toon', x, 0.05, -z, 0.24, 0.3, 6, 2, shade(pal.lane, 0.85));
+    }
+  }
+}
+
+/**
+ * A floating catwalk in vacuum. Nothing below, nothing beside, and it stops
+ * dead wherever a gap is authored: the deck is built as the spans *between*
+ * the holes rather than as one slab with holes drawn on it.
+ */
+function buildCatwalk(b, pal, props, gaps = []) {
+  const L = CHUNK_LEN;
+  const half = ROAD_HALF;
+
+  const holes = gaps.filter((g) => g.kind === 'gap').sort((a, b2) => a.from - b2.from);
+  const spans = [];
+  let cursor = 0;
+  for (const g of holes) {
+    if (g.from > cursor) spans.push([cursor, g.from]);
+    cursor = Math.max(cursor, g.to);
+  }
+  if (cursor < L) spans.push([cursor, L]);
+
+  for (const [from, to] of spans) {
+    const len = to - from;
+    if (len <= 0.2) continue;
+    const mid = -(from + len / 2);
+    b.box('toon', 0, -0.5, mid, half * 2, 0.5, len, shade(pal.road, 1.0));
+    b.slab('toon', 0, 0.02, mid, half * 2, len, shade(pal.road, 1.25));
+
+    // grating ribs, so speed reads on a surface with no markings beside it
+    for (let z = from + 1; z < to; z += 2.4) {
+      b.box('toon', 0, 0.03, -z, half * 2 - 0.3, 0.05, 0.5, shade(pal.deck, 1.5));
+    }
+    for (const s of [-1, 1]) {
+      b.box('chrome', s * (half - 0.15), 0.02, mid, 0.5, 0.28, len, shade(pal.chrome, 0.9));
+      b.box('emissive', s * (half - 0.15), 0.3, mid, 0.3, 0.06, len, shade(pal.edge, 0.85));
+      for (let z = from + 3; z < to; z += 9) {
+        b.at(s * (half - 0.2), -0.5, -z, 0, 1, 1, 1);
+        b.box('chrome', s * 0.9, -1.6, 0, 0.3, 3.4, 0.3, shade(pal.chrome, 0.7));
+        b.pop();
+        b.cyl('emissive', s * (half + 0.55), -3.5, -z, 0.22, 0.22, 0.2, 6, shade(pal.accentGlow, 1.2));
+      }
+    }
+    // lip and warning stripes at each cut end
+    for (const [edgeZ, dir] of [[from, 1], [to, -1]]) {
+      if (edgeZ <= 0.01 || edgeZ >= L - 0.01) continue;
+      b.box('chrome', 0, 0.02, -edgeZ, half * 2, 0.34, 0.5, shade(pal.chrome, 1.0));
+      b.box('emissive', 0, 0.36, -edgeZ, half * 2 - 0.4, 0.07, 0.55, shade(pal.accentGlow, 1.3));
+      for (let i = 0; i < 3; i++) {
+        b.box('emissive', 0, 0.04, -(edgeZ + dir * (1.4 + i * 1.5)), half * 2 - 1.2, 0.02, 0.6,
+          shade(pal.accentGlow, 0.5 - i * 0.13));
+      }
+    }
+  }
+}
+
+/** A bare bridge above the clouds. The lack of railings is the mechanic. */
+function buildSkybridge(b, pal, props) {
+  const L = CHUNK_LEN;
+  const mid = -L / 2;
+  // Narrower than a street on purpose: the outer lane sits close enough to the
+  // drop that a gust can take you over it.
+  const half = props.deckHalf ?? ROAD_HALF;
+
+  b.box('toon', 0, -0.9, mid, half * 2 + 0.6, 0.9, L, shade(pal.road, 0.72));
+  b.slab('toon', 0, 0.02, mid, half * 2, L, pal.road);
+
+  // The edge is the danger, so it is the brightest thing on the deck.
+  for (const s of [-1, 1]) {
+    b.box('toon', s * (half + 0.12), 0, mid, 0.55, 0.14, L, shade(pal.kerb, 1.0));
+    b.box('emissive', s * (half + 0.12), 0.14, mid, 0.42, 0.05, L, shade(pal.edge, 1.0));
+    // hazard chevrons pointing off the side
+    for (let z = 2; z < L; z += 3.2) {
+      b.box('emissive', s * (half - 0.55), 0.04, -z, 0.7, 0.02, 1.1, shade(pal.edge, 0.35));
+    }
+  }
+  // suspension pylons, spaced far apart so the deck feels thin and exposed
+  for (let z = 8; z < L; z += 24) {
+    for (const s of [-1, 1]) {
+      b.cyl('chrome', s * (half + 0.9), -0.9, -z, 0.5, 0.3, 16, 8, shade(pal.chrome, 0.95));
+      b.box('emissive', s * (half + 0.9), 14, -z, 0.5, 0.4, 0.5, shade(pal.accentGlow, 1.2));
+    }
+    b.box('chrome', 0, 15.2, -z, half * 2 + 2.2, 0.5, 0.6, shade(pal.chrome, 0.9));
+  }
+}
+
+function buildStreet(b, pal, props) {
   const L = CHUNK_LEN;
   const mid = -L / 2;
 
@@ -132,6 +276,18 @@ function buildRoad(b, pal, props) {
       }
     }
   }
+
+  // The Core runs in a trench: walls right at the kerb turn an avenue into a
+  // chute, which is most of why it feels like a descent rather than a street.
+  if (props.walls) {
+    for (const s of [-1, 1]) {
+      b.box('toon', s * (ROAD_HALF + 2.4), 0, mid, 3.4, 18, L, shade(pal.road, 0.45));
+      b.box('emissive', s * (ROAD_HALF + 0.72), 2.4, mid, 0.14, 0.34, L, shade(pal.edge, 0.75));
+      for (let z = 4; z < L; z += 6) {
+        b.box('emissive', s * (ROAD_HALF + 0.72), 5.5, -z, 0.14, 1.6, 1.2, shade(pal.accentGlow, 0.8));
+      }
+    }
+  }
 }
 
 function buildObstacle(b, pal, o) {
@@ -174,11 +330,11 @@ function buildScenery(b, rng, pal, props) {
   }
 
   for (const side of [-1, 1]) {
-    for (let z = 4; z < L; z += props.lampEvery) {
+    for (let z = 4; props.lampEvery > 0 && z < L; z += props.lampEvery) {
       lamp(b, pal, side * (ROAD_HALF + 2.0), -z, side);
     }
 
-    for (let z = 6; z < L; z += props.streetEvery) {
+    for (let z = 6; props.streetEvery > 0 && z < L; z += props.streetEvery) {
       const roll = rng();
       const x = side * (ROAD_HALF + 4.6);
       if (roll < props.stallChance) marketStall(b, rng, pal, side * (ROAD_HALF + 5.4), -z, side);
@@ -194,7 +350,7 @@ function buildScenery(b, rng, pal, props) {
 
     // Skyline behind the deck.
     let z = rng.range(2, 8);
-    while (z < L - 4) {
+    while (props.skylineChance > 0 && z < L - 4) {
       const depth = rng.range(props.lotMin, props.lotMax);
       const x = side * (ROAD_HALF + 9 + rng.range(0, 9));
       if (rng() < props.skylineChance) {
@@ -236,12 +392,14 @@ export function buildChunk(rng, pattern, materials, zone) {
   const features = set.map((f) => ({ kind, ...f }));
   const kept = pattern.obstacles.filter((o) => !conflicts(o, features));
 
-  buildRoad(b, pal, zone.props);
+  // Road first, but it has to know the features: on The Docks the gaps are
+  // holes in the deck, not markings on it.
+  buildRoad(b, pal, zone.props, features);
   buildScenery(b, rng, pal, zone.props);
   for (const o of kept) buildObstacle(b, pal, o);
   for (const f of features) {
     if (f.kind === 'swell') swell(b, pal, -f.z);
-    else rail(b, pal, LANE_X[f.lane], f.from, f.to);
+    else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
   }
 
   const group = b.toGroup(materials);

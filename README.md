@@ -246,6 +246,22 @@ the music, and everything respects the mute toggle.
 
 ## Zone verbs
 
+**Track structure is per zone, not just palette.** This is the thing that
+matters: repainting a street made every zone feel like a remix of the first
+one. `props.road` selects what is actually underfoot, and each style emits a
+different *shape* of track rather than the same slab in another colour.
+
+- `street` — kerbs, decks, guard rails, lamps. The Ring, The Market, The Core.
+- `sea` — open water to the horizon. No kerb, no deck, no rail, no lamps, no
+  painted lines. Lanes are marked by buoys, because paint on the sea was the
+  main thing still reading as "a road with water on it".
+- `catwalk` — a narrow platform in vacuum with nothing below or beside it, and
+  it stops dead wherever a gap is authored: the deck is built as the spans
+  *between* the holes, not as a slab with holes drawn on it.
+- `skybridge` — a bare deck, narrower than a street, with no railings at all.
+- `street` + `walls` — the same street in a trench, which is most of why The
+  Core feels like a descent instead of an avenue.
+
 Every zone changes a rule, not just a colour.
 
 - **The Ring** — the base grammar: jump, slide, switch lane.
@@ -257,11 +273,14 @@ Every zone changes a rule, not just a colour.
   it, riding above barrier height and earning charge per second. Run into one
   on the ground and it is a wall. That is the bargain: it is only a shortcut
   if you commit to the jump.
-- **The Docks** — gravity drops to 42% with a slightly softer push, so she
-  hangs. A jump becomes a commitment you cannot take back mid-air.
-- **The Heights** — a crosswind shifts your target off the lane centre rather
-  than nudging x directly, so it is something you steer against instead of a
-  stutter you cannot read. Collision uses x, so the drift genuinely costs you.
+- **The Docks** — the catwalk simply runs out. Gravity drops to 42% so the
+  jump arc roughly doubles, and gap widths are tuned to it. Miss and you fall.
+- **The Heights** — no railings. The crosswind shifts your target off the lane
+  centre rather than nudging x directly, so it is something you steer against
+  instead of a stutter you cannot read, and `edgeX` sits just outside the
+  outer lane. Sitting in an outer lane through a gust puts you over the side:
+  measured at 17 falls in 90 seconds if you never move, none if you stay
+  central. That is the decision the zone is about.
 - **The Core** — starts at 25 and tops out at 54 with a steeper ramp, plus a
   light crosswind and the rails from The Market. Everything at once.
 
@@ -284,6 +303,11 @@ matte now.
 ## Not done yet
 
 - Ghost replay and the Daily Run leaderboard.
+- **The obstacle vocabulary is still shared.** Barrier, gate and block are the
+  same three objects in all six zones, so a block sitting in the open sea or
+  on a vacuum catwalk reads as borrowed. Each zone wants its own set: a wreck
+  or a breaker on The Shore, a swinging crane load on The Docks, a snapped
+  cable on The Heights. That is the next real novelty gain after this pass.
 - Never tested on a real phone. Everything so far is a desktop browser at a
   mobile viewport, so touch latency and sustained frame rate on low-end
   Android are unverified.

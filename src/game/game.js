@@ -30,6 +30,7 @@ const TUNE = {
   splashCut: 0.88,
   splashCharge: -6,
   grindCharge: 9,     // per second while on a rail
+  fallCharge: -32,    // off the catwalk, or off the bridge
 };
 
 /** Lets the game run headless in tests without branching on `if (sfx)`. */
@@ -187,9 +188,47 @@ export class Game {
    * Zone-specific verbs. Both are timing rewards rather than new obstacles:
    * the punishment for getting them wrong is losing tempo, not dying.
    */
+  /**
+   * Losing the deck. Not instant death, in keeping with the rest of the game:
+   * it costs a chunk of charge, all your speed and your clean run, and hauls
+   * you back to the middle lane.
+   */
+  _fall(label) {
+    const p = this.player;
+    this.charge += TUNE.fallCharge;
+    this.speed = Math.max(this.pace.start * 0.8, this.speed * 0.55);
+    p.stunned = 0.75;
+    p.grinding = null;
+    p.airborne = false;
+    p.y = 0;
+    p.vy = 0;
+    p.lane = 1;
+    p.x = 0;
+    this.run.clean = false;
+    this.shake = 0.75;
+    this.hud.toast(label, 'warn');
+    this.hud.flash();
+    this.sfx.crash();
+  }
+
   _features(dt) {
     const p = this.player;
+
+    // The Heights has no railings, and the gusts are strong enough to carry
+    // the outer lane over the edge. Standing still is not a strategy.
+    const edge = this.zone.props.edgeX;
+    if (edge && p.stunned <= 0 && Math.abs(p.x) > edge) this._fall('BLOWN OFF');
+
     for (const f of this.track.nearFeatures(p.z, 44)) {
+      if (f.kind === 'gap') {
+        const over = p.z <= f.startZ && p.z > f.endZ;
+        if (over && !f.done && !p.grinding && p.y < 0.4) {
+          f.done = true;
+          this._fall('MISSED IT');
+        }
+        continue;
+      }
+
       if (f.kind === 'swell') {
         if (f.done || p.z > f.z - 0.1) continue;
         f.done = true;

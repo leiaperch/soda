@@ -98,9 +98,13 @@ export class Track {
         slot.obstacles.push({ x: LANE_X[o.lane], z: zStart + o.z, spec: o.spec, type: o.type, hit: false });
       }
       for (const f of (variant.features || [])) {
-        slot.features.push(f.kind === 'swell'
-          ? { kind: 'swell', z: zStart - f.z, done: false }
-          : { kind: 'rail', lane: f.lane, x: LANE_X[f.lane], startZ: zStart - f.from, endZ: zStart - f.to, hit: false });
+        if (f.kind === 'swell') {
+          slot.features.push({ kind: 'swell', z: zStart - f.z, done: false });
+        } else if (f.kind === 'gap') {
+          slot.features.push({ kind: 'gap', startZ: zStart - f.from, endZ: zStart - f.to, done: false });
+        } else {
+          slot.features.push({ kind: 'rail', lane: f.lane, x: LANE_X[f.lane], startZ: zStart - f.from, endZ: zStart - f.to, hit: false });
+        }
       }
       for (const c of variant.cells) {
         this.cells.push({ x: LANE_X[c.lane], y: 1.15, z: zStart + c.z, slot: index });

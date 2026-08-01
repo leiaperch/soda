@@ -225,22 +225,43 @@ export function gantry(b, pal, z, roadHalf, color) {
  * A swell crossing the road on The Shore: a low curved crest of water. Not a
  * wall, a timing gate. You clear it in the air or you plough through it.
  */
+/**
+ * A swell rearing up out of the sea.
+ *
+ * Built as a grid, not a row: it needs a profile front-to-back as well as
+ * across, or it reads as a slab dropped on the water. It also runs far wider
+ * than the lane, because a wave that stops at the lane edge is a ramp.
+ */
 export function swell(b, pal, z) {
-  const span = ROAD_HALF * 2;
-  const segs = 14;
-  for (let i = 0; i < segs; i++) {
-    const t = (i + 0.5) / segs;
-    const x = -span / 2 + span * t;
-    const w = span / segs;
-    const h = 0.3 + Math.sin(t * Math.PI) * 0.8;
-    // Matte and well under 1.0. This is a wide surface repeated across the
-    // whole road; reflective or bright here and the bloom whites out the zone.
-    b.box('toon', x, 0.03, z, w * 1.02, h, 3.0, shade(pal.edge, 0.72));
-    // the lip curls forward, which is what makes it read as breaking
-    b.box('toon', x, 0.03 + h, z + 0.9, w * 1.02, 0.26, 1.3, shade(pal.edge, 0.9));
-    b.box('emissive', x, 0.03 + h + 0.26, z + 0.9, w * 1.02, 0.07, 1.35, shade(pal.lane, 0.55));
-    b.box('beam', x, 0.03 + h * 0.6, z, w * 1.02, 0.5, 0.06, shade(pal.lane, 0.3));
-    b.box('emissive', x, 0.05, z + 1.6, w * 1.02, 0.06, 0.3, shade(pal.lane, 0.45));
+  const span = 46;
+  const cols = 22;
+  const rows = 7;
+  const depth = 7;
+
+  for (let i = 0; i < cols; i++) {
+    const tx = (i + 0.5) / cols;
+    const x = -span / 2 + span * tx;
+    const w = span / cols;
+    // taller in the middle, tapering out to nothing at the far edges
+    const across = Math.pow(Math.sin(tx * Math.PI), 0.45);
+    for (let j = 0; j < rows; j++) {
+      const tz = (j + 0.5) / rows;
+      const cz = z - depth / 2 + depth * tz;
+      const along = Math.sin(tz * Math.PI);
+      const h = 0.06 + across * along * 1.05;
+      b.box('toon', x, 0.02, cz, w * 1.03, h, (depth / rows) * 1.03,
+        shade(pal.edge, 0.62 + along * 0.22));
+      // foam only on the crest row
+      if (tz > 0.5 && tz < 0.72 && across > 0.35) {
+        b.box('emissive', x, 0.02 + h, cz, w * 1.03, 0.06, (depth / rows) * 0.8, shade(pal.lane, 0.5));
+      }
+    }
+    // the lip curls forward off the crest, which is what makes it read broken
+    if (across > 0.3) {
+      const hc = 0.06 + across * 1.05;
+      b.box('toon', x, hc * 0.94, z + depth * 0.24, w * 1.03, 0.22, 1.5, shade(pal.edge, 0.95));
+      b.box('emissive', x, hc * 0.94 + 0.22, z + depth * 0.24, w * 1.03, 0.06, 1.55, shade(pal.lane, 0.62));
+    }
   }
 }
 
