@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2a0b3f">
+  <title>SODA</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <!-- Shared Y2K sprite sheet: 4-point sparkle, 8-point starburst, heart. -->
+  <svg class="sprites" aria-hidden="true">
+    <defs>
+      <symbol id="spark" viewBox="0 0 100 100">
+        <path d="M50 0C53 30 70 47 100 50 70 53 53 70 50 100 47 70 30 53 0 50 30 47 47 30 50 0Z"/>
+      </symbol>
+      <symbol id="burst" viewBox="0 0 100 100">
+        <path d="M50 0l8 32 24-22-14 30 33-6-28 18 28 18-33-6 14 30-24-22-8 32-8-32-24 22 14-30-33 6 28-18-28-18 33 6-14-30 24 22z"/>
+      </symbol>
+      <symbol id="heart" viewBox="0 0 100 100">
+        <path d="M50 92C22 72 4 55 4 34 4 19 16 8 30 8c9 0 17 5 20 12 3-7 11-12 20-12 14 0 26 11 26 26 0 21-18 38-46 58Z"/>
+      </symbol>
+      <symbol id="sound" viewBox="0 0 100 100">
+        <path d="M12 38h16L50 18v64L28 62H12z"/>
+        <path d="M62 34a24 24 0 0 1 0 32l-7-7a14 14 0 0 0 0-18zM74 22a40 40 0 0 1 0 56l-7-7a30 30 0 0 0 0-42z"/>
+      </symbol>
+      <symbol id="lock" viewBox="0 0 100 100">
+        <path d="M28 44V32a22 22 0 0 1 44 0v12h-10V32a12 12 0 0 0-24 0v12z"/>
+        <rect x="20" y="44" width="60" height="48" rx="10"/>
+      </symbol>
+      <symbol id="mute" viewBox="0 0 100 100">
+        <path d="M12 38h16L50 18v64L28 62H12z"/>
+        <path d="M63 39l7-7 24 24-7 7z"/>
+        <path d="M94 39l-7-7-24 24 7 7z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <button class="mute" id="btnMute" type="button" aria-label="Toggle music">
+    <span class="jelly__gloss"></span>
+    <svg class="ico mute__icon mute__icon--on"><use href="#sound"/></svg>
+    <svg class="ico mute__icon mute__icon--off"><use href="#mute"/></svg>
+  </button>
+
+  <div class="flash" id="flash"></div>
+  <div class="vignette" id="vignette"></div>
+
+  <div id="hud" class="hud is-hidden">
+    <div class="progress">
+      <div class="progress__fill" id="progressFill"></div>
+      <div class="progress__gloss"></div>
+      <svg class="ico progress__flag"><use href="#burst"/></svg>
+    </div>
+
+    <div class="gauge">
+      <div class="gauge__cap"><svg class="ico"><use href="#burst"/></svg></div>
+      <div class="gauge__body">
+        <div class="gauge__label">CHARGE</div>
+        <div class="gauge__track">
+          <div class="gauge__fill" id="chargeFill"></div>
+          <div class="gauge__ticks"></div>
+          <div class="gauge__gloss"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <svg class="ico readout__spark"><use href="#spark"/></svg>
+      <div class="readout__main">
+        <span class="chrome" id="statDistance">0</span>
+        <span class="readout__unit">M</span>
+      </div>
+      <div class="readout__sub"><span id="statSpeed">0</span> KM/H</div>
+    </div>
+
+    <div class="best" id="hudBest"></div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <div id="screenTitle" class="screen">
+    <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="sparkles" aria-hidden="true">
+      <svg class="ico s1"><use href="#burst"/></svg>
+      <svg class="ico s2"><use href="#spark"/></svg>
+      <svg class="ico s3"><use href="#burst"/></svg>
+      <svg class="ico s4"><use href="#spark"/></svg>
+      <svg class="ico s5"><use href="#burst"/></svg>
+      <svg class="ico s6"><use href="#spark"/></svg>
+      <svg class="ico s7"><use href="#heart"/></svg>
+      <svg class="ico s8"><use href="#spark"/></svg>
+      <svg class="ico s9"><use href="#burst"/></svg>
+      <svg class="ico s10"><use href="#spark"/></svg>
+      <svg class="ico s11"><use href="#heart"/></svg>
+      <svg class="ico s12"><use href="#spark"/></svg>
+    </div>
+
+    <div class="screen__inner">
+      <div class="logo">
+        <span class="logo__halo" aria-hidden="true">SODA</span>
+        <span class="logo__stroke" aria-hidden="true">SODA</span>
+        <span class="logo__fill">SODA</span>
+        <svg class="ico logo__spark logo__spark--a"><use href="#burst"/></svg>
+        <svg class="ico logo__spark logo__spark--b"><use href="#spark"/></svg>
+        <svg class="ico logo__spark logo__spark--c"><use href="#spark"/></svg>
+      </div>
+
+      <button class="jelly" id="btnStart" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">TAP TO RUN</span>
+        <svg class="ico jelly__spark"><use href="#spark"/></svg>
+      </button>
+
+      <ul class="howto">
+        <li><b>SWIPE</b> to switch lane</li>
+        <li><b>UP</b> to jump &middot; <b>DOWN</b> to slide</li>
+        <li>hit a <b>RELAY</b> before your <b>CHARGE</b> dies</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="screenZones" class="screen is-hidden">
+    <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="sparkles" aria-hidden="true">
+      <svg class="ico s1"><use href="#burst"/></svg>
+      <svg class="ico s5"><use href="#burst"/></svg>
+      <svg class="ico s8"><use href="#spark"/></svg>
+      <svg class="ico s11"><use href="#heart"/></svg>
+    </div>
+
+    <div class="screen__inner screen__inner--wide">
+      <h2 class="pick">
+        <span class="pick__stroke" aria-hidden="true">PICK A ZONE</span>
+        <span class="pick__fill">PICK A ZONE</span>
+      </h2>
+      <div class="zonelist" id="zoneList"></div>
+      <button class="jelly jelly--ghost" id="btnBackTitle" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">BACK</span>
+      </button>
+    </div>
+  </div>
+
+  <template id="tplZone">
+    <button class="zone" type="button">
+      <span class="zone__gloss"></span>
+      <span class="zone__num"></span>
+      <span class="zone__body">
+        <span class="zone__name"></span>
+        <span class="zone__sub"></span>
+        <span class="zone__mech"></span>
+      </span>
+      <span class="zone__best"></span>
+      <svg class="ico zone__lock"><use href="#lock"/></svg>
+    </button>
+  </template>
+
+  <div id="screenClear" class="screen is-hidden">
+    <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="sparkles" aria-hidden="true">
+      <svg class="ico s1"><use href="#burst"/></svg>
+      <svg class="ico s3"><use href="#burst"/></svg>
+      <svg class="ico s5"><use href="#burst"/></svg>
+      <svg class="ico s7"><use href="#heart"/></svg>
+      <svg class="ico s9"><use href="#spark"/></svg>
+      <svg class="ico s11"><use href="#heart"/></svg>
+    </div>
+
+    <div class="screen__inner">
+      <div class="panel">
+        <div class="panel__gloss"></div>
+        <div class="over__zone" id="clearZone"></div>
+        <h2 class="clear__title">ZONE CLEAR</h2>
+        <div class="over__score">
+          <span class="chrome" id="clearTime">0:00</span>
+        </div>
+        <dl class="tally">
+          <div><dt>CELLS</dt><dd id="clearCells">0</dd></div>
+          <div><dt>RELAYS</dt><dd id="clearRelays">0</dd></div>
+          <div><dt>CLEAN</dt><dd id="clearClean">NO</dd></div>
+        </dl>
+        <div class="newrecord is-hidden" id="clearRecord">
+          <svg class="ico"><use href="#burst"/></svg>BEST TIME<svg class="ico"><use href="#burst"/></svg>
+        </div>
+        <div class="unlocked is-hidden" id="clearUnlock"></div>
+      </div>
+      <button class="jelly" id="btnNextZone" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">NEXT ZONE</span>
+        <svg class="ico jelly__spark"><use href="#spark"/></svg>
+      </button>
+      <button class="jelly jelly--ghost" id="btnClearZones" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">ZONES</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="screenOver" class="screen is-hidden">
+    <div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="sparkles" aria-hidden="true">
+      <svg class="ico s1"><use href="#burst"/></svg>
+      <svg class="ico s4"><use href="#spark"/></svg>
+      <svg class="ico s5"><use href="#burst"/></svg>
+      <svg class="ico s8"><use href="#spark"/></svg>
+      <svg class="ico s11"><use href="#heart"/></svg>
+    </div>
+
+    <div class="screen__inner">
+      <div class="panel">
+        <div class="panel__gloss"></div>
+        <div class="over__zone" id="overZone"></div>
+        <h2 class="over__title">OUT OF CHARGE</h2>
+        <div class="over__score">
+          <span class="chrome" id="overDistance">0</span><span class="over__unit">M</span>
+        </div>
+        <dl class="tally">
+          <div><dt>TIME</dt><dd id="overTime">0:00</dd></div>
+          <div><dt>CELLS</dt><dd id="overCells">0</dd></div>
+          <div><dt>RELAYS</dt><dd id="overRelays">0</dd></div>
+        </dl>
+        <div class="newrecord is-hidden" id="overRecord">
+          <svg class="ico"><use href="#burst"/></svg>NEW RECORD<svg class="ico"><use href="#burst"/></svg>
+        </div>
+      </div>
+      <button class="jelly" id="btnRetry" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">RUN AGAIN</span>
+        <svg class="ico jelly__spark"><use href="#spark"/></svg>
+      </button>
+      <button class="jelly jelly--ghost" id="btnChangeZone" type="button">
+        <span class="jelly__gloss"></span>
+        <span class="jelly__text">CHANGE ZONE</span>
+      </button>
+    </div>
+  </div>
+
+  <template id="tplToast">
+    <div class="toast">
+      <svg class="ico toast__spark"><use href="#spark"/></svg>
+      <span class="toast__text"></span>
+      <svg class="ico toast__spark toast__spark--b"><use href="#spark"/></svg>
+    </div>
+  </template>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

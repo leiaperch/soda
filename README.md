@@ -1,0 +1,219 @@
+# SODA
+
+Y2K bubblegum orbital runner. You are a courier on antigrav rollers descending
+The Ring, a pastel orbital city. Prototype in three.js, aimed at mobile and
+eventually the Play Store.
+
+Everything shown in-game is in English. This file is the dev-side doc.
+
+## Run it
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:5184. Swipe or use the arrow keys.
+
+## Design
+
+**Core loop.** CHARGE drains continuously and always faster than you would
+like. RELAY gates refill it to full, CELLS scattered on the road extend it.
+Crashing is never instant death: it costs charge and cuts your speed, which
+costs you charge again by delaying the next RELAY. You die when the bar
+empties, never on impact. That is what makes the game readable by someone who
+has never played a runner while still having a real ceiling.
+
+**Skill expression.** There is no power progression, ever. What separates a
+good run from a bad one is that clean play pays charge back: clearing an
+obstacle in your own lane grants CLEAN, passing one in an adjacent lane grants
+NEAR MISS. A cautious player survives on CELLS. A good player never runs out
+because they play tidily. Measured on the current build with a scripted pilot:
+a player who touches nothing dies around 300 m, a player who dodges correctly
+passes 10 000 m and reaches top speed.
+
+**Zones.** Six of them, each an ambience *and* a mechanic rather than a reskin.
+Three are built as ambiences today (The Ring, The Shore, The Market) and share
+the base mechanic; The Docks, The Heights and The Core are listed on the select
+screen as locked so the shape of the game is visible.
+
+Everything a zone changes lives in `world/zones.js`: sky gradient, fog, key and
+fill light, backdrop tints, road and kerb colours, facade palette, and a prop
+mix (arch style and spacing, lamp and street-furniture density, how much of the
+skyline fills in, whether the sides are water). The chunk builder reads that
+config and never hardcodes a colour, which is why The Market can be a dense
+neon night and The Shore an open golden-hour beach out of the same generator.
+
+**Zones end.** Each one has a length (The Ring 1400 m, The Shore 1900 m, The
+Market 2400 m) and a finish gate waiting at it, deliberately built to read as a
+different object from a RELAY: chequered banner, gold, and a wall of light you
+stop on rather than a curtain you pass through. No checkpoint spawns within
+90 m of the line, so the last stretch is run on whatever charge you arrive
+with.
+
+Zones unlock by **clearing** the previous one, not by accumulating distance. A
+distance threshold can be ground out by replaying zone one; finishing cannot,
+so it actually means you learned something. Clearing also turns the board into
+a fastest-time race, which is where the replay value lives.
+
+**Records.** Time Attack per zone with a ghost of your own best run, Endless
+distance, a Daily Run on a shared seed (see `dailySeed()` in `core/rng.js`),
+and a Clean Run badge for finishing a zone untouched.
+
+## Art direction
+
+Cel-shaded pastel for the world, chrome reserved for what the player must read
+instantly: the courier, her rollers, RELAY gates and CELLS. That split is
+deliberate. Full chrome everywhere costs frames and, worse, flattens the
+hierarchy — if everything shines, nothing does.
+
+Two gotchas worth remembering, both cost a debug pass here:
+
+- The environment map must **not** be the same texture as the sky. A mirror
+  needs a hard horizon and a dark lower hemisphere or the chrome reads as pink
+  plastic. `skyTexture()` and `envTexture()` are separate on purpose.
+- An equirectangular source has to be 2:1. A 32×256 canvas silently produced a
+  black PMREM, which looked exactly like "the env map isn't applied".
+
+## Interface
+
+Y2K UI is skeuomorphic, not flat, and `src/style.css` is built on six motifs
+that all come from the era's actual vocabulary:
+
+1. **Candy gloss type** with a hard stop at 50%: light blue above, pink below,
+   and a white highlight band at the break. Textbook Y2K chrome puts a dark
+   horizon there instead, which is more literally metallic but drags a violet
+   bar across every letter, so the highlight version won. The hard stop is the
+   part that matters; without it this is just a pastel gradient.
+2. **Inflated bubble type with a double outline**, done as stacked layers with
+   the widest `-webkit-text-stroke` at the back. One stroke plus a shadow is
+   not enough, the sticker look needs a real second outline.
+3. **The Aqua gloss**: a hard white highlight across the top ~40% of every
+   object, on its own element so it never scales with the content.
+4. **Translucent tinted plastic** for panels, with `backdrop-filter` and an
+   inner shadow so they read as moulded rather than as a flat overlay.
+5. **Iridescent gradients**, animated across the charge bar.
+6. **4- and 8-point sparkles**, inline SVG symbols, scattered and twinkling.
+
+The charge bar carries segment ticks on purpose: a coloured length alone is
+not readable as a quantity at speed. Low charge drives a red vignette and a
+blink, a crash drives a full-screen flash, and each scoring event pops a bubble
+toast.
+
+Type is Titan One for anything display (logo, score, buttons, toasts) and
+Fredoka for UI text, both self-hosted through `@fontsource` so nothing is
+fetched from a CDN at runtime. That matters for the Play Store build.
+
+The palette is deliberately **light blue and pink together**, not pink alone.
+Pink on its own goes muddy at this saturation; the blue is what makes it read
+as bubblegum rather than as a wash.
+
+## Assets
+
+**Music** lives in `public/audio`, five tracks made in Suno. `game/audio.js`
+runs two `<audio>` elements and crossfades between them rather than using the
+Web Audio API: these are full-length streamed songs, and decoding them into
+AudioBuffers would cost tens of megabytes of RAM on a phone for nothing.
+Autoplay is blocked until a real gesture, so the menu track is queued at boot
+and released by whichever interaction happens first. Run tracks are drawn from
+a shuffled bag so the same one never repeats back to back. Mute is persisted.
+
+**The tempo rides the run.** `playbackRate` is driven off the same speed ratio
+the camera FOV uses, from 1.0 at the start line to 1.34 at top speed, smoothed
+so it never clicks. `preservesPitch` is switched off on purpose: time-stretched
+audio at constant pitch sounds correct and feels like nothing, while letting
+the track climb in pitch is what makes the acceleration physical. Past about
+1.34 pop punk starts sounding like a wasp, hence the ceiling.
+
+**The courier** is `public/models/courier.gltf`. Three fixes are applied at
+load time in `game/courier.js` and none are optional:
+
+- the primitive ships with no `NORMAL` attribute, and three does not
+  synthesise one, so the mesh renders unlit until `computeVertexNormals()`;
+- the material arrives as `metallic 1 / roughness 1`, which drowns the base
+  colour texture, so it is rebuilt as a toon material on the world's own ramp;
+- the figure is one unit tall centred on the origin, so it is rescaled to 2.1
+  and dropped onto the floor.
+
+The export also carries four punctual lights that would stack on the scene's
+key light; they are stripped. She faces +Z out of the box, which is straight at
+the chase camera, hence the half turn in `MODEL_FACING`.
+
+The procedural courier is still in `game/player.js` and still runs for the
+first frames while the model streams in, so the game is never unplayable.
+
+**Animation is live.** `public/models/courier-b.fbx` is the Mixamo auto-rigged
+mesh (33 bones, skinned) and the three clips in `public/anim` drive it through
+`game/animator.js`: skate as the loop, jump and knocked as one-shots, cross-
+faded off the player's own physics rather than a duplicated state machine. Root
+motion on the hips is stripped at load, otherwise she walks out of her lane
+while the world is already moving under her. When no skeleton is found the
+animator returns false and the procedural lean/tuck/bob takes over, so a bad
+export degrades instead of breaking.
+
+**The rigged mesh is deliberately untextured, and that is a known problem.**
+Mixamo did not only rig the model, it reprocessed the geometry: the glTF has
+7412 triangles, the returned FBX has 6984, and the UV layout no longer matches
+the original 1024² atlas. Applying it gives marbled garbage — verified lit,
+unlit, and with `flipY` both ways. The rigged courier therefore wears a chrome
+finish, which at least reads as a deliberate choice here. The fix is upstream:
+re-upload her to Mixamo with the texture applied so it comes back on a UV set
+that matches. `PREFER_RIGGED` in `game/courier.js` flips back to the textured
+static mesh (and loses the animation) in one line.
+
+`tools/extract-texture.mjs` pulls the base64 map out of the glTF into a plain
+PNG, which is what the static path loads.
+
+Payload today is about 21 MB of audio and a 3 MB glTF whose texture is a
+base64 PNG. Fine for an APK, heavy for the web. Converting the model to `.glb`
+and compressing the tracks are the obvious wins before shipping.
+
+## Structure
+
+```
+src/
+  core/      builder (merged geometry + matrix stack), seeded rng, input
+  render/    stage (renderer, lights, IBL, bloom), materials + world-bend shader
+  world/     chunk patterns, prop generators, streaming track, pooled pickups
+  game/      player, game loop and tuning, local records
+  ui/        HUD (markup lives in index.html, JS only sets text and classes)
+```
+
+**The bend.** The Ring curves away and rolls as it recedes. It is a vertex
+shader lie applied in world space (`BEND_PROJECT` in `render/materials.js`),
+which is why it works identically for merged chunks, pooled props and
+InstancedMesh. Collision runs on the flat coordinates and ignores it entirely.
+
+**Draw calls.** A whole chunk of city (road, skyline, street furniture,
+obstacles) is four merged meshes, one per material. All CELLS on screen are two
+instanced draws. Chunk geometry is built once at boot and recycled by moving
+it, so a run never allocates geometry mid-flight.
+
+## Tuning
+
+Everything balance-related is in the `TUNE` block at the top of
+`game/game.js`, plus `RELAY_EVERY` in `world/track.js`. Obstacle phrases are
+authored by hand in `PATTERNS` in `world/chunks.js` and picked by tier as the
+run gets faster — placement is never random, which is what keeps stretches from
+being unfair or trivial.
+
+## Not done yet
+
+- Sound effects. Music is in; jump, land, pickup and crash are still silent.
+- Ghost replay, Daily Run leaderboard, the other five zones.
+- Capacitor wrapper for the Play Store, plus a pass on asset budgets for
+  low-end Android.
+- Confirm the Suno commercial licence covers distribution before publishing.
+- The courier has no skeleton, so she glides without a leg cycle. That fits
+  hover rollers, but a rigged version would allow a proper crash reaction.
+
+## Dev capture
+
+`vite.config.js` adds a dev-only `/__shot` endpoint. In the browser console:
+
+```js
+__soda.capture('name', { w: 1200, h: 700 })
+```
+
+writes `shots/name.png`. Reading a live WebGL canvas back through an automation
+bridge stalls; this sidesteps it.

@@ -1,0 +1,277 @@
+import * as THREE from 'three';
+import { ROAD_HALF, RAIL_H } from './layout.js';
+
+/**
+ * Prop generators. Everything is emitted straight into the shared Builder
+ * buckets, so an entire city block still costs four draw calls.
+ *
+ * Every generator takes a resolved zone palette (`pal`) rather than reaching
+ * for a global one: that indirection is the whole reason The Shore and The
+ * Market can reuse the same code and not look like the same place.
+ * `side` is -1 for the left kerb, +1 for the right, so the road-facing
+ * direction is always `-side`.
+ */
+
+const WHITE = new THREE.Color('#fff6ea');
+const _c = new THREE.Color();
+const shade = (color, mul) => _c.copy(color).multiplyScalar(mul).clone();
+
+export function resolvePalette(zone) {
+  const c = zone.colors;
+  return {
+    road: new THREE.Color(c.road),
+    kerb: new THREE.Color(c.kerb),
+    deck: new THREE.Color(c.deck),
+    edge: new THREE.Color(c.edge),
+    lane: new THREE.Color(c.lane),
+    accent: new THREE.Color(c.accent),
+    accentGlow: new THREE.Color(c.accentGlow),
+    chrome: WHITE.clone(),
+    facades: zone.facades.map((h) => new THREE.Color(h)),
+    archTints: zone.props.archTint.map((h) => new THREE.Color(h)),
+  };
+}
+
+/** Horizontal band of lit windows on the road-facing facade. */
+function windowBand(b, x, y, z, w, d, side, count, color) {
+  const facing = -side;
+  const step = d / count;
+  for (let i = 0; i < count; i++) {
+    const wz = z - d / 2 + step * (i + 0.5);
+    b.box('emissive', x + facing * (w / 2 + 0.06), y, wz, 0.12, 0.34, step * 0.55, color);
+  }
+}
+
+/**
+ * Stacked tapered slabs, chrome trim between stacks, lit window bands facing
+ * the road, and a dome or a mast on top. Nothing has a hard right angle, which
+ * is the whole Y2K read.
+ */
+export function tower(b, rng, pal, x, z, side, opts = {}) {
+  const w = opts.w ?? rng.range(6, 11);
+  const d = opts.d ?? rng.range(7, 14);
+  const stacks = opts.stacks ?? rng.int(2, 4);
+  const base = pal.facades[rng.int(0, pal.facades.length - 1)];
+  let y = 0;
+  let cw = w;
+  let cd = d;
+
+  for (let i = 0; i < stacks; i++) {
+    const h = rng.range(5, 11) * (1 - i * 0.12);
+    b.taper('toon', x, y, z, cw, h, cd, rng.range(0.15, 0.6), base, 1 - i * 0.05);
+    windowBand(b, x, y + h * 0.42, z, cw, cd * 0.86, side, Math.max(2, Math.round(cd / 2.4)), shade(pal.lane, 1.1));
+    windowBand(b, x, y + h * 0.72, z, cw, cd * 0.86, side, Math.max(2, Math.round(cd / 2.4)), shade(pal.accentGlow, 1.0));
+    y += h;
+    b.box('chrome', x, y, z, cw + 0.5, 0.42, cd + 0.5, shade(pal.chrome, 0.95));
+    y += 0.42;
+    cw *= rng.range(0.66, 0.84);
+    cd *= rng.range(0.7, 0.88);
+  }
+
+  const cap = rng();
+  if (cap < 0.45) {
+    b.dome('toon', x, y, z, Math.min(cw, cd) * 0.62, Math.min(cw, cd) * 0.5, 12, 5, shade(base, 1.08));
+    b.cyl('emissive', x, y + Math.min(cw, cd) * 0.5, z, 0.16, 0.16, 2.4, 6, shade(pal.accentGlow, 1.2));
+  } else if (cap < 0.78) {
+    b.cyl('chrome', x, y, z, Math.min(cw, cd) * 0.24, 0.1, rng.range(4, 9), 8, shade(pal.chrome, 0.9));
+  } else {
+    b.box('glass', x, y, z, cw * 0.7, rng.range(2.5, 5), cd * 0.7, shade(pal.edge, 1.1));
+    b.dome('chrome', x, y + 3, z, cw * 0.36, cw * 0.3, 10, 4, shade(pal.chrome, 1.0));
+  }
+}
+
+/** Glass dome on a chrome collar. Pure orbital-suburb energy. */
+export function bubbleHab(b, rng, pal, x, z, side) {
+  const r = rng.range(3.2, 5.4);
+  const base = pal.facades[rng.int(0, pal.facades.length - 1)];
+  b.cyl('toon', x, 0, z, r * 1.05, r * 0.95, rng.range(1.6, 3.4), 12, shade(base, 0.95));
+  const y = rng.range(1.6, 3.4);
+  b.cyl('chrome', x, y, z, r * 1.02, r * 1.02, 0.4, 12, shade(pal.chrome, 0.95));
+  b.dome('glass', x, y + 0.4, z, r, r * 0.85, 14, 6, shade(pal.edge, 1.15));
+  b.cyl('emissive', x, y + 0.4, z, r * 0.35, r * 0.35, 0.12, 10, shade(pal.accentGlow, 1.1));
+  windowBand(b, x, y * 0.5, z, r * 2, r * 1.4, side, 3, shade(pal.lane, 1.1));
+}
+
+/** Antenna palm: The Ring's idea of a street tree. */
+export function antennaPalm(b, rng, pal, x, z) {
+  const h = rng.range(5, 8.5);
+  b.cyl('chrome', x, 0, z, 0.3, 0.16, h, 7, shade(pal.chrome, 0.85));
+  const fronds = rng.int(5, 7);
+  for (let i = 0; i < fronds; i++) {
+    const a = (i / fronds) * Math.PI * 2 + rng.range(0, 0.5);
+    const len = rng.range(1.8, 3);
+    b.at(x, h, z, a);
+    b.box('toon', 0, -0.1, len * 0.5, 0.5, 0.16, len, shade(pal.edge, 1.0));
+    b.box('emissive', 0, -0.02, len * 0.9, 0.18, 0.06, 0.5, shade(pal.edge, 1.25));
+    b.pop();
+  }
+  b.dome('emissive', x, h, z, 0.4, 0.4, 8, 3, shade(pal.accentGlow, 1.2));
+}
+
+/** An actual palm, for The Shore: curved trunk, drooping fronds, coconuts. */
+export function palmTree(b, rng, pal, x, z) {
+  const h = rng.range(6, 10);
+  const lean = rng.range(-0.22, 0.22);
+  const segs = 6;
+  const trunk = new THREE.Color('#8a6a44');
+  for (let i = 0; i < segs; i++) {
+    const t0 = i / segs, t1 = (i + 1) / segs;
+    const y0 = h * t0, y1 = h * t1;
+    const x0 = x + lean * y0 * 0.5, x1 = x + lean * y1 * 0.5;
+    b.cyl('toon', x0, y0, z, 0.34 - t0 * 0.16, 0.34 - t1 * 0.16, y1 - y0, 7, shade(trunk, 1 - i * 0.04));
+    if (x1 !== x0) { /* the lean is baked into each segment's own origin */ }
+  }
+  const topX = x + lean * h * 0.5;
+  const fronds = rng.int(6, 8);
+  const leaf = new THREE.Color('#4fbf7a');
+  for (let i = 0; i < fronds; i++) {
+    const a = (i / fronds) * Math.PI * 2 + rng.range(0, 0.4);
+    const len = rng.range(2.4, 3.8);
+    b.at(topX, h, z, a);
+    b.box('toon', 0, 0.1, len * 0.42, 0.9, 0.14, len * 0.85, shade(leaf, rng.range(0.85, 1.15)));
+    b.box('toon', 0, -0.42, len * 0.85, 0.55, 0.12, len * 0.5, shade(leaf, 0.78));
+    b.pop();
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    b.dome('toon', topX + Math.cos(a) * 0.4, h - 0.5, z + Math.sin(a) * 0.4, 0.3, 0.3, 7, 3, new THREE.Color('#7a5a3a'));
+  }
+}
+
+/** Street lamp: chrome hook with a glowing bulb, leaning over the road. */
+export function lamp(b, pal, x, z, side) {
+  const facing = -side;
+  b.cyl('chrome', x, 0, z, 0.22, 0.14, 5.4, 7, shade(pal.chrome, 0.9));
+  b.box('chrome', x + facing * 0.7, 5.4, z, 1.6, 0.22, 0.3, shade(pal.chrome, 0.9));
+  b.dome('emissive', x + facing * 1.4, 5.0, z, 0.42, -0.42, 8, 3, shade(pal.lane, 1.3));
+  b.dome('emissive', x + facing * 1.4, 5.4, z, 0.42, 0.3, 8, 3, shade(pal.accentGlow, 1.1));
+}
+
+/** Billboard on a chrome mast: flat glowing panel angled at the player. */
+export function billboard(b, rng, pal, x, z, side) {
+  const facing = -side;
+  const h = rng.range(5, 8);
+  b.cyl('chrome', x, 0, z, 0.26, 0.2, h, 6, shade(pal.chrome, 0.9));
+  b.at(x + facing * 1.1, h, z, facing * 0.35);
+  b.box('toon', 0, 0, 0, 5.6, 3.2, 0.3, new THREE.Color('#150a24'));
+  const tint = pal.archTints[rng.int(0, pal.archTints.length - 1)];
+  b.box('emissive', 0, 0.35, 0.18, 5.0, 1.5, 0.08, shade(tint, 1.25));
+  b.box('emissive', 0, 2.15, 0.18, 3.2, 0.5, 0.08, shade(pal.lane, 1.2));
+  b.pop();
+}
+
+/**
+ * Market stall: awning, crate stack, hanging lanterns and a vertical sign.
+ * Packed tight against the kerb, which is what makes The Market feel narrow
+ * even though the road is exactly as wide as everywhere else.
+ */
+export function marketStall(b, rng, pal, x, z, side) {
+  const facing = -side;
+  const w = rng.range(3, 4.6);
+  const d = rng.range(3, 5);
+  const tint = pal.archTints[rng.int(0, pal.archTints.length - 1)];
+
+  b.box('toon', x, 0, z, w, 2.4, d, new THREE.Color('#2a1836'));
+  b.at(x + facing * (w * 0.35), 2.4, z, 0, 1, 1, 1);
+  b.box('toon', 0, 0, 0, w * 1.15, 0.22, d * 1.1, shade(tint, 0.55));
+  b.box('emissive', 0, -0.16, 0, w * 1.0, 0.1, d * 1.0, shade(tint, 1.3));
+  b.pop();
+
+  // crates
+  for (let i = 0; i < rng.int(2, 4); i++) {
+    b.box('toon', x + rng.range(-w * 0.3, w * 0.3), 2.62, z + rng.range(-d * 0.3, d * 0.3),
+      rng.range(0.5, 0.9), rng.range(0.4, 0.8), rng.range(0.5, 0.9),
+      shade(pal.facades[rng.int(0, pal.facades.length - 1)], 1.5));
+  }
+
+  // vertical neon sign facing the road
+  const sh = rng.range(3, 5.5);
+  b.box('chrome', x + facing * (w * 0.55), 2.6, z, 0.16, sh, 0.16, shade(pal.chrome, 0.8));
+  b.box('toon', x + facing * (w * 0.62), 2.6, z, 0.12, sh * 0.9, 0.9, new THREE.Color('#150a24'));
+  for (let i = 0; i < 4; i++) {
+    b.box('emissive', x + facing * (w * 0.70), 3.0 + i * (sh * 0.2), z, 0.06, 0.42, 0.62, shade(tint, 1.35));
+  }
+
+  // hanging lanterns over the kerb
+  for (let i = 0; i < 3; i++) {
+    const lz = z - d / 2 + (i + 0.5) * (d / 3);
+    b.cyl('chrome', x + facing * (w * 0.4), 2.62, lz, 0.04, 0.04, 0.7, 4, shade(pal.chrome, 0.7));
+    b.dome('emissive', x + facing * (w * 0.4), 3.32, lz, 0.28, -0.34, 8, 3, shade(pal.accentGlow, 1.25));
+  }
+}
+
+/** Round arch spanning the road: the tunnel-of-light rhythm at speed. */
+export function skyArch(b, pal, z, roadHalf, color) {
+  b.arch('chrome', 0, 0, z, roadHalf + 1.6, 0.5, 16, 6, shade(pal.chrome, 0.95), Math.PI, 0);
+  b.arch('emissive', 0, 0, z, roadHalf + 1.6, 0.22, 16, 5, shade(color, 1.3), Math.PI, 0);
+}
+
+/** Flat gantry instead of an arch: harsher, industrial, right for The Market. */
+export function gantry(b, pal, z, roadHalf, color) {
+  const h = 6.2;
+  for (const s of [-1, 1]) {
+    b.box('toon', s * (roadHalf + 1.1), 0, z, 0.9, h, 0.9, new THREE.Color('#231436'));
+    b.box('emissive', s * (roadHalf + 1.1), 1.2, z, 0.95, 0.14, 0.95, shade(color, 1.3));
+    b.box('emissive', s * (roadHalf + 1.1), 4.4, z, 0.95, 0.14, 0.95, shade(color, 1.3));
+  }
+  b.box('toon', 0, h, z, (roadHalf + 1.6) * 2, 0.9, 1.0, new THREE.Color('#1c1030'));
+  b.box('emissive', 0, h - 0.16, z, (roadHalf + 1.2) * 2, 0.14, 1.05, shade(color, 1.35));
+  for (let i = -2; i <= 2; i++) {
+    b.box('emissive', i * 2.4, h - 0.9, z, 1.1, 0.5, 0.1, shade(pal.lane, 1.15));
+  }
+}
+
+/**
+ * A swell crossing the road on The Shore: a low curved crest of water. Not a
+ * wall, a timing gate. You clear it in the air or you plough through it.
+ */
+export function swell(b, pal, z) {
+  const span = ROAD_HALF * 2;
+  const segs = 14;
+  for (let i = 0; i < segs; i++) {
+    const t = (i + 0.5) / segs;
+    const x = -span / 2 + span * t;
+    const w = span / segs;
+    const h = 0.28 + Math.sin(t * Math.PI) * 0.5;
+    // Matte and well under 1.0. This is a wide surface repeated across the
+    // whole road; reflective or bright here and the bloom whites out the zone.
+    b.box('toon', x, 0.03, z, w * 1.02, h, 2.6, shade(pal.edge, 0.75));
+    b.box('beam', x, 0.03 + h, z, w * 1.02, 0.12, 2.8, shade(pal.lane, 0.42));
+    b.box('emissive', x, 0.05, z + 1.35, w * 1.02, 0.08, 0.2, shade(pal.lane, 0.5));
+  }
+}
+
+/**
+ * A grind rail in one lane of The Market: chrome tube on posts with a lit top
+ * edge so it is obvious from far away that it is standable, not an obstacle.
+ */
+export function rail(b, pal, x, from, to) {
+  const len = to - from;
+  const mid = -(from + len / 2);
+  // Matte, not chrome. A twenty-metre polished bar running to the horizon
+  // mirrors the whole environment map and the bloom turns that into a sheet
+  // of light across the entire zone. Verified by rendering with bloom off.
+  b.box('toon', x, RAIL_H - 0.16, mid, 0.34, 0.2, len, shade(pal.accent, 0.75));
+  b.box('emissive', x, RAIL_H, mid, 0.26, 0.06, len, shade(pal.accentGlow, 0.7));
+  b.box('toon', x, 0, mid, 0.5, 0.12, len, shade(pal.deck, 1.3));
+  for (let z = from + 1; z < to; z += 4) {
+    b.cyl('toon', x, 0, -z, 0.12, 0.1, RAIL_H - 0.16, 6, shade(pal.accent, 0.55));
+  }
+  // lit approach ramp so the entry point is unmistakable
+  for (let i = 0; i < 3; i++) {
+    b.box('emissive', x, 0.04, -(from - 1.6 - i * 1.6), 1.5, 0.02, 0.7, shade(pal.accentGlow, 0.22 + i * 0.18));
+  }
+}
+
+/** Parked hover pod, floating just off the deck. */
+export function hoverPod(b, rng, pal, x, z) {
+  const y = rng.range(1.1, 1.9);
+  const col = pal.facades[rng.int(0, pal.facades.length - 1)];
+  b.at(x, y, z, rng.range(-0.3, 0.3));
+  b.taper('toon', 0, 0, 0, 2.6, 0.9, 4.6, 0.5, shade(col, 1.0));
+  b.dome('glass', 0, 0.9, -0.4, 1.05, 0.85, 10, 4, shade(pal.edge, 1.2));
+  b.box('emissive', 0, 0.28, 2.2, 1.6, 0.16, 0.16, shade(pal.accentGlow, 1.3));
+  b.box('chrome', 0, 0.1, 0, 2.9, 0.22, 3.0, shade(pal.chrome, 0.95));
+  b.pop();
+  b.dome('emissive', x, y - 0.35, z, 0.9, -0.3, 8, 2, shade(pal.edge, 0.9));
+}
