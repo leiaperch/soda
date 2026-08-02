@@ -25,6 +25,11 @@ export function createHud() {
     el.tplToast = doc.getElementById('tplToast');
     el.powers = doc.getElementById('powers');
     el.tplPower = doc.getElementById('tplPower');
+    el.trick = doc.getElementById('trick');
+    el.trickName = doc.getElementById('trickName');
+    el.trickScore = doc.getElementById('trickScore');
+    el.trickMult = doc.getElementById('trickMult');
+    el.trickTimer = doc.getElementById('trickTimer');
     el.flash = doc.getElementById('flash');
     el.vignette = doc.getElementById('vignette');
 
@@ -38,7 +43,7 @@ export function createHud() {
     el.clearZone = doc.getElementById('clearZone');
     el.clearTime = doc.getElementById('clearTime');
     el.clearCells = doc.getElementById('clearCells');
-    el.clearRelays = doc.getElementById('clearRelays');
+    el.clearStyle = doc.getElementById('clearStyle');
     el.clearClean = doc.getElementById('clearClean');
     el.clearRecord = doc.getElementById('clearRecord');
     el.clearUnlock = doc.getElementById('clearUnlock');
@@ -52,7 +57,7 @@ export function createHud() {
     el.overDistance = doc.getElementById('overDistance');
     el.overTime = doc.getElementById('overTime');
     el.overCells = doc.getElementById('overCells');
-    el.overRelays = doc.getElementById('overRelays');
+    el.overStyle = doc.getElementById('overStyle');
     el.overRecord = doc.getElementById('overRecord');
 
     el.btnStart = doc.getElementById('btnStart');
@@ -202,6 +207,7 @@ export function createHud() {
     el.powers.replaceChildren();
     powerChips.clear();
     powerSig = '';
+    el.trick.classList.add('is-hidden');
     el.best.textContent = zoneRecords.cleared
       ? `${zone.name} · BEST ${formatTime(zoneRecords.bestClearTime)}`
       : `${zone.name} · ${zone.length} M`;
@@ -215,8 +221,8 @@ export function createHud() {
     el.overDistance.textContent = String(Math.floor(run.distance));
     el.overTime.textContent = formatTime(run.time);
     el.overCells.textContent = String(run.cells);
-    el.overRelays.textContent = String(run.relays);
-    el.overRecord.classList.toggle('is-hidden', !(beat.distance || beat.time || beat.cells));
+    el.overStyle.textContent = String(run.style || 0);
+    el.overRecord.classList.toggle('is-hidden', !(beat.distance || beat.time || beat.cells || beat.style));
   };
 
   api.showClear = (run, beat, zone, next) => {
@@ -227,9 +233,9 @@ export function createHud() {
     el.clearZone.textContent = zone.name;
     el.clearTime.textContent = formatTime(run.time);
     el.clearCells.textContent = String(run.cells);
-    el.clearRelays.textContent = String(run.relays);
+    el.clearStyle.textContent = String(run.style || 0);
     el.clearClean.textContent = run.clean ? 'YES' : 'NO';
-    el.clearRecord.classList.toggle('is-hidden', !beat.time);
+    el.clearRecord.classList.toggle('is-hidden', !(beat.time || beat.style));
     el.clearUnlock.classList.toggle('is-hidden', !(beat.firstClear && next));
     if (beat.firstClear && next) el.clearUnlock.textContent = `${next.name} UNLOCKED`;
     el.btnNextZone.querySelector('.jelly__text').textContent = next ? 'NEXT ZONE' : 'RUN IT AGAIN';
@@ -277,6 +283,31 @@ export function createHud() {
       chip.querySelector('.power__fill').style.transform = `scaleX(${left})`;
       chip.classList.toggle('power--ending', left < 0.25);
     }
+  };
+
+  /**
+   * The running chain. `label` is the trick just landed, or null to refresh
+   * without re-triggering the pop animation (banking, crashing, ticking).
+   */
+  api.showTrick = (chain, label) => {
+    if (!chain.active) { el.trick.classList.add('is-hidden'); return; }
+    el.trick.classList.remove('is-hidden');
+    if (label) {
+      el.trickName.textContent = label;
+      el.trick.style.animation = 'none';
+      void el.trick.offsetWidth;
+      el.trick.style.animation = '';
+    }
+    el.trickScore.textContent = String(Math.round(chain.score));
+    el.trickMult.textContent = `x${chain.multiplier}`;
+  };
+
+  /** Every frame: just the countdown, so the chain's urgency is visible. */
+  api.tickTrick = (chain) => {
+    if (!chain.active) { el.trick.classList.add('is-hidden'); return; }
+    el.trickTimer.style.transform = `scaleX(${Math.max(0, chain.timer / 2.7)})`;
+    el.trickScore.textContent = String(Math.round(chain.score));
+    el.trickMult.textContent = `x${chain.multiplier}`;
   };
 
   api.toast = (text, kind) => {

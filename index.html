@@ -98,6 +98,15 @@
       <div class="readout__sub"><span id="statSpeed">0</span> KM/H</div>
     </div>
 
+    <div class="trick is-hidden" id="trick">
+      <span class="trick__name" id="trickName"></span>
+      <span class="trick__row">
+        <span class="trick__score" id="trickScore">0</span>
+        <span class="trick__mult" id="trickMult">x1</span>
+      </span>
+      <span class="trick__timer"><span class="trick__timerFill" id="trickTimer"></span></span>
+    </div>
+
     <div class="best" id="hudBest"></div>
   </div>
 
@@ -238,7 +247,7 @@
         </div>
         <dl class="tally">
           <div><dt>CELLS</dt><dd id="clearCells">0</dd></div>
-          <div><dt>RELAYS</dt><dd id="clearRelays">0</dd></div>
+          <div><dt>STYLE</dt><dd id="clearStyle">0</dd></div>
           <div><dt>CLEAN</dt><dd id="clearClean">NO</dd></div>
         </dl>
         <div class="newrecord is-hidden" id="clearRecord">
@@ -279,7 +288,7 @@
         <dl class="tally">
           <div><dt>TIME</dt><dd id="overTime">0:00</dd></div>
           <div><dt>CELLS</dt><dd id="overCells">0</dd></div>
-          <div><dt>RELAYS</dt><dd id="overRelays">0</dd></div>
+          <div><dt>STYLE</dt><dd id="overStyle">0</dd></div>
         </dl>
         <div class="newrecord is-hidden" id="overRecord">
           <svg class="ico"><use href="#burst"/></svg>NEW RECORD<svg class="ico"><use href="#burst"/></svg>

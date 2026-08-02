@@ -310,6 +310,35 @@ semitone per pickup while a streak holds, then resets — without pre-baking
 variants. The context is created lazily on the first cue, same gesture gate as
 the music, and everything respects the mute toggle.
 
+## Tricks
+
+CLEAN and NEAR MISS used to hand out 2.0 and 1.2 charge. That is noise: below
+the resolution a player can feel, so doing anything stylishly paid nothing and
+the game was only ever about not dying. She is on skates. She should be able
+to skate.
+
+`game/tricks.js` turns those same events into **links in a chain**. On their
+own they are worth nothing. Each one adds points, raises the multiplier and
+refreshes a 2.7 s window; when the window closes the whole chain is **banked**
+as charge in one lump. Crash and it is lost unbanked.
+
+That makes the risk legible. A long chain is worth a lot and you are carrying
+it through obstacles: cash out early and safe, or keep it alive and pay for it.
+Measured: ollie → grab → surf reaches 710 points at ×3, which banks 10.1
+charge, against the 2.0 the old CLEAN gave.
+
+Repeating the same trick still scores but does not raise the multiplier, so
+mashing one input is not a strategy. Grinding pays continuously rather than
+once on landing.
+
+**One new input.** Down while airborne is a **GRAB**: worth more than an ollie,
+and it commits you to a fast fall. Style you pay for with air control. It is
+the only trick that is a decision rather than a consequence.
+
+STYLE is banked per run, kept per zone as a record, and shown on both end
+screens, which gives the game a second axis of mastery next to distance and
+time.
+
 ## Power-ups
 
 Three, deliberately, in `game/powerups.js`. A runner's pickups only work if

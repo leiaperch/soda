@@ -299,6 +299,70 @@ html, body {
   text-shadow: 0 2px 0 var(--ink), 0 0 12px rgba(98, 207, 255, 0.95);
 }
 
+/* --- the running trick chain -------------------------------------------
+   Bottom right, above the buttons, because the top of the screen is already
+   toasts and the middle is the track. It has to be readable in peripheral
+   vision: big number, big multiplier, and a bar showing how long you have. */
+.trick {
+  position: absolute;
+  right: 16px;
+  bottom: calc(var(--safe-bottom) + 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+  animation: trickPop 0.26s cubic-bezier(0.2, 1.7, 0.4, 1);
+}
+
+@keyframes trickPop {
+  0% { transform: scale(0.82) translateX(10px); opacity: 0.4; }
+  60% { transform: scale(1.07); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.trick__name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.16em;
+  color: var(--sky);
+  text-shadow: 0 2px 0 var(--ink), 0 0 12px rgba(98, 207, 255, 0.9);
+}
+
+.trick__row { display: flex; align-items: baseline; gap: 7px; }
+
+.trick__score {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 3px 0 var(--ink), 0 0 16px var(--pink);
+}
+
+.trick__mult {
+  font-family: var(--font-display);
+  font-size: 21px;
+  color: #fff5a8;
+  text-shadow: 0 2px 0 var(--ink), 0 0 14px rgba(255, 245, 168, 0.95);
+}
+
+.trick__timer {
+  display: block;
+  width: 84px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(45, 17, 87, 0.75);
+  overflow: hidden;
+}
+
+.trick__timerFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sky), var(--pink));
+  transform-origin: right center;
+}
+
 .best {
   position: absolute;
   left: 16px;

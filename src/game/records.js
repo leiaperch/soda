@@ -4,6 +4,7 @@ const EMPTY_ZONE = {
   bestDistance: 0,
   bestClearTime: 0,   // 0 means never cleared
   bestCells: 0,
+  bestStyle: 0,       // best total trick score in a single run
   cleared: false,
   cleanRun: false,
 };
@@ -55,10 +56,11 @@ export const records = {
   submit(zoneId, run) {
     const data = read();
     const z = { ...EMPTY_ZONE, ...(data.zones[zoneId] || {}) };
-    const beat = { distance: false, time: false, cells: false, firstClear: false };
+    const beat = { distance: false, time: false, cells: false, style: false, firstClear: false };
 
     if (run.distance > z.bestDistance) { z.bestDistance = run.distance; beat.distance = true; }
     if (run.cells > z.bestCells) { z.bestCells = run.cells; beat.cells = true; }
+    if ((run.style || 0) > z.bestStyle) { z.bestStyle = run.style; beat.style = true; }
     if (run.cleared) {
       if (!z.cleared) { z.cleared = true; beat.firstClear = true; }
       // Fastest clear, so this one is a minimum.

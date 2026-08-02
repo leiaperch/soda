@@ -7,6 +7,7 @@ import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
 import { RAIL_H } from '../world/layout.js';
 import { PowerState, POWERUPS } from './powerups.js';
+import { TrickChain } from './tricks.js';
 
 /** Tuning lives in one block on purpose: this is the balance surface. */
 const TUNE = {
@@ -20,8 +21,7 @@ const TUNE = {
   drainBase: 6.0,         // charge/s at start speed
   drainSpeedFactor: 0.75, // how much faster it drains at top speed
   cellCharge: 6,
-  nearMissCharge: 1.2,
-  cleanCharge: 2.0,
+  bigAirTime: 0.62,   // seconds aloft before a landing counts as BIG AIR
   hitCharge: -25,
   hitSpeedCut: 0.75,
   hitStun: 0.55,
@@ -59,6 +59,7 @@ export class Game {
     this.sfx = sfx || SILENT_SFX;
     this._wasAirborne = false;
     this.power = new PowerState();
+    this.tricks = new TrickChain();
     this.rng = makeRng(seed);
     this.track = new Track(stage.scene, stage.materials, this.rng);
     this.player = new Player(stage.scene, stage.materials);
@@ -116,17 +117,29 @@ export class Game {
     this.shake = 0;
     this.speed = this.pace.start;
     this.charge = TUNE.maxCharge;
-    this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false };
+    this.run = { distance: 0, time: 0, cells: 0, relays: 0, clean: true, cleared: false, style: 0, bestChain: 0 };
     this.combo = 0;
     this.lastBump = -99;
     this.taught = new Set();
     this.power.reset();
+    this.tricks.reset();
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.showZoneIntro(this.zone, ZONES.indexOf(this.zone) + 1);
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
   }
 
+  /** Cash any chain still running, so crossing the line never eats one. */
+  _bankChain() {
+    if (!this.tricks.active) return;
+    this.tricks.timer = 0.0001;
+    const banked = this.tricks.update(0.001);
+    if (banked) this.charge = Math.min(TUNE.maxCharge, this.charge + banked.charge);
+    this.run.style = this.tricks.total;
+    this.run.bestChain = this.tricks.best;
+  }
+
   _finish() {
+    this._bankChain();
     this.state = 'clear';
     this.run.cleared = true;
     const beat = records.submit(this.zone.id, this.run);
@@ -163,7 +176,10 @@ export class Game {
     this.player.stunned = TUNE.hitStun;
     this.run.clean = false;
     this.shake = 0.55;
-    this.hud.toast('CRASH', 'warn');
+    // The chain dies unbanked. That is the whole tension of carrying a big one.
+    const lost = this.tricks.drop();
+    this.hud.toast(lost > 200 ? `CHAIN LOST ${lost}` : 'CRASH', 'warn');
+    this.hud.showTrick(this.tricks, null);
     this.hud.flash();
     this.sfx.crash();
   }
@@ -191,7 +207,7 @@ export class Game {
     this.charge = Math.min(TUNE.maxCharge, this.charge + payout);
     this.speed = Math.max(this.pace.start * 0.9, this.speed * TUNE.bumperCut);
     this.shake = 0.3;
-    this.hud.toast(this.combo > 1 ? `BUMP x${this.combo}` : 'BUMP', 'relay');
+    this._trick('bump');
     this.sfx.relay();
   }
 
@@ -215,14 +231,10 @@ export class Game {
       if (!o.scored && p.z < o.z - 1.2) {
         o.scored = true;
         if (!o.hit) {
-          if (dx < 1.4) {
-            this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.cleanCharge);
-            this.hud.toast('CLEAN');
-            this.sfx.clean();
-          } else if (dx < 3.8) {
-            this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.nearMissCharge);
-            this.hud.toast('NEAR MISS');
-          }
+          // Links in the chain, not charge. On their own they are worth
+          // nothing; what they buy is the multiplier on everything after.
+          if (dx < 1.4) { this._trick('clean'); this.sfx.clean(); }
+          else if (dx < 3.8) this._trick('close');
         }
       }
     }
@@ -286,6 +298,12 @@ export class Game {
     this.hud.toast(label, 'warn');
     this.hud.flash();
     this.sfx.crash();
+  }
+
+  /** Adds a link and shows it, so the chain is always visible as it builds. */
+  _trick(key) {
+    const def = this.tricks.add(key);
+    if (def) this.hud.showTrick(this.tricks, def.label);
   }
 
   /** Says a thing once per run, the first time it can possibly matter. */
@@ -353,7 +371,7 @@ export class Game {
           if (f.dir < 0) this.onBadBelt = true;
           else if (!this.beltToast || this.time - this.beltToast > 2.5) {
             this.beltToast = this.time;
-            this.hud.toast('CARRIED', 'relay');
+            this._trick('carried');
           }
         }
         continue;
@@ -382,7 +400,7 @@ export class Game {
         if (threaded) {
           this.speed = Math.min(this.pace.max + 5, this.speed * TUNE.ringBoost);
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.ringCharge);
-          this.hud.toast('THREADED', 'relay');
+          this._trick('thread');
           this.sfx.clean();
         } else {
           this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.ringMiss);
@@ -403,7 +421,7 @@ export class Game {
           p.sliding = 0;
           p.vy = Math.abs(p.physics.jump) * TUNE.springBoost;
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.springCharge);
-          this.hud.toast('BOING', 'relay');
+          this._trick('boing');
           this.sfx.jump();
         }
         continue;
@@ -415,7 +433,7 @@ export class Game {
         if (p.airborne) {
           this.speed = Math.min(this.pace.max + 6, this.speed * TUNE.surfBoost);
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.surfCharge);
-          this.hud.toast('SURF!', 'relay');
+          this._trick('surf');
           this.sfx.surf();
         } else {
           this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.splashCut);
@@ -433,14 +451,18 @@ export class Game {
 
       if (!p.grinding && p.y > RAIL_H - 0.45 && p.vy <= 0) {
         p.grinding = { y: RAIL_H, endZ: f.endZ, lane: f.lane };
-        this.hud.toast('GRIND', 'relay');
+        this._trick('grind');
         this.sfx.grind();
       } else if (!p.grinding && !f.hit && p.y < RAIL_H - 0.35) {
         f.hit = true;
         this._hit();
       }
     }
-    if (p.grinding) this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.grindCharge * dt);
+    if (p.grinding) {
+      this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.grindCharge * dt);
+      // A grind pays for every second you hold it, not once on landing.
+      this.tricks.addContinuous('grind', dt);
+    }
   }
 
   _camera(dt) {
@@ -496,6 +518,17 @@ export class Game {
 
       // Power-ups tick before movement so a magnet grabbed this frame already
       // pulls, and an expiring FIZZ stops shielding on the frame it ends.
+      // Banking a chain is the payout, and it is a number you feel.
+      const banked = this.tricks.update(dt);
+      if (banked) {
+        this.charge = Math.min(TUNE.maxCharge, this.charge + banked.charge);
+        this.run.style = this.tricks.total;
+        this.run.bestChain = this.tricks.best;
+        this.hud.toast(`+${banked.score} STYLE`, 'relay');
+        this.hud.showTrick(this.tricks, null);
+        this.sfx.relay();
+      }
+
       for (const key of this.power.update(dt)) this.hud.toast(`${POWERUPS[key].label} OUT`, 'warn');
       this.power.attract(this.track.cells, this.player, dt);
       if (this.power.has('fizz')) {
@@ -522,7 +555,11 @@ export class Game {
       this._features(dt);
 
       // Landing is a state transition, not an event the player object emits.
-      if (this._wasAirborne && !this.player.airborne) this.sfx.land();
+      if (!this._wasAirborne && this.player.airborne) this._airFrom = this.time;
+      if (this._wasAirborne && !this.player.airborne) {
+        this.sfx.land();
+        if (this.time - this._airFrom > TUNE.bigAirTime) this._trick('bigAir');
+      }
       this._wasAirborne = this.player.airborne;
 
       if (this.zone.length && this.run.distance >= this.zone.length) {
@@ -530,6 +567,7 @@ export class Game {
         this._finish();
       } else if (this.charge <= 0) {
         this.charge = 0;
+        this._bankChain();
         this.state = 'over';
         const beat = records.submit(this.zone.id, this.run);
         this.hud.showOver(this.run, beat, this.zone);
@@ -537,6 +575,7 @@ export class Game {
       } else {
         this.hud.update(this.charge, TUNE.maxCharge, this.run.distance, this.speed, this.zone.length);
         this.hud.updatePowers(this.power);
+        this.hud.tickTrick(this.tricks);
       }
     } else if (this.state === 'title') {
       // Slow drift on the title screen so the city is alive before you press play.
@@ -572,10 +611,22 @@ export class Game {
     if (this.state !== 'running') return;
     const wasAirborne = this.player.airborne;
     const wasSliding = this.player.sliding > 0;
+    const wasGrinding = !!this.player.grinding;
     this.player.intent(kind);
-    if (kind === 'jump' && !wasAirborne) this.sfx.jump();
-    else if (kind === 'jump' && this.player.grinding === null && wasAirborne && this.player.vy > 0) this.sfx.jump();
-    else if (kind === 'slide' && !wasSliding && this.player.sliding > 0) this.sfx.slide();
+    if (this.player.flying) return;
+
+    if (kind === 'jump' && (!wasAirborne || wasGrinding)) {
+      this.sfx.jump();
+      this._trick('ollie');
+    } else if (kind === 'slide' && wasAirborne && !wasGrinding) {
+      // Down in the air is a GRAB: worth more than an ollie, and it commits
+      // you to a fast fall. Style you pay for with air control.
+      this.sfx.slide();
+      this._trick('grab');
+    } else if (kind === 'slide' && !wasSliding && this.player.sliding > 0) {
+      this.sfx.slide();
+      this._trick('slide');
+    }
   }
 }
 
