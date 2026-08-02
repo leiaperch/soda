@@ -331,8 +331,16 @@ refreshes it rather than stacking: a stack whose size you cannot see is a
 stack you cannot reason about. The HUD shows a chip per active power-up with
 its time draining, blinking under 25% so the loss is never a surprise.
 
-The pickup silhouette is a caged bubble, bigger and differently shaped from a
-CELL. A pickup that differs only by colour is a pickup you grab by accident.
+They are **soda cans**, because the game is called SODA. The first pass was an
+abstract caged bubble and at any distance it read as a coloured lump with no
+shape at all. A recognisable object beats an abstract one every time: the
+silhouette says "pickup", the label colour says which one. They are tilted and
+spun on their own axis so the label sweeps past instead of tumbling, because a
+tumbling can is unreadable.
+
+Never put a built APK in `public/`. It lands in `dist/`, and then inside the
+next APK: the app shipped a 38 MB copy of itself once, doubling the download.
+`*.apk` and `*.aab` are gitignored now.
 
 ## Zone verbs
 

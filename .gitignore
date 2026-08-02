@@ -12,6 +12,11 @@ android/local.properties
 android/keystore.properties
 *.jks
 *.keystore
+
+# A built APK dropped into public/ ends up inside dist/, and then inside the
+# next APK. The app shipped a 38 MB copy of itself once; never again.
+*.apk
+*.aab
 *.local
 .DS_Store
 .vite/

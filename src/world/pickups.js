@@ -75,41 +75,66 @@ export class CellPool {
 export class PowerPool {
   constructor(scene, materials, max = 8) {
     this.max = max;
-    const cage = tinted(new THREE.IcosahedronGeometry(0.95, 0), new THREE.Color('#fff4e8'));
-    const core = tinted(new THREE.OctahedronGeometry(0.55, 0), new THREE.Color('#ffffff'));
 
-    this.cageMesh = new THREE.InstancedMesh(cage, materials.beam, max);
-    this.coreMesh = new THREE.InstancedMesh(core, materials.emissive, max);
-    for (const m of [this.cageMesh, this.coreMesh]) {
+    // A can, because the game is called SODA. The first version was an
+    // abstract caged bubble and it read at distance as a coloured lump with no
+    // shape at all. A recognisable object beats an abstract one every time:
+    // the silhouette says "pickup" and the label colour says which.
+    const b = new Builder();
+    const white = new THREE.Color('#ffffff');
+    b.cyl('chrome', 0, -0.52, 0, 0.40, 0.40, 1.04, 14, white);
+    b.cyl('chrome', 0, 0.46, 0, 0.42, 0.33, 0.12, 14, white);
+    b.cyl('chrome', 0, -0.60, 0, 0.33, 0.42, 0.12, 14, white);
+    b.box('chrome', 0, 0.55, 0, 0.26, 0.05, 0.12, white);          // pull tab
+    b.cyl('emissive', 0, -0.30, 0, 0.425, 0.425, 0.60, 14, white); // label band
+    b.cyl('emissive', 0, 0.20, 0, 0.415, 0.415, 0.08, 14, white);  // top stripe
+    b.cyl('emissive', 0, -0.42, 0, 0.415, 0.415, 0.08, 14, white); // bottom stripe
+    const parts = b.toGroup(materials);
+    const geomFor = (mat) => parts.children.find((c) => c.material === mat).geometry;
+
+    this.bodyMesh = new THREE.InstancedMesh(geomFor(materials.chrome), materials.chrome, max);
+    this.labelMesh = new THREE.InstancedMesh(geomFor(materials.emissive), materials.emissive, max);
+    // A soft halo so it is spottable from the far end of a chunk. Dim base
+    // colour on purpose: the material is additive and double sided, so this
+    // gets multiplied by the label tint and then again by the bloom.
+    this.haloMesh = new THREE.InstancedMesh(
+      tinted(new THREE.IcosahedronGeometry(0.95, 1), new THREE.Color(0.09, 0.09, 0.09)),
+      materials.beam, max,
+    );
+
+    for (const m of [this.haloMesh, this.bodyMesh, this.labelMesh]) {
       m.frustumCulled = false;
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.count = 0;
       scene.add(m);
     }
-    this.cageMesh.renderOrder = 2;
   }
 
   update(items, time) {
     const n = Math.min(items.length, this.max);
     for (let i = 0; i < n; i++) {
       const p = items[i];
-      _v.set(p.x, p.y + Math.sin(time * 2.4 + i) * 0.22, p.z);
-      _e.set(time * 0.9 + i, time * 1.7 + i, 0);
+      _v.set(p.x, p.y + Math.sin(time * 2.4 + i) * 0.2, p.z);
+      // Tilted and spinning on its own axis, so the label sweeps past rather
+      // than tumbling: a tumbling can is unreadable.
+      _e.set(0.34, time * 2.1 + i, 0.12);
       _q.setFromEuler(_e);
-      const pulse = 1 + Math.sin(time * 5 + i) * 0.06;
-      _m.compose(_v, _q, _s.set(pulse, pulse, pulse));
-      this.cageMesh.setMatrixAt(i, _m);
-      this.coreMesh.setMatrixAt(i, _m);
-      this.cageMesh.setColorAt(i, p.colour);
-      this.coreMesh.setColorAt(i, p.colour);
+      _m.compose(_v, _q, _s);
+      this.bodyMesh.setMatrixAt(i, _m);
+      this.labelMesh.setMatrixAt(i, _m);
+      this.labelMesh.setColorAt(i, p.colour);
+
+      const halo = 1 + Math.sin(time * 4 + i) * 0.07;
+      _m.compose(_v, _q, _s.set(halo, halo, halo));
+      this.haloMesh.setMatrixAt(i, _m);
+      this.haloMesh.setColorAt(i, p.colour);
+      _s.set(1, 1, 1);
     }
-    _s.set(1, 1, 1);
-    this.cageMesh.count = n;
-    this.coreMesh.count = n;
-    this.cageMesh.instanceMatrix.needsUpdate = true;
-    this.coreMesh.instanceMatrix.needsUpdate = true;
-    if (this.cageMesh.instanceColor) this.cageMesh.instanceColor.needsUpdate = true;
-    if (this.coreMesh.instanceColor) this.coreMesh.instanceColor.needsUpdate = true;
+    for (const m of [this.haloMesh, this.bodyMesh, this.labelMesh]) {
+      m.count = n;
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    }
   }
 }
 
