@@ -98,12 +98,35 @@ export class Animator {
     this.current = next;
   }
 
+  /**
+   * Stretch the jump clip over the jump actually being made.
+   *
+   * The clip is 0.83 s and clamps on its last frame. A zone with low gravity,
+   * or a spring pad, buys well over a second of air, so she reached the top of
+   * the clip and hung there in a frozen high-jump pose until she landed.
+   * Timing the clip to the arc means it always lands when she does.
+   */
+  _fitJump(player) {
+    const jump = this.actions.jump;
+    if (!jump || this._fitted) return;
+    this._fitted = true;
+    const g = player.physics.gravity;
+    const air = g < 0 ? (2 * Math.max(player.vy, 1)) / -g : 0.67;
+    jump.timeScale = THREE.MathUtils.clamp(jump.getClip().duration / air, 0.45, 1.6);
+  }
+
   /** Drive state straight off the player's physics rather than duplicating it. */
   syncTo(player) {
     if (!this.ready) return;
+    // Re-fit on the next take-off, not every frame: vy falls through the arc.
+    if (!player.airborne || player.grinding) this._fitted = false;
     if (player.stunned > 0) this.play('knocked');
     else if (player.flying) this.play('fly');
-    else if (player.airborne) this.play('jump');
+    // A grind sets `airborne` because her feet are off the road, but it is a
+    // ride, not a jump. The jump clip is LoopOnce and clamps, so playing it
+    // here froze her on the last frame of a high jump for the whole rail.
+    else if (player.grinding) this.play('skate');
+    else if (player.airborne) { this._fitJump(player); this.play('jump'); }
     else this.play('skate');
   }
 
