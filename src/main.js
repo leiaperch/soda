@@ -47,11 +47,23 @@ const back = createBackButton({
   onExit: exitApp,
 });
 hud.bindMute(audio);
-hud.showTitle();
 
-// Browsers refuse to start audio before a real gesture, so the menu track is
-// queued now and released by whichever interaction happens first.
-audio.playMenu();
+// `?hero` (ou `?embed`) : mode vitrine embarqué (hero de portfolio). On saute
+// l'écran titre et la liste des zones, et on démarre directement une course
+// jouable dans The Ring.
+const HERO = (() => {
+  const p = new URLSearchParams(location.search);
+  return p.has('hero') || p.has('embed');
+})();
+
+if (HERO) {
+  game.start();
+} else {
+  hud.showTitle();
+  // Browsers refuse to start audio before a real gesture, so the menu track is
+  // queued now and released by whichever interaction happens first.
+  audio.playMenu();
+}
 for (const evt of ['pointerdown', 'touchstart', 'keydown']) {
   window.addEventListener(evt, () => { audio.unlock(); sfx.unlock(); }, { once: true });
 }
