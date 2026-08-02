@@ -144,9 +144,12 @@ export class Track {
     }
 
     // A power-up, offset from the RELAY so the two never land together and
-    // steal each other's moment.
-    if (index > 1 && index % POWER_EVERY === 0) {
-      const key = POWER_KEYS[this.rng.int(0, POWER_KEYS.length - 1)];
+    // steal each other's moment. A zone only spawns the kinds it has been
+    // introduced to; an empty list means none at all, which is how The Ring
+    // stays a clean lesson in the three base verbs.
+    const allowed = this.zone.props.powers ?? POWER_KEYS;
+    if (index > 1 && index % POWER_EVERY === 0 && allowed.length) {
+      const key = allowed[this.rng.int(0, allowed.length - 1)];
       this.powers.push({
         key,
         colour: POWERUPS[key].colour,

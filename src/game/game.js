@@ -319,6 +319,14 @@ export class Game {
       const b = this.track.nearObstacles(p.z, 60).find((o) => o.type === 'bumper' && p.z - o.z > 10);
       if (b) this._teach('bumper', 'CHAIN THE BUMPERS');
     }
+
+    // A can the player has never seen deserves its name before they reach it,
+    // not only once they have already run into it.
+    const debut = this.zone.introduces;
+    if (debut) {
+      const can = this.track.powers.find((pu) => pu.key === debut && p.z - pu.z > 14 && p.z - pu.z < 70);
+      if (can) this._teach(`power-${debut}`, `NEW · ${POWERUPS[debut].label}`);
+    }
   }
 
   _features(dt) {

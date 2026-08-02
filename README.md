@@ -325,6 +325,25 @@ has rather than inventing a parallel one.
   shield the player does not believe in.
 - **DOUBLE** (gold, 11 s) scales what a CELL is worth.
 
+**They arrive one at a time.** `props.powers` is the list a zone may spawn and
+`introduces` marks its debut, announced as `NEW · FIZZ` before the player
+reaches the can rather than after they have run into it.
+
+| Zone | Spawns |
+| --- | --- |
+| The Ring | nothing |
+| The Shore | MAGNET |
+| The Sugar Flats | + DOUBLE |
+| The Market | + FIZZ |
+| everything after | all three |
+
+The Ring spawns none at all: it is teaching jump, slide and lane change, and a
+player learning three verbs does not also need a fourth thing rolling down the
+road at them. Each debut sits where that power-up is most obviously good,
+because one first met in a situation it does not help in reads as junk —
+MAGNET on the open sea where CELLS are spread wide, DOUBLE on the hills where
+they are awkward to reach, FIZZ in The Market where you crash most.
+
 They spawn every four chunks, offset from the RELAY so the two never land
 together and steal each other's moment. Grabbing one you already hold
 refreshes it rather than stacking: a stack whose size you cannot see is a

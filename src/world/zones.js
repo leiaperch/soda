@@ -1,6 +1,17 @@
 /**
  * Zone definitions. A zone is an ambience AND a mechanic; this file owns the
- * ambience half. Everything the generator needs to make one stretch of road
+ * ambience half.
+ *
+ * POWER-UPS ARE INTRODUCED ONE AT A TIME. `props.powers` is the list a zone
+ * may spawn, and `introduces` marks the zone that shows one for the first
+ * time so it can be announced. The Ring spawns none at all: it is teaching
+ * jump, slide and lane change, and a player learning three verbs does not
+ * also need a fourth thing rolling down the road at them.
+ *
+ * Each debut is placed where that power-up is most obviously good, because a
+ * power-up first met in a situation it does not help in reads as junk:
+ * MAGNET on the open sea where CELLS are spread wide, DOUBLE on the hills
+ * where they are awkward to reach, FIZZ in The Market where you crash most. Everything the generator needs to make one stretch of road
  * look nothing like another lives here, so adding a zone never means editing
  * the chunk builder.
  *
@@ -38,6 +49,7 @@ export const ZONES = [
     facades: ['#ffc2e2', '#c9b6ff', '#a8ecda', '#ffd9b0', '#e9d5ff', '#bfe3ff'],
     props: {
       road: 'street',
+      powers: [],
       obstacleKit: { barrier: 'fence', gate: 'gantry', block: 'pillar' },
       arches: 'round', archEvery: 24, archTint: ['#ff7ac6', '#7ff0d4', '#b79bff'],
       lampEvery: 12, streetEvery: 16, billboardChance: 0.7,
@@ -52,6 +64,7 @@ export const ZONES = [
     name: 'THE SHORE',
     subtitle: 'ARTIFICIAL OCEAN, GOLDEN HOUR',
     mechanic: 'Surf the swell. Waves taken clean give a boost.',
+    introduces: 'magnet',
     built: true,
     length: 1900,
     track: 'audio/surf-punk.mp3',
@@ -77,6 +90,7 @@ export const ZONES = [
       // Open sea: no kerb, no deck, no rail, no lamps. Everything that made it
       // read as "a road with water on it" is simply not emitted.
       road: 'sea',
+      powers: ['magnet'],
       obstacleKit: { barrier: 'rock', gate: 'net', block: 'wreck' },
       arches: 'none', archEvery: 0, archTint: ['#7fe6ff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
@@ -91,6 +105,7 @@ export const ZONES = [
     name: 'THE SUGAR FLATS',
     subtitle: 'PINK SAND, CANDY SUN',
     mechanic: 'Real hills. You lose speed climbing and get it back falling.',
+    introduces: 'double',
     built: true,
     length: 2000,
     track: 'audio/neon-tides.mp3',
@@ -117,6 +132,7 @@ export const ZONES = [
     facades: ['#ffc2e2', '#ffe0b8', '#c9b6ff', '#a8ecda', '#ffd0e8', '#e8d8ff'],
     props: {
       road: 'street',
+      powers: ['magnet', 'double'],
       // The one thing no other zone has: the road actually goes up and down.
       hill: 4.6,
       obstacleKit: { barrier: 'rock', gate: 'net', block: 'wreck' },
@@ -133,6 +149,7 @@ export const ZONES = [
     name: 'THE MARKET',
     subtitle: 'NEON NIGHT, NARROW AND LOUD',
     mechanic: 'Grind the rails to clear the crowd.',
+    introduces: 'fizz',
     built: true,
     length: 2400,
     track: 'audio/glitch-in-the-velvet-rope.mp3',
@@ -156,6 +173,7 @@ export const ZONES = [
     facades: ['#2c1740', '#3a1d33', '#241a44', '#40203a', '#1e1436', '#35163f'],
     props: {
       road: 'street',
+      powers: ['magnet', 'double', 'fizz'],
       obstacleKit: { barrier: 'crate', gate: 'gantry', block: 'pillar' },
       arches: 'gantry', archEvery: 16, archTint: ['#ff2e93', '#ffb02e', '#7fdcff'],
       lampEvery: 8, streetEvery: 6, billboardChance: 1,
