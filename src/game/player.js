@@ -15,6 +15,23 @@ export const JUMP_V = 11.4;
 const SLIDE_TIME = 0.58;
 /** How long the stand-up flourish runs after a slide ends. */
 const SLIDE_RECOVER = 0.36;
+
+/**
+ * Trick poses, layered on top of whatever clip is playing.
+ *
+ * There is no Mixamo clip for an ollie or a grab, and there does not need to
+ * be: a trick reads almost entirely from the body's rotation. `pitch`, `roll`
+ * and `spin` are the peak offsets, reached fast and decaying over `time`, so
+ * each one is a snap rather than a slow lean.
+ */
+const POSES = {
+  ollie: { time: 0.42, pitch: -0.55, roll: 0.1, spin: 0 },
+  grab: { time: 0.5, pitch: 0.95, roll: -0.3, spin: 0 },
+  bigAir: { time: 0.75, pitch: -0.2, roll: 0, spin: Math.PI * 2 },
+  // A spin has to be a whole turn: the pose ends by releasing the offset, so
+  // half a turn would pop her back round by 180 degrees on the last frame.
+  boing: { time: 0.6, pitch: -0.35, roll: 0, spin: -Math.PI * 2 },
+};
 const LANE_SPEED = 12;
 
 export const PLAYER = {
@@ -162,6 +179,8 @@ export class Player {
     this.grinding = null;
     this.slideRecover = 0;
     this.wasSliding = false;
+    this.pose = null;
+    this.poseT = 0;
     this.wind = 0;
     this.root.position.set(this.x, 0, 0);
     this.tilt.rotation.set(0, 0, 0);
@@ -198,6 +217,47 @@ export class Player {
    * A damped overshoot rather than a lerp, because the whole point is that
    * recovering is a move she performs, not a state that stops being true.
    */
+  /**
+   * A held lean while grinding. Sustained rather than a snap, because a grind
+   * is a pose you are holding, not a moment you hit.
+   */
+  _grindLean() {
+    const want = this.grinding ? -0.22 : 0;
+    this.grindLean = THREE.MathUtils.lerp(this.grindLean || 0, want, 0.12);
+    return this.grinding ? 0.12 : 0;
+  }
+
+  /** Fired by the game when a trick lands. Unknown keys are ignored. */
+  playPose(key) {
+    if (!POSES[key]) return;
+    this.pose = POSES[key];
+    this.poseT = 0;
+  }
+
+  /**
+   * Applies the current trick pose. Returns the pitch to add; roll and spin
+   * are applied here. Snaps in over the first fifth of its life and decays
+   * out, so it lands on the beat of the input rather than easing into it.
+   */
+  _trickPose(dt) {
+    this.poseRoll = 0;
+    this.poseSpin = 0;
+    if (!this.pose) return 0;
+    this.poseT += dt;
+    const t = this.poseT / this.pose.time;
+    if (t >= 1) { this.pose = null; return 0; }
+    const attack = Math.min(1, t / 0.18);
+    const decay = 1 - Math.pow(t, 1.7);
+    const k = attack * decay;
+    this.poseRoll = this.pose.roll * k;
+    // A spin runs once through the whole pose rather than decaying, or it
+    // would unwind halfway round and read as a stumble. Stored as an offset
+    // rather than added to the rotation: adding it every frame while the lean
+    // lerp reads the same channel makes it accumulate without bound.
+    if (this.pose.spin) this.poseSpin = this.pose.spin * Math.min(1, t * 1.15);
+    return this.pose.pitch * k;
+  }
+
   _slideFlourish() {
     if (this.slideRecover <= 0) return 0;
     const t = 1 - this.slideRecover / SLIDE_RECOVER;   // 0 at the start
@@ -274,9 +334,14 @@ export class Player {
     // Lean into the lane change, tuck into the slide, squash on landing.
     // Skeletal clips own the jump and the crash when they are available, so
     // only the lean survives in that case: doubling them up looks drunk.
+    // The lean is lerped on its own scalars, then every offset is added on top
+    // when the rotation is written. Lerping the rotation channel itself while
+    // also adding an offset to it makes the offset accumulate every frame.
     const lean = THREE.MathUtils.clamp(dx * 0.5, -0.55, 0.55);
-    this.tilt.rotation.z = THREE.MathUtils.lerp(this.tilt.rotation.z, -lean, 0.2);
-    this.tilt.rotation.y = THREE.MathUtils.lerp(this.tilt.rotation.y, lean * 0.6, 0.2);
+    this.leanZ = THREE.MathUtils.lerp(this.leanZ || 0, -lean, 0.2);
+    this.leanY = THREE.MathUtils.lerp(this.leanY || 0, lean * 0.6, 0.2);
+    this.tilt.rotation.z = this.leanZ;
+    this.tilt.rotation.y = this.leanY;
 
     if (this.flying) {
       // bank into the turn and pitch with the climb, which is all a flying
@@ -297,8 +362,10 @@ export class Player {
       const tuckOnly = this.sliding > 0 ? 1 : 0;
       this.tilt.position.y = tuckOnly ? 0.32 : 0;
       this.tilt.scale.y = 1;
-      const kickA = this._slideFlourish();
+      const kickA = this._slideFlourish() + this._trickPose(dt) + this._grindLean();
       this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuckOnly * 1.15 + kickA, 0.35);
+      this.tilt.rotation.z = this.leanZ + this.poseRoll + this.grindLean;
+      this.tilt.rotation.y = this.leanY + this.poseSpin;
       return;
     }
 
@@ -306,8 +373,10 @@ export class Player {
     const squash = this.landedAt && time - this.landedAt < 0.16 ? 0.82 : 1;
     this.tilt.scale.y = THREE.MathUtils.lerp(this.tilt.scale.y, squash, 0.4);
     this.tilt.position.y = tuck ? 0.32 : 0;
-    const kick = this._slideFlourish();
+    const kick = this._slideFlourish() + this._trickPose(dt) + this._grindLean();
     this.tilt.rotation.x = THREE.MathUtils.lerp(this.tilt.rotation.x, tuck * 1.15 + kick, 0.35);
+    this.tilt.rotation.z = this.leanZ + this.poseRoll + this.grindLean;
+    this.tilt.rotation.y = this.leanY + this.poseSpin;
     if (!this.airborne && !tuck) this.root.position.y += Math.sin(time * 9) * 0.05;
   }
 }

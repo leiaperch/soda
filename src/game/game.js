@@ -303,7 +303,9 @@ export class Game {
   /** Adds a link and shows it, so the chain is always visible as it builds. */
   _trick(key) {
     const def = this.tricks.add(key);
-    if (def) this.hud.showTrick(this.tricks, def.label);
+    if (!def) return;
+    this.hud.showTrick(this.tricks, def.label);
+    this.player.playPose(key);
   }
 
   /** Says a thing once per run, the first time it can possibly matter. */
