@@ -1,4 +1,5 @@
 import { formatTime } from '../game/records.js';
+import { POWERUPS } from '../game/powerups.js';
 
 /**
  * HUD and screens. All markup lives in index.html (cards come from a
@@ -11,6 +12,8 @@ export function createHud() {
   let lowCharge = false;
   let onPickZone = null;
   let nextZone = null;
+  let powerSig = '';
+  const powerChips = new Map();
 
   api.init = (doc = document) => {
     el.hud = doc.getElementById('hud');
@@ -20,6 +23,8 @@ export function createHud() {
     el.best = doc.getElementById('hudBest');
     el.toasts = doc.getElementById('toasts');
     el.tplToast = doc.getElementById('tplToast');
+    el.powers = doc.getElementById('powers');
+    el.tplPower = doc.getElementById('tplPower');
     el.flash = doc.getElementById('flash');
     el.vignette = doc.getElementById('vignette');
 
@@ -194,6 +199,9 @@ export function createHud() {
     el.vignette.classList.remove('vignette--low');
     lowCharge = false;
     el.progressFill.style.transform = 'scaleX(0)';
+    el.powers.replaceChildren();
+    powerChips.clear();
+    powerSig = '';
     el.best.textContent = zoneRecords.cleared
       ? `${zone.name} · BEST ${formatTime(zoneRecords.bestClearTime)}`
       : `${zone.name} · ${zone.length} M`;
@@ -241,6 +249,34 @@ export function createHud() {
     }
     el.distance.textContent = String(Math.floor(distance));
     el.speed.textContent = String(Math.round(speed * 3.6));
+  };
+
+  /**
+   * One chip per running power-up, rebuilt only when the set changes so the
+   * entry animation does not restart sixty times a second. The bar inside is
+   * updated every frame.
+   */
+  api.updatePowers = (power) => {
+    const keys = [...power.active.keys()];
+    const signature = keys.join(',');
+    if (signature !== powerSig) {
+      powerSig = signature;
+      el.powers.replaceChildren();
+      powerChips.clear();
+      for (const key of keys) {
+        const def = POWERUPS[key];
+        const chip = el.tplPower.content.firstElementChild.cloneNode(true);
+        chip.style.setProperty('--power', `#${def.colour.getHexString()}`);
+        chip.querySelector('.power__label').textContent = def.label;
+        el.powers.appendChild(chip);
+        powerChips.set(key, chip);
+      }
+    }
+    for (const [key, chip] of powerChips) {
+      const left = power.remaining(key);
+      chip.querySelector('.power__fill').style.transform = `scaleX(${left})`;
+      chip.classList.toggle('power--ending', left < 0.25);
+    }
   };
 
   api.toast = (text, kind) => {

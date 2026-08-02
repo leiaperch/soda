@@ -114,6 +114,21 @@ export class Player {
 
     // The authored model arrives asynchronously; the procedural courier holds
     // the frame until it does, so the game is playable from the first frame.
+    // FIZZ shell. Additive and unlit so it reads as a bubble around her
+    // rather than as a solid ball she is trapped in.
+    // Values well under 1: the material is additive AND double sided, so the
+    // front and back of the sphere both contribute and the bloom takes it from
+    // there. At full brightness this was a white blob with her invisible in it.
+    this.shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.62, 1), materials.beam);
+    this.shell.geometry.setAttribute('color', new THREE.Float32BufferAttribute(
+      new Array(this.shell.geometry.attributes.position.count * 3).fill(0).map((_, i) =>
+        [0.07, 0.20, 0.17][i % 3]), 3));
+    this.shell.position.y = 1.05;
+    this.shell.frustumCulled = false;
+    this.shell.visible = false;
+    this.root.add(this.shell);
+    this.shielded = false;
+
     this.animator = new Animator();
     this.animated = false;
     // Overridden per zone: low gravity on The Docks, crosswind on The Heights.
@@ -248,6 +263,13 @@ export class Player {
     // or she walks straight through it. Collision stays in flat space, where
     // she and every obstacle share the offset anyway.
     this.root.position.set(this.x, this.y + hillAt(this.z, this.hill), this.z);
+
+    this.shell.visible = this.shielded;
+    if (this.shielded) {
+      const wobble = 1 + Math.sin(time * 7) * 0.05;
+      this.shell.scale.set(wobble, 1 + Math.sin(time * 9 + 1) * 0.05, wobble);
+      this.shell.rotation.y = time * 0.8;
+    }
 
     // Lean into the lane change, tuck into the slide, squash on landing.
     // Skeletal clips own the jump and the crash when they are available, so

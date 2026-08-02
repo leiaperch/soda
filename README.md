@@ -310,6 +310,30 @@ semitone per pickup while a streak holds, then resets — without pre-baking
 variants. The context is created lazily on the first cue, same gesture gate as
 the music, and everything respects the mute toggle.
 
+## Power-ups
+
+Three, deliberately, in `game/powerups.js`. A runner's pickups only work if
+the player can tell which one they grabbed from its colour alone, at speed,
+without reading anything, so three strongly separated colours and three
+effects you feel inside half a second. Each leans on a system the game already
+has rather than inventing a parallel one.
+
+- **MAGNET** (pink, 8 s) drags loose CELLS to her from ten metres.
+- **FIZZ** (mint, 6.5 s) intercepts the crash entirely: obstacles burst, she
+  keeps her line and runs hot. It gets its own SMASH toast rather than
+  silently swallowing the hit, because a shield you cannot see working is a
+  shield the player does not believe in.
+- **DOUBLE** (gold, 11 s) scales what a CELL is worth.
+
+They spawn every four chunks, offset from the RELAY so the two never land
+together and steal each other's moment. Grabbing one you already hold
+refreshes it rather than stacking: a stack whose size you cannot see is a
+stack you cannot reason about. The HUD shows a chip per active power-up with
+its time draining, blinking under 25% so the loss is never a surprise.
+
+The pickup silhouette is a caged bubble, bigger and differently shaped from a
+CELL. A pickup that differs only by colour is a pickup you grab by accident.
+
 ## Zone verbs
 
 **Track structure is per zone, not just palette.** This is the thing that

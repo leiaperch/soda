@@ -1,10 +1,12 @@
 import { CHUNK_LEN, LANE_X, buildChunk, pickPattern } from './chunks.js';
-import { CellPool, RelayPool, FinishGate } from './pickups.js';
+import { CellPool, RelayPool, FinishGate, PowerPool } from './pickups.js';
 import { disposeGroup } from '../core/builder.js';
+import { POWERUPS, POWER_KEYS } from '../game/powerups.js';
 
 const VARIANTS = 10;      // pre-built chunk meshes, recycled forever
 const ACTIVE = 8;         // slots alive at once (~380 units of visible road)
 const RELAY_EVERY = 3;    // one checkpoint every three chunks (~144 m)
+const POWER_EVERY = 4;    // one power-up every four chunks (~192 m)
 
 /**
  * Checkpoint spacing is the real difficulty dial.
@@ -35,11 +37,13 @@ export class Track {
     this.cellPool = new CellPool(scene, materials);
     this.relayPool = new RelayPool(scene, materials, 5);
     this.finishGate = new FinishGate(scene, materials);
+    this.powerPool = new PowerPool(scene, materials);
     this.finishZ = null;
 
     this.slots = [];
     this.cells = [];
     this.relays = [];
+    this.powers = [];
     this.chunkIndex = 0;
     this.frontZ = 0;
   }
@@ -79,6 +83,7 @@ export class Track {
     this.slots.length = 0;
     this.cells.length = 0;
     this.relays.length = 0;
+    this.powers.length = 0;
     this.chunkIndex = 0;
     this.frontZ = CHUNK_LEN; // one chunk of runway behind the start line
     this.finishZ = this.zone && this.zone.length ? -this.zone.length : null;
@@ -137,6 +142,20 @@ export class Track {
     if (index > 0 && index % relayEvery(this.zone) === 0 && clearOfFinish) {
       this.relays.push({ z: relayZ, slot: index, used: false });
     }
+
+    // A power-up, offset from the RELAY so the two never land together and
+    // steal each other's moment.
+    if (index > 1 && index % POWER_EVERY === 0) {
+      const key = POWER_KEYS[this.rng.int(0, POWER_KEYS.length - 1)];
+      this.powers.push({
+        key,
+        colour: POWERUPS[key].colour,
+        x: LANE_X[this.rng.int(0, 2)],
+        y: this.zone.props.flight ? 2.8 : 1.5,
+        z: zStart - CHUNK_LEN * 0.28,
+        slot: index,
+      });
+    }
     this.slots.push(slot);
   }
 
@@ -147,10 +166,12 @@ export class Track {
       dead.variant.group.visible = false;
       this.cells = this.cells.filter((c) => c.slot !== dead.index);
       this.relays = this.relays.filter((r) => r.slot !== dead.index);
+      this.powers = this.powers.filter((p) => p.slot !== dead.index);
       this._spawn(tier);
     }
     this.cellPool.update(this.cells, time);
     this.relayPool.update(this.relays, time);
+    this.powerPool.update(this.powers, time);
     this.finishGate.update(this.finishZ, playerZ, time);
   }
 

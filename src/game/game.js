@@ -6,6 +6,7 @@ import { bendUniforms, hillAt, slopeAt } from '../render/materials.js';
 import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
 import { RAIL_H } from '../world/layout.js';
+import { PowerState, POWERUPS } from './powerups.js';
 
 /** Tuning lives in one block on purpose: this is the balance surface. */
 const TUNE = {
@@ -57,6 +58,7 @@ export class Game {
     this.audio = audio;
     this.sfx = sfx || SILENT_SFX;
     this._wasAirborne = false;
+    this.power = new PowerState();
     this.rng = makeRng(seed);
     this.track = new Track(stage.scene, stage.materials, this.rng);
     this.player = new Player(stage.scene, stage.materials);
@@ -118,6 +120,7 @@ export class Game {
     this.combo = 0;
     this.lastBump = -99;
     this.taught = new Set();
+    this.power.reset();
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.showZoneIntro(this.zone, ZONES.indexOf(this.zone) + 1);
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
@@ -146,6 +149,15 @@ export class Game {
   }
 
   _hit() {
+    // FIZZ is the shield: the obstacle bursts and you keep your line. This is
+    // the one power-up whose value has to be unmistakable the instant it saves
+    // you, so it gets its own toast rather than silently swallowing the crash.
+    if (this.power.has('fizz')) {
+      this.hud.toast('SMASH', 'relay');
+      this.sfx.relay();
+      this.shake = 0.22;
+      return;
+    }
     this.charge += TUNE.hitCharge;
     this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.hitSpeedCut);
     this.player.stunned = TUNE.hitStun;
@@ -220,9 +232,20 @@ export class Game {
       const c = this.track.cells[i];
       if (Math.abs(c.z - p.z) < 1.1 && Math.abs(c.x - p.x) < 1.2 && Math.abs(c.y - (p.y + 0.9)) < 1.5) {
         this.track.cells.splice(i, 1);
-        this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.cellCharge);
+        this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.cellCharge * this.power.cellFactor());
         this.run.cells++;
         this.sfx.cell(this.time);
+      }
+    }
+
+    // POWER-UPS
+    for (let i = this.track.powers.length - 1; i >= 0; i--) {
+      const pu = this.track.powers[i];
+      if (Math.abs(pu.z - p.z) < 1.4 && Math.abs(pu.x - p.x) < 1.5 && Math.abs(pu.y - (p.y + 0.9)) < 1.9) {
+        this.track.powers.splice(i, 1);
+        const def = this.power.grant(pu.key);
+        this.hud.toast(def.label, 'relay');
+        this.sfx.relay();
       }
     }
 
@@ -463,6 +486,15 @@ export class Game {
       const zoneTax = this.zone.props.drain || 1;
       this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * dt;
 
+      // Power-ups tick before movement so a magnet grabbed this frame already
+      // pulls, and an expiring FIZZ stops shielding on the frame it ends.
+      for (const key of this.power.update(dt)) this.hud.toast(`${POWERUPS[key].label} OUT`, 'warn');
+      this.power.attract(this.track.cells, this.player, dt);
+      if (this.power.has('fizz')) {
+        this.speed = Math.min(this.pace.max * POWERUPS.fizz.speed, this.speed + 26 * dt);
+      }
+      this.player.shielded = this.power.has('fizz');
+
       this.player.update(dt, this.speed, this.time);
 
       // Gravity does the rest of the work on a slope: you bleed speed on the
@@ -496,6 +528,7 @@ export class Game {
         if (this.audio) this.audio.duck();
       } else {
         this.hud.update(this.charge, TUNE.maxCharge, this.run.distance, this.speed, this.zone.length);
+        this.hud.updatePowers(this.power);
       }
     } else if (this.state === 'title') {
       // Slow drift on the title screen so the city is alive before you press play.

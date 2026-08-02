@@ -65,6 +65,55 @@ export class CellPool {
 }
 
 /**
+ * POWER-UPS: a caged bubble with a glowing core.
+ *
+ * Bigger than a CELL and shaped differently on purpose. A pickup that only
+ * differs by colour is a pickup the player grabs by accident; the silhouette
+ * has to say "this is not the usual thing" before the colour says which one.
+ * The core is tinted per instance, so all three kinds cost two draw calls.
+ */
+export class PowerPool {
+  constructor(scene, materials, max = 8) {
+    this.max = max;
+    const cage = tinted(new THREE.IcosahedronGeometry(0.95, 0), new THREE.Color('#fff4e8'));
+    const core = tinted(new THREE.OctahedronGeometry(0.55, 0), new THREE.Color('#ffffff'));
+
+    this.cageMesh = new THREE.InstancedMesh(cage, materials.beam, max);
+    this.coreMesh = new THREE.InstancedMesh(core, materials.emissive, max);
+    for (const m of [this.cageMesh, this.coreMesh]) {
+      m.frustumCulled = false;
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.count = 0;
+      scene.add(m);
+    }
+    this.cageMesh.renderOrder = 2;
+  }
+
+  update(items, time) {
+    const n = Math.min(items.length, this.max);
+    for (let i = 0; i < n; i++) {
+      const p = items[i];
+      _v.set(p.x, p.y + Math.sin(time * 2.4 + i) * 0.22, p.z);
+      _e.set(time * 0.9 + i, time * 1.7 + i, 0);
+      _q.setFromEuler(_e);
+      const pulse = 1 + Math.sin(time * 5 + i) * 0.06;
+      _m.compose(_v, _q, _s.set(pulse, pulse, pulse));
+      this.cageMesh.setMatrixAt(i, _m);
+      this.coreMesh.setMatrixAt(i, _m);
+      this.cageMesh.setColorAt(i, p.colour);
+      this.coreMesh.setColorAt(i, p.colour);
+    }
+    _s.set(1, 1, 1);
+    this.cageMesh.count = n;
+    this.coreMesh.count = n;
+    this.cageMesh.instanceMatrix.needsUpdate = true;
+    this.coreMesh.instanceMatrix.needsUpdate = true;
+    if (this.cageMesh.instanceColor) this.cageMesh.instanceColor.needsUpdate = true;
+    if (this.coreMesh.instanceColor) this.coreMesh.instanceColor.needsUpdate = true;
+  }
+}
+
+/**
  * RELAY gates: the Pin Out checkpoint, and the single most important object on
  * the track, so it is built to be unmissable at 40 m/s.
  *

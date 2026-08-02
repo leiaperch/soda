@@ -208,6 +208,60 @@ html, body {
 
 @keyframes blink { 50% { opacity: 0.35; } }
 
+/* --- active power-ups: one chip each, with the time left draining out --- */
+.powers {
+  margin-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: min(44vw, 210px);
+}
+
+.power {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(61, 13, 82, 0.55));
+  border: 2px solid #fff;
+  box-shadow: 0 3px 0 rgba(61, 13, 82, 0.6), 0 0 16px var(--power, #fff);
+  animation: powerIn 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes powerIn {
+  from { opacity: 0; transform: translateX(-14px) scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+
+.power__label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+.power__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(45, 17, 87, 0.7);
+}
+
+.power__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--power, #fff);
+  transform-origin: left center;
+}
+
+/* Under 25% left, the chip starts blinking so the loss is not a surprise. */
+.power--ending { animation: blink 0.42s steps(2, end) infinite; }
+
 /* --- distance readout --- */
 .readout {
   position: absolute;
