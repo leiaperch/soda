@@ -335,6 +335,21 @@ once on landing.
 and it commits you to a fast fall. Style you pay for with air control. It is
 the only trick that is a decision rather than a consequence.
 
+**Spins fill the empty stretches.** Tapping while already in the air was a dead
+input, so it now spins: SHUV-IT → 360 → 720, one per extra tap, the ladder
+reset at each take-off. Three fit inside the shortest jump in the game (0.67 s
+against a 0.18 s lock-out), so a straight with nothing in it is somewhere to go
+looking for points instead of somewhere to wait.
+
+A spin costs nothing and cannot kill you, which is exactly why it is marked
+`free` in the trick table: it scores STYLE but banks **no charge**. Without
+that, the full ladder is 1400 points, and 1400 points is 20 charge on a jump
+you can make every 1.5 s while the bar drains 6/s — a flat stretch would pay
+more than it costs and the run would stop having a clock. Spins do still raise
+the multiplier, so setting one up before threading an obstacle is the real
+reward: measured, CLEAN alone banks 2.86 charge, three spins then CLEAN banks
+3.43.
+
 STYLE is banked per run, kept per zone as a record, and shown on both end
 screens, which gives the game a second axis of mastery next to distance and
 time.

@@ -31,6 +31,12 @@ const POSES = {
   // A spin has to be a whole turn: the pose ends by releasing the offset, so
   // half a turn would pop her back round by 180 degrees on the last frame.
   boing: { time: 0.6, pitch: -0.35, roll: 0, spin: -Math.PI * 2 },
+  // Spins alternate direction so a chain of them reads as three separate
+  // tricks rather than one long blur, and the 720 is two turns in the time
+  // of one, which is what sells it as the harder move.
+  shuv: { time: 0.34, pitch: -0.12, roll: 0.3, spin: Math.PI * 2 },
+  spin360: { time: 0.4, pitch: -0.08, roll: -0.38, spin: -Math.PI * 2 },
+  spin720: { time: 0.46, pitch: 0.1, roll: 0.44, spin: Math.PI * 4 },
 };
 const LANE_SPEED = 12;
 

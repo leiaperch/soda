@@ -28,7 +28,22 @@ export const TRICKS = {
   bump:     { label: 'BUMP', value: 100 },
   boing:    { label: 'BOING', value: 110 },
   carried:  { label: 'CARRIED', value: 70 },
+  // Spins. Tapping while already in the air costs nothing and risks nothing,
+  // which is the point: an empty stretch is where you go looking for style
+  // instead of waiting it out. They escalate, so a long jump is worth working.
+  //
+  // `free` means the points are style only and bank no charge. A riskless
+  // input must not refill the bar, or a flat stretch becomes an infinite loop
+  // that pays more charge than it drains and the run stops having a clock.
+  // They still raise the multiplier, so setting a spin chain up before
+  // threading an obstacle is the actual reward: the risky trick pays for both.
+  shuv:     { label: 'SHUV-IT', value: 60, free: true },
+  spin360:  { label: '360 SPIN', value: 120, free: true },
+  spin720:  { label: '720 SPIN', value: 220, free: true },
 };
+
+/** Spins in the order they are earned, one per extra tap in the same jump. */
+export const SPIN_LADDER = ['shuv', 'spin360', 'spin720'];
 
 const WINDOW = 2.7;        // seconds a chain survives without a new link
 const MAX_MULT = 8;
@@ -40,6 +55,7 @@ export class TrickChain {
 
   reset() {
     this.score = 0;        // points in the chain currently running
+    this.paying = 0;       // the part of that score that banks as charge
     this.links = 0;
     this.timer = 0;
     this.total = 0;        // banked style points for the whole run
@@ -59,7 +75,9 @@ export class TrickChain {
     if (!def) return null;
     const repeated = this.last === def.label;
     if (!repeated) this.links++;
-    this.score += Math.round(def.value * this.multiplier);
+    const points = Math.round(def.value * this.multiplier);
+    this.score += points;
+    if (!def.free) this.paying += points;
     this.timer = WINDOW;
     this.last = def.label;
     return def;
@@ -71,6 +89,7 @@ export class TrickChain {
     if (!def) return;
     if (this.last !== def.label) { this.links++; this.last = def.label; }
     this.score += def.value * dt;
+    if (!def.free) this.paying += def.value * dt;
     this.timer = WINDOW;
   }
 
@@ -84,10 +103,11 @@ export class TrickChain {
     if (this.timer > 0) return null;
     const score = Math.round(this.score);
     const links = this.links;
-    const charge = Math.min(MAX_BANK, score * CHARGE_PER_POINT);
+    const charge = Math.min(MAX_BANK, this.paying * CHARGE_PER_POINT);
     this.total += score;
     this.best = Math.max(this.best, score);
     this.score = 0;
+    this.paying = 0;
     this.links = 0;
     this.last = null;
     this.timer = 0;
@@ -98,6 +118,7 @@ export class TrickChain {
   drop() {
     const lost = Math.round(this.score);
     this.score = 0;
+    this.paying = 0;
     this.links = 0;
     this.timer = 0;
     this.last = null;

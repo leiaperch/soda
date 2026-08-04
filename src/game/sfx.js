@@ -97,6 +97,14 @@ export function createSfx(audio) {
       noise({ dur: 0.34, gain: 0.16, from: 3200, to: 700, q: 3 });
     },
 
+    /** A mid-air spin. Pitched up per step so the ladder is audible. */
+    spin(step = 1) {
+      if (!live()) return;
+      const base = 520 * Math.pow(1.26, step - 1);
+      noise({ dur: 0.2, gain: 0.13, from: 700, to: 3400, q: 2.5 });
+      tone({ type: 'triangle', from: base, to: base * 1.9, dur: 0.16, gain: 0.16 });
+    },
+
     /** Climbs with an uninterrupted pickup streak, then resets. */
     cell(now) {
       if (!live()) return;

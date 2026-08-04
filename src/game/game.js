@@ -7,7 +7,7 @@ import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
 import { RAIL_H } from '../world/layout.js';
 import { PowerState, POWERUPS } from './powerups.js';
-import { TrickChain } from './tricks.js';
+import { TrickChain, SPIN_LADDER } from './tricks.js';
 
 /** Tuning lives in one block on purpose: this is the balance surface. */
 const TUNE = {
@@ -123,6 +123,8 @@ export class Game {
     this.taught = new Set();
     this.power.reset();
     this.tricks.reset();
+    this.airSpins = 0;
+    this._lastSpin = -99;
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.showZoneIntro(this.zone, ZONES.indexOf(this.zone) + 1);
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
@@ -301,6 +303,25 @@ export class Game {
   }
 
   /** Adds a link and shows it, so the chain is always visible as it builds. */
+  /**
+   * A tap in mid-air spins. It costs no height and cannot kill you, so it is
+   * the thing to do on an empty stretch instead of nothing. Each extra tap in
+   * the same jump climbs the ladder; the ladder is short so a single huge
+   * jump cannot be mashed into an entire run's worth of style.
+   */
+  _spin() {
+    if (this.player.flying || this.player.grinding) return;
+    if (this.airSpins >= SPIN_LADDER.length) return;
+    // One spin has to be readable before the next starts, or three taps in a
+    // frame collapse into one blur worth 400 points.
+    // 0.18 fits all three spins inside the shortest jump in the game (0.67 s)
+    // while still refusing a double-fire from one thumb.
+    if (this.time - this._lastSpin < 0.18) return;
+    this._lastSpin = this.time;
+    this._trick(SPIN_LADDER[this.airSpins++]);
+    this.sfx.spin(this.airSpins);
+  }
+
   _trick(key) {
     const def = this.tricks.add(key);
     if (!def) return;
@@ -557,7 +578,11 @@ export class Game {
       this._features(dt);
 
       // Landing is a state transition, not an event the player object emits.
-      if (!this._wasAirborne && this.player.airborne) this._airFrom = this.time;
+      if (!this._wasAirborne && this.player.airborne) {
+        this._airFrom = this.time;
+        this.airSpins = 0;
+        this._teach('spin', 'TAP IN THE AIR TO SPIN');
+      }
       if (this._wasAirborne && !this.player.airborne) {
         this.sfx.land();
         if (this.time - this._airFrom > TUNE.bigAirTime) this._trick('bigAir');
@@ -620,6 +645,8 @@ export class Game {
     if (kind === 'jump' && (!wasAirborne || wasGrinding)) {
       this.sfx.jump();
       this._trick('ollie');
+    } else if (kind === 'jump' && wasAirborne) {
+      this._spin();
     } else if (kind === 'slide' && wasAirborne && !wasGrinding) {
       // Down in the air is a GRAB: worth more than an ollie, and it commits
       // you to a fast fall. Style you pay for with air control.
