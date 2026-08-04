@@ -153,7 +153,12 @@ export function billboard(b, rng, pal, x, z, side) {
   const h = rng.range(5, 8);
   b.cyl('chrome', x, 0, z, 0.26, 0.2, h, 6, shade(pal.chrome, 0.9));
   b.at(x + facing * 1.1, h, z, facing * 0.35);
-  b.box('toon', 0, 0, 0, 5.6, 3.2, 0.3, new THREE.Color('#150a24'));
+  // Palette, not a hardcoded near-black. Five props carried their own dark
+  // colour, which reads as "night city" in the zones they were written for and
+  // as a slab of grey concrete in any zone that is not. In a pastel level they
+  // were the largest and ugliest things on screen — and being roadside, they
+  // sat outside a portrait capture's crop, which is why they survived so long.
+  b.box('toon', 0, 0, 0, 5.6, 3.2, 0.3, shade(pal.deck, 0.85));
   const tint = pal.archTints[rng.int(0, pal.archTints.length - 1)];
   b.box('emissive', 0, 0.35, 0.18, 5.0, 1.5, 0.08, shade(tint, 1.25));
   b.box('emissive', 0, 2.15, 0.18, 3.2, 0.5, 0.08, shade(pal.lane, 1.2));
@@ -171,7 +176,7 @@ export function marketStall(b, rng, pal, x, z, side) {
   const d = rng.range(3, 5);
   const tint = pal.archTints[rng.int(0, pal.archTints.length - 1)];
 
-  b.box('toon', x, 0, z, w, 2.4, d, new THREE.Color('#2a1836'));
+  b.box('toon', x, 0, z, w, 2.4, d, shade(pal.deck, 1.0));
   b.at(x + facing * (w * 0.35), 2.4, z, 0, 1, 1, 1);
   b.box('toon', 0, 0, 0, w * 1.15, 0.22, d * 1.1, shade(tint, 0.55));
   b.box('emissive', 0, -0.16, 0, w * 1.0, 0.1, d * 1.0, shade(tint, 1.3));
@@ -187,7 +192,7 @@ export function marketStall(b, rng, pal, x, z, side) {
   // vertical neon sign facing the road
   const sh = rng.range(3, 5.5);
   b.box('chrome', x + facing * (w * 0.55), 2.6, z, 0.16, sh, 0.16, shade(pal.chrome, 0.8));
-  b.box('toon', x + facing * (w * 0.62), 2.6, z, 0.12, sh * 0.9, 0.9, new THREE.Color('#150a24'));
+  b.box('toon', x + facing * (w * 0.62), 2.6, z, 0.12, sh * 0.9, 0.9, shade(pal.deck, 0.85));
   for (let i = 0; i < 4; i++) {
     b.box('emissive', x + facing * (w * 0.70), 3.0 + i * (sh * 0.2), z, 0.06, 0.42, 0.62, shade(tint, 1.35));
   }
@@ -210,11 +215,11 @@ export function skyArch(b, pal, z, roadHalf, color) {
 export function gantry(b, pal, z, roadHalf, color) {
   const h = 6.2;
   for (const s of [-1, 1]) {
-    b.box('toon', s * (roadHalf + 1.1), 0, z, 0.9, h, 0.9, new THREE.Color('#231436'));
+    b.box('toon', s * (roadHalf + 1.1), 0, z, 0.9, h, 0.9, shade(pal.deck, 1.05));
     b.box('emissive', s * (roadHalf + 1.1), 1.2, z, 0.95, 0.14, 0.95, shade(color, 1.3));
     b.box('emissive', s * (roadHalf + 1.1), 4.4, z, 0.95, 0.14, 0.95, shade(color, 1.3));
   }
-  b.box('toon', 0, h, z, (roadHalf + 1.6) * 2, 0.9, 1.0, new THREE.Color('#1c1030'));
+  b.box('toon', 0, h, z, (roadHalf + 1.6) * 2, 0.9, 1.0, shade(pal.deck, 0.9));
   b.box('emissive', 0, h - 0.16, z, (roadHalf + 1.2) * 2, 0.14, 1.05, shade(color, 1.35));
   for (let i = -2; i <= 2; i++) {
     b.box('emissive', i * 2.4, h - 0.9, z, 1.1, 0.5, 0.1, shade(pal.lane, 1.15));
