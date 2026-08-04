@@ -125,6 +125,7 @@ export class Game {
     this.tricks.reset();
     this.airSpins = 0;
     this._lastSpin = -99;
+    this._lastDodge = -99;
     this._clearT = 0;
     this._clearPanel = 0;
     this._clearArgs = null;
@@ -690,6 +691,7 @@ export class Game {
     const wasAirborne = this.player.airborne;
     const wasSliding = this.player.sliding > 0;
     const wasGrinding = !!this.player.grinding;
+    const wasLane = this.player.lane;
     this.player.intent(kind);
     if (this.player.flying) return;
 
@@ -698,6 +700,16 @@ export class Game {
       this._trick('ollie');
     } else if (kind === 'jump' && wasAirborne) {
       this._spin();
+    } else if ((kind === 'left' || kind === 'right') && wasAirborne && !wasGrinding
+               && this.zone.props.storm && this.player.lane !== wasLane) {
+      // In The Storm the lane change IS the mechanic, so it is scored rather
+      // than free. Rate-limited to the clip: without that, a player sweeping
+      // across two lanes restarts EVADE mid-swing and it never reads.
+      if (this.time - this._lastDodge > 0.5) {
+        this._lastDodge = this.time;
+        this._trick('dodge');
+        this.sfx.slide();
+      }
     } else if (kind === 'slide' && wasAirborne && !wasGrinding) {
       // Down in the air is a GRAB: worth more than an ollie, and it commits
       // you to a fast fall. Style you pay for with air control.

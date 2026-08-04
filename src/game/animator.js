@@ -23,7 +23,26 @@ const CLIPS = {
   // fixed length and then hand control straight back.
   flip: 'anim/flip.fbx',
   runflip: 'anim/runflip.fbx',
+  evade: 'anim/evade.fbx',
   victory: 'anim/victory.fbx',
+};
+
+/**
+ * Clips trimmed to the part that is actually the move, `[start, end]` in
+ * seconds.
+ *
+ * A Mixamo export is authored out of and back into an idle, so a "3.67 s
+ * dodge" is mostly standing still. Played whole it has to be crushed to fit an
+ * airborne moment, which is what made the first pass read as a twitch.
+ *
+ * Measured rather than guessed: summing per-bone quaternion deltas across each
+ * clip gives its motion envelope. EVADE ramps up to 0.5 s, peaks between 1.5
+ * and 2.5 s and has decayed by 2.8 s. RUNFLIP is flat after 1.8 s. FLIP is at
+ * full energy from its first frame to its last, so it is not trimmed at all.
+ */
+const TRIM = {
+  evade: [1.10, 2.50],
+  runflip: [0, 1.80],
 };
 
 /**
@@ -38,6 +57,7 @@ const CLIPS = {
 const TRICK_CLIPS = {
   bigAir: 'flip',
   boing: 'runflip',
+  dodge: 'evade',
 };
 
 /** Past this the clip stops reading as a move and starts reading as a stutter. */
@@ -51,6 +71,21 @@ function findSkinned(root) {
   return found;
 }
 
+/**
+ * Cut a clip down to `[start, end]` seconds. `AnimationUtils.subclip` works in
+ * frames, so the sample rate is read off the clip rather than assumed to be
+ * Mixamo's 30: an export at another rate would otherwise be trimmed to the
+ * wrong window without any error to notice.
+ */
+function trim(clip, [start, end]) {
+  const times = clip.tracks[0] && clip.tracks[0].times;
+  if (!times || times.length < 2) return clip;
+  const fps = 1 / (times[1] - times[0]);
+  const cut = THREE.AnimationUtils.subclip(clip, clip.name, Math.round(start * fps), Math.round(end * fps), fps);
+  cut.name = clip.name;
+  return cut;
+}
+
 export async function loadClips() {
   const loader = new FBXLoader();
   const entries = await Promise.all(Object.entries(CLIPS).map(async ([name, url]) => {
@@ -62,7 +97,7 @@ export async function loadClips() {
       // Mixamo bakes forward travel into the hips. The track moves the world,
       // so root motion has to go or she drifts out of her lane.
       clip.tracks = clip.tracks.filter((t) => !/mixamorig:?Hips\.position$/i.test(t.name));
-      return [name, clip];
+      return [name, TRIM[name] ? trim(clip, TRIM[name]) : clip];
     } catch (err) {
       console.warn(`[soda] clip ${name} failed to load`, err);
       return null;
@@ -147,7 +182,9 @@ export class Animator {
     // lands even at full speed, and a flip cut off halfway is worse than the
     // procedural pose it would have replaced.
     if (action.getClip().duration / MAX_TRICK_SPEED > window * 1.15) return false;
-    action.timeScale = THREE.MathUtils.clamp(action.getClip().duration / window, 0.5, MAX_TRICK_SPEED);
+    // Floor as well as ceiling: stretched much under 1x a trimmed clip stops
+    // reading as a snap and starts reading as slow motion.
+    action.timeScale = THREE.MathUtils.clamp(action.getClip().duration / window, 0.85, MAX_TRICK_SPEED);
     this.trickT = window;
     this.trickAir = inAir;
     this.play(name, { restart: true });

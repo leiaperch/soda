@@ -445,6 +445,53 @@ export const ZONES = [
   },
 
   {
+    id: 'storm',
+    name: 'THE STORM',
+    subtitle: 'AIRBORNE CHAOS',
+    mechanic: 'The wreckage is in the air. Dodge it while you are up there.',
+    built: true,
+    length: 2600,
+    track: 'audio/airborne-chaos.mp3',
+    // Every other zone keeps the danger on the floor, so this one puts it
+    // overhead and makes you live up there. Gravity at 0.40 buys 1.68 s of
+    // hangtime, long enough for a mid-flight decision to be a decision; the
+    // speed cap keeps a jump to ~37 m against a 48 m chunk, so a drift is
+    // never something you were already committed to before you could see it.
+    physics: { gravityScale: 0.40, maxSpeed: 22, speedRamp: 0.15 },
+    sky: [
+      [0.00, '#0a0618'], [0.24, '#1e1040'], [0.44, '#3d1e70'],
+      [0.62, '#7a3ba8'], [0.80, '#ff7ad0'], [1.00, '#160a2e'],
+    ],
+    fog: { color: '#3d1e70', near: 150, far: 300 },
+    sun: { color: '#ffd8f4', intensity: 1.8 },
+    hemi: { sky: '#b07aff', ground: '#0e0620', intensity: 0.48 },
+    backdrop: { sun: '#ffe8fa', halo: '#ff5ac8', arc: '#8a5ad0', planet: '#2e1a5a' },
+    colors: {
+      road: '#191030',
+      kerb: '#c8b0e8',
+      deck: '#251848',
+      edge: '#5ce8d0',
+      lane: '#f0e2ff',
+      accent: '#ff5ac8',
+      accentGlow: '#5ce8d0',
+    },
+    facades: ['#3a2468', '#52306e', '#2a2a5e', '#6a3a78', '#34265c', '#472a6a'],
+    props: {
+      road: 'street',
+      storm: true,
+      obstacleKit: { barrier: 'slab', gate: 'beam', block: 'wreck' },
+      // Sparse on purpose. At one gantry every 12 m the mint emissive stacked
+      // into a solid wall of light the moment she was airborne and looking
+      // along the road, which is exactly when she needs to read a drift.
+      arches: 'gantry', archEvery: 24, archTint: ['#ff5ac8', '#b07aff'],
+      lampEvery: 20, streetEvery: 10, billboardChance: 0.4,
+      palmChance: 0, podChance: 0.5, stallChance: 0,
+      skylineChance: 0.9, backRowChance: 0.7, waterSides: false, waterRoad: false,
+      lotMin: 6, lotMax: 12, towerStacks: [2, 4], feature: 'rail',
+    },
+  },
+
+  {
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',

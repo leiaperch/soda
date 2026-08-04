@@ -268,6 +268,43 @@ function bumper(b, pal, x, z, s) {
   b.dome('emissive', x, 0.4 + s.h * 0.5 + r * 0.8, z, r * 0.3, 0.26, 8, 3, shade(pal.lane, 1.1));
 }
 
+// ---------- drift: the only obstacle that lives in the air ------------------
+
+/**
+ * Storm debris caught in the updraft: a slab of torn decking with a bent rail
+ * still attached, tumbling nose-down. Everything about it has to say "up
+ * there" — nothing touches the road, and a lit shadow ring is painted on the
+ * floor underneath so its lane is readable long before its height is.
+ */
+function drift(b, pal, x, z, s) {
+  const y = s.base;
+  // Pale body, not a facade colour. The zone is a dark violet city at night
+  // and the first version was dark violet debris in it: invisible until it was
+  // too late, which in a zone that is entirely about reading one object ahead
+  // of time is not a look, it is a broken level.
+  const body = pal.kerb;
+  b.at(x, y + s.h * 0.5, z, 0.34, 1, 1, 1);
+  b.box('toon', 0, 0, 0, s.w, s.h * 0.34, s.d, shade(body, 1.0));
+  b.box('toon', -s.w * 0.18, s.h * 0.3, 0.1, s.w * 0.55, s.h * 0.3, s.d * 0.8, shade(body, 0.78));
+  b.box('chrome', 0, -s.h * 0.2, 0, s.w * 0.9, 0.14, s.d + 0.1, shade(pal.chrome, 0.95));
+  // torn rail, the tell that this used to be part of the track
+  for (const side of [-1, 1]) {
+    b.cyl('chrome', side * s.w * 0.42, s.h * 0.42, 0, 0.1, 0.08, s.h * 0.5, 6, shade(pal.chrome, 0.8));
+  }
+  // Hazard chevrons on the underside, because underneath is the face you see
+  // on the approach. Kept at 0.55 so a row of them cannot bloom into a bar.
+  for (let i = -1; i <= 1; i++) {
+    b.box('emissive', i * s.w * 0.3, -s.h * 0.19, 0, s.w * 0.2, 0.1, s.d * 0.85, shade(pal.accent, 0.55));
+  }
+  b.box('emissive', 0, -s.h * 0.16, s.d * 0.5, s.w * 0.7, 0.14, 0.07, shade(pal.accentGlow, 0.6));
+  b.pop();
+  // Ground marker: a thin ring, not a disc. At disc size it reads as a pad you
+  // are meant to hit, which is the opposite of what it means, and it is the
+  // brightest thing on the road at the exact moment you are looking down.
+  b.cyl('emissive', x, 0.03, z, s.w * 0.34, s.w * 0.30, 0.04, 16, shade(pal.accentGlow, 0.34));
+  b.cyl('emissive', x, 0.03, z, s.w * 0.20, s.w * 0.16, 0.04, 14, shade(pal.accent, 0.28));
+}
+
 const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'hedge' };
 
 /**
@@ -279,6 +316,7 @@ export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
   if (o.t === 'panel') return panel(b, pal, x, z, spec);
   if (o.t === 'hedge') return hedge(b, pal, x, z, spec);
   if (o.t === 'bumper') return bumper(b, pal, x, z, spec);
+  if (o.t === 'drift') return drift(b, pal, x, z, spec);
   const form = (kit && kit[o.t]) || DEFAULTS[o.t];
   const table = o.t === 'barrier' ? BARRIERS : o.t === 'gate' ? GATES : BLOCKS;
   (table[form] || table[DEFAULTS[o.t]])(b, pal, x, z, spec);

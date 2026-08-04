@@ -150,8 +150,28 @@ export function panelSpec(alt) {
   return { w: 2.4, h: 1.5, d: 0.8, base: ALT_Y[alt] - 0.1 };
 }
 
-export function pickPattern(rng, tier, flight) {
-  const source = flight ? FLIGHT_PATTERNS : PATTERNS;
+/**
+ * The Storm. Every phrase is the same sentence: something on the floor puts
+ * you in the air, and something in the air is waiting for you when you get
+ * there. The barrier is the launcher, the drift is the question.
+ *
+ * Spacing is set by the arc, not by taste. At that zone's gravity a jump lasts
+ * ~1.9 s and its top speed is 22, so she covers ~42 m airborne. A drift 12 m
+ * past the barrier arrives 0.55 s into the flight and one at 24 m arrives at
+ * 1.1 s — both while she is still up, which is the only time a drift means
+ * anything. Past ~40 m she has landed and it is scenery.
+ */
+const STORM_PATTERNS = [
+  { tier: 0, obstacles: [{ t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 }], cells: [{ lane: 0, z: 26, n: 4 }] },
+  { tier: 0, obstacles: [{ t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 }], cells: [{ lane: 1, z: 30, n: 4 }] },
+  { tier: 1, obstacles: [{ t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'drift', lane: 1, z: 34 }], cells: [{ lane: 0, z: 36, n: 3 }] },
+  { tier: 1, obstacles: [{ t: 'barrier', lane: 1, z: 11 }, { t: 'drift', lane: 0, z: 23 }, { t: 'drift', lane: 2, z: 23 }], cells: [{ lane: 1, z: 26, n: 5 }] },
+  { tier: 2, obstacles: [{ t: 'barrier', lane: 0, z: 10 }, { t: 'barrier', lane: 1, z: 10 }, { t: 'drift', lane: 2, z: 23 }, { t: 'drift', lane: 1, z: 35 }], cells: [{ lane: 0, z: 37, n: 3 }] },
+  { tier: 2, obstacles: [{ t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 }, { t: 'drift', lane: 0, z: 31 }, { t: 'drift', lane: 2, z: 42 }], cells: [{ lane: 1, z: 34, n: 4 }] },
+];
+
+export function pickPattern(rng, tier, flight, storm) {
+  const source = storm ? STORM_PATTERNS : flight ? FLIGHT_PATTERNS : PATTERNS;
   const pool = source.filter((p) => p.tier <= tier);
   return pool[rng.int(0, pool.length - 1)];
 }

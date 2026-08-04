@@ -28,4 +28,8 @@ export const OBSTACLE = {
   // Hitting one is not a crash: it throws you sideways and pays out. Tall
   // enough that jumping it is not the answer.
   bumper:  { w: 2.2, h: 2.6, d: 1.6, base: 0 },
+  // The Storm. Floats above head height, so it is harmless on the ground and
+  // only ever a problem while you are up. That inversion is the whole zone:
+  // everywhere else the danger is on the floor.
+  drift:   { w: 2.5, h: 3.4, d: 1.5, base: 2.6 },
 };

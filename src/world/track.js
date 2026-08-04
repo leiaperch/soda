@@ -53,7 +53,7 @@ export class Track {
     this.zone = zone;
     this._disposeVariants();
     for (let i = 0; i < VARIANTS; i++) {
-      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, zone.props.flight);
+      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, zone.props.flight, zone.props.storm);
       const chunk = buildChunk(this.rng, pattern, this.materials, zone);
       chunk.group.visible = false;
       this.scene.add(chunk.group);

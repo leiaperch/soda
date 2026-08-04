@@ -40,6 +40,9 @@ export const TRICKS = {
   shuv:     { label: 'SHUV-IT', value: 60, free: true },
   spin360:  { label: '360 SPIN', value: 120, free: true },
   spin720:  { label: '720 SPIN', value: 220, free: true },
+  // The Storm. Changing lane mid-flight is the zone's whole verb, so unlike a
+  // spin it pays: you only ever do it because something was in the way.
+  dodge:    { label: 'AIR DODGE', value: 130 },
 };
 
 /** Spins in the order they are earned, one per extra tap in the same jump. */

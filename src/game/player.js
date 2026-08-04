@@ -31,6 +31,7 @@ const POSES = {
   // A spin has to be a whole turn: the pose ends by releasing the offset, so
   // half a turn would pop her back round by 180 degrees on the last frame.
   boing: { time: 0.6, pitch: -0.35, roll: 0, spin: -Math.PI * 2 },
+  dodge: { time: 0.45, pitch: -0.2, roll: 0.6, spin: 0 },
   // Spins alternate direction so a chain of them reads as three separate
   // tricks rather than one long blur, and the 720 is two turns in the time
   // of one, which is what sells it as the harder move.
