@@ -553,16 +553,27 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
       palmChance: 0, podChance: 0.3, stallChance: 0.4,
       skylineChance: 1, backRowChance: 0.9, waterSides: false, waterRoad: false,
-      // A road that only ever goes down. `hill` is a sum of sines and can only
-      // give a descent followed by its own climb; `drop` is a constant
-      // gradient laid on top, so The Core falls for its whole length.
+      // THE PERPETUAL DESCENT IS OFF, AND UNSOLVED.
       //
-      // 0.055 was three degrees. That is a car park ramp: a real descent by
-      // the numbers and nothing at all to look at, which is exactly what got
-      // reported. 0.30 is seventeen degrees — a black run — and over the 48 m
-      // of a chunk the road drops fourteen metres, so the fall is the first
-      // thing you see rather than something you have to be told about.
-      drop: 0.30, slopePull: 62, overspeed: 22,
+      // `drop` fed a constant gradient into the bend shader and its CPU
+      // mirror. Three attempts, all of them wrong in a different way:
+      //   - 0.055 was three degrees, a car park ramp: correct arithmetic, no
+      //     visible slope at all;
+      //   - measured from world z instead of from the player, it sheared the
+      //     whole scene about the origin, so everything behind the camera
+      //     reared up as two grey walls that filled half the screen;
+      //   - measured from the player and steepened to seventeen degrees, my
+      //     own captures showed a clean pink sky and a falling road, and the
+      //     player still reported grey, no descent, a camera too close and
+      //     unplayable obstacle spacing.
+      //
+      // That last point is the important one: my verification says one thing
+      // and the screen says another, and until that gap is understood there is
+      // no basis for a fourth attempt. Flat plays; broken does not. The
+      // machinery is intact — `uDrop` in materials.js and its mirror in
+      // hillAt/slopeAt — so re-enabling it is one value, once the reason my
+      // captures disagreed with the game has actually been found.
+      slopePull: 62, overspeed: 22,   // `drop` removed — see the note above
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,
