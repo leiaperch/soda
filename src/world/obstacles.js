@@ -164,12 +164,59 @@ const GATES = {
 
 const BLOCKS = {
   /** Tapered pillar with light bands. The city default. */
+  /**
+   * Fluted column with a broken cap.
+   *
+   * The old one was a single tapered box with four stripes on it, which is the
+   * shape a placeholder has. A column reads from three things a box cannot
+   * give: a base wider than the shaft, flutes breaking the round silhouette,
+   * and a cap that overhangs. The break at the top is what stops three of them
+   * in a row from looking stamped.
+   */
   pillar(b, pal, x, z, s) {
-    b.taper('toon', x, 0, z, s.w, s.h, s.d, 0.25, shade(pal.accentGlow, 0.7));
-    b.box('chrome', x, s.h, z, s.w * 0.9, 0.22, s.d * 0.9, shade(pal.chrome, 0.95));
-    for (let i = 0; i < 4; i++) {
-      b.box('emissive', x, 0.5 + i * 0.85, z, s.w * 0.95, 0.12, s.d + 0.06, shade(pal.lane, 1.15));
+    const r = s.w * 0.36;
+    b.taper('toon', x, 0, z, s.w * 1.02, 0.32, s.d * 1.02, 0.14, shade(pal.deck, 1.25));
+    b.cyl('toon', x, 0.32, z, r * 1.06, r * 0.9, s.h * 0.82, 10, shade(pal.accentGlow, 0.62));
+    // flutes: eight thin ribs around the shaft, the detail that carries at speed
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      b.box('toon', x + Math.cos(a) * r * 0.92, 0.34, z + Math.sin(a) * r * 0.92,
+        0.11, s.h * 0.78, 0.11, shade(pal.accentGlow, 0.48));
     }
+    b.cyl('chrome', x, s.h * 0.86, z, r * 1.15, r * 1.02, 0.18, 10, shade(pal.chrome, 0.95));
+    b.taper('toon', x, s.h * 0.86 + 0.18, z, s.w * 0.92, s.h * 0.12, s.d * 0.92, -0.1, shade(pal.deck, 1.4));
+    // the cap is snapped off at an angle rather than cut flat
+    b.tri('toon', [x - s.w * 0.46, s.h * 0.98, z], [x + s.w * 0.46, s.h * 0.98, z],
+      [x, s.h * 1.06, z - s.d * 0.4], shade(pal.deck, 1.6));
+    b.cyl('emissive', x, 0.36, z, r * 1.1, r * 1.1, 0.1, 10, shade(pal.lane, 0.6));
+    b.cyl('emissive', x, s.h * 0.8, z, r * 1.04, r * 1.04, 0.1, 10, shade(pal.lane, 0.55));
+  },
+
+  /**
+   * A market sign tower: stacked lit boards on a mast, listing.
+   *
+   * The Market used the Ring's `pillar` and The Core's arches, so from the road
+   * the three zones met in the middle. This is the thing The Market has that
+   * nothing else does — a stack of signage, wider at the top than the bottom,
+   * which is the opposite silhouette to every other block in the game.
+   */
+  signtower(b, pal, x, z, s) {
+    b.at(x, 0, z, 0.14, 1, 1, 1);
+    b.taper('toon', 0, 0, 0, s.w * 0.5, 0.26, s.d * 0.8, 0.08, shade(pal.deck, 1.3));
+    b.cyl('chrome', 0, 0.26, 0, 0.17, 0.13, s.h * 0.92, 6, shade(pal.chrome, 0.85));
+    const boards = [
+      [0.30, 0.62, -1], [0.52, 0.78, 1], [0.72, 0.66, -1], [0.88, 0.9, 1],
+    ];
+    for (const [t, wide, side] of boards) {
+      const y = 0.3 + t * s.h * 0.72;
+      const w = s.w * wide;
+      b.box('toon', side * w * 0.18, y, 0, w, s.h * 0.15, s.d * 0.34, shade(pal.facades[1], 1.5));
+      b.box('emissive', side * w * 0.18, y + s.h * 0.02, s.d * 0.18, w * 0.86, s.h * 0.09, 0.05,
+        shade(side > 0 ? pal.accent : pal.accentGlow, 0.62));
+      b.box('chrome', side * w * 0.18, y - 0.04, 0, w + 0.1, 0.06, s.d * 0.38, shade(pal.chrome, 0.9));
+    }
+    b.dome('emissive', 0, s.h * 0.98, 0, 0.2, 0.24, 6, 2, shade(pal.accent, 0.7));
+    b.pop();
   },
 
   /** Half-sunk hull, listing. */

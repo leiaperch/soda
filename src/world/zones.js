@@ -174,7 +174,7 @@ export const ZONES = [
     props: {
       road: 'street',
       powers: ['magnet', 'double', 'fizz'],
-      obstacleKit: { barrier: 'crate', gate: 'gantry', block: 'pillar' },
+      obstacleKit: { barrier: 'crate', gate: 'gantry', block: 'signtower' },
       arches: 'gantry', archEvery: 16, archTint: ['#ff2e93', '#ffb02e', '#7fdcff'],
       lampEvery: 8, streetEvery: 6, billboardChance: 1,
       palmChance: 0.1, podChance: 0.3, stallChance: 0.9,
