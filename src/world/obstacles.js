@@ -18,16 +18,36 @@ import { OBSTACLE } from './layout.js';
 const _c = new THREE.Color();
 const shade = (color, m) => _c.copy(color).multiplyScalar(m).clone();
 
+/**
+ * NOTHING MAY BE DRAWN ON THE SIDE OF A HITBOX THE PLAYER TRAVELS PAST.
+ *
+ * Read the constraint per contract, not per object:
+ *   - a BARRIER is jumped, so nothing may stand above its box;
+ *   - a GATE is slid under, so nothing may hang below its base. Its top is as
+ *     unreachable as a block's and is not a constraint at all.
+ * In both cases the rule covers the surface the player physically travels
+ * past. Geometry there is geometry she passes through, which reads as the
+ * game cheating.
+ *
+ * Blocks are exempt, and deliberately so: a block is 3.6 m against a 1.8 m
+ * jump apex, so its top is somewhere she can never be. `wreck` stands 1.8 m
+ * clear of its box and that is fine — squashing a listing hull by a third to
+ * satisfy a rule nobody can observe would cost the silhouette for nothing.
+ */
+
 // ---------- barriers: low, jump them ---------------------------------------
 
 const BARRIERS = {
   /** Guard fence with chrome caps. The city default. */
   fence(b, pal, x, z, s) {
-    b.box('toon', x, 0, z, s.w, s.h, s.d, shade(pal.accent, 0.9));
-    b.box('chrome', x, s.h, z, s.w + 0.16, 0.16, s.d + 0.16, shade(pal.chrome, 0.95));
+    // The cap is inset, not stacked on top. Sat at `s.h` it put 0.16 m of
+    // visible rail above the hitbox, so a jump that the game scored as clean
+    // passed through the bar you can see. See the note above BARRIERS.
+    b.box('toon', x, 0, z, s.w, s.h - 0.16, s.d, shade(pal.accent, 0.9));
+    b.box('chrome', x, s.h - 0.16, z, s.w + 0.16, 0.16, s.d + 0.16, shade(pal.chrome, 0.95));
     b.box('emissive', x, s.h * 0.55, z, s.w * 0.8, 0.16, s.d + 0.05, shade(pal.accentGlow, 1.3));
     for (const side of [-1, 1]) {
-      b.cyl('chrome', x + side * s.w / 2, 0, z, 0.14, 0.12, s.h, 6, shade(pal.chrome, 0.9));
+      b.cyl('chrome', x + side * s.w / 2, 0, z, 0.14, 0.12, s.h - 0.02, 6, shade(pal.chrome, 0.9));
     }
   },
 
@@ -123,9 +143,11 @@ const BARRIERS = {
       b.dome('toon', x + side * s.w * 0.5, s.h * 0.5, z, r * 0.95, side * 0.28, 8, 3, shade(bark, 1.15));
     }
     // moss and a couple of glowing caps along the top
-    b.box('toon', x, s.h * 0.86, z, s.w * 0.9, s.h * 0.2, s.d * 0.72, shade(pal.edge, 0.9));
-    b.dome('emissive', x - s.w * 0.22, s.h * 1.02, z, 0.22, 0.2, 6, 2, shade(pal.accentGlow, 1.2));
-    b.dome('emissive', x + s.w * 0.26, s.h * 1.02, z + 0.1, 0.16, 0.15, 6, 2, shade(pal.accentGlow, 1.0));
+    b.box('toon', x, s.h * 0.66, z, s.w * 0.9, s.h * 0.14, s.d * 0.72, shade(pal.edge, 0.9));
+    // Caps sit in the moss rather than on top of it: at s.h * 1.02 they stood
+    // 0.22 m clear of the hitbox and you jumped straight through them.
+    b.dome('emissive', x - s.w * 0.22, s.h * 0.8, z, 0.22, 0.12, 6, 2, shade(pal.accentGlow, 1.2));
+    b.dome('emissive', x + s.w * 0.26, s.h * 0.8, z + 0.1, 0.16, 0.1, 6, 2, shade(pal.accentGlow, 1.0));
   },
 };
 
@@ -477,8 +499,8 @@ function skywalk(b, pal, x, z, s) {
   b.box('toon', x, y + s.h * 0.2, z, s.w, s.h * 0.22, s.d * 0.7, shade(pal.kerb, 0.8));
   // handrail still attached, the tell that people used to walk on this
   for (const side of [-1, 1]) {
-    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.82, z, 0.1, 0.5, s.d, shade(pal.chrome, 0.9));
-    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.82 + 0.5, z, 0.16, 0.1, s.d, shade(pal.chrome, 1.0));
+    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.62, z, 0.1, 0.28, s.d, shade(pal.chrome, 0.9));
+    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.9, z, 0.16, 0.1, s.d, shade(pal.chrome, 1.0));
   }
   // torn cabling hanging into the gap you slide through
   for (let i = -1; i <= 1; i++) {
