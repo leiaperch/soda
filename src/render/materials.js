@@ -38,6 +38,7 @@ export const bendUniforms = {
   uBendY: { value: 0.00085 },   // drop-off with distance
   uBendX: { value: 0.00042 },   // lateral curve of the ring
   uHill: { value: 0 },          // elevation amplitude, 0 on a flat zone
+  uDrop: { value: 0 },          // constant gradient: a road that only descends
   uTime: { value: 0 },
 };
 
@@ -55,15 +56,22 @@ export const bendUniforms = {
 export const HILL_A = 0.0449;   // 2*PI/140
 export const HILL_B = 0.0209;   // 2*PI/300
 
+/**
+ * The CPU mirror of the vertex displacement. It has to match the shader
+ * exactly, drop included: the player, the camera and every collision are
+ * placed with this, and the world is drawn with the other.
+ */
 export function hillAt(z, amp) {
-  if (!amp) return 0;
-  return amp * (Math.sin(z * HILL_A) * 0.65 + Math.sin(z * HILL_B) * 0.35);
+  const drop = bendUniforms.uDrop.value * z;
+  if (!amp) return drop;
+  return amp * (Math.sin(z * HILL_A) * 0.65 + Math.sin(z * HILL_B) * 0.35) + drop;
 }
 
 /** Slope at z, i.e. the derivative. Positive means the road climbs ahead. */
 export function slopeAt(z, amp) {
-  if (!amp) return 0;
-  return amp * (Math.cos(z * HILL_A) * 0.65 * HILL_A + Math.cos(z * HILL_B) * 0.35 * HILL_B);
+  const drop = bendUniforms.uDrop.value;
+  if (!amp) return drop;
+  return amp * (Math.cos(z * HILL_A) * 0.65 * HILL_A + Math.cos(z * HILL_B) * 0.35 * HILL_B) + drop;
 }
 
 const BEND_PARS = /* glsl */`
@@ -71,6 +79,7 @@ const BEND_PARS = /* glsl */`
   uniform float uBendY;
   uniform float uBendX;
   uniform float uHill;
+  uniform float uDrop;
   uniform float uTime;
 `;
 
@@ -89,6 +98,10 @@ const BEND_PROJECT = /* glsl */`
   sodaWorld.y -= sodaD2 * uBendY;
   sodaWorld.x += sodaD2 * uBendX;
   sodaWorld.y += uHill * (sin(sodaWorld.z * 0.0449) * 0.65 + sin(sodaWorld.z * 0.0209) * 0.35);
+  // A constant gradient on top of the waves. World z runs negative ahead of
+  // her, so a positive uDrop lowers everything in front: the road only ever
+  // goes down, which a sum of sines can never express on its own.
+  sodaWorld.y += uDrop * sodaWorld.z;
   mvPosition = viewMatrix * sodaWorld;
   gl_Position = projectionMatrix * mvPosition;
 `;
@@ -99,6 +112,7 @@ function applyBend(material, cacheKey) {
     shader.uniforms.uBendY = bendUniforms.uBendY;
     shader.uniforms.uBendX = bendUniforms.uBendX;
     shader.uniforms.uHill = bendUniforms.uHill;
+    shader.uniforms.uDrop = bendUniforms.uDrop;
     shader.uniforms.uTime = bendUniforms.uTime;
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', `${BEND_PARS}\nvoid main() {`)

@@ -102,6 +102,7 @@ export class Game {
     this.hill = zone.props.hill || 0;
     this.player.hill = this.hill;
     bendUniforms.uHill.value = this.hill;
+    bendUniforms.uDrop.value = zone.props.drop || 0;
     this.pace = {
       start: ph.startSpeed ?? TUNE.startSpeed,
       max: ph.maxSpeed ?? TUNE.maxSpeed,
@@ -715,7 +716,7 @@ export class Game {
       // Gravity does the rest of the work on a slope: you bleed speed on the
       // way up and get it back on the way down. Nothing else needed to make a
       // hill felt rather than just seen.
-      if (this.hill) {
+      if (this.hill || this.zone.props.drop) {
         // Both the pull and the ceiling are per zone. The Sugar Flats are
         // rolling country where the hills colour the pace; The Core is a
         // plunge, and a plunge that cannot take you past your own top speed is

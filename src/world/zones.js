@@ -506,7 +506,7 @@ export const ZONES = [
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',
-    mechanic: 'Every zone at once. Every colour, every verb, and faster.',
+    mechanic: 'Down, and only down. Every colour, every verb, and faster.',
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
@@ -544,11 +544,12 @@ export const ZONES = [
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
       palmChance: 0, podChance: 0.3, stallChance: 0.4,
       skylineChance: 1, backRowChance: 0.9, waterSides: false, waterRoad: false,
-      // No relief here. `hill` is a sine wave, so asking it for a descent gives
-      // you a descent AND the climb back out — mountains, not a plunge. The
-      // Core wants a road that only ever goes down, which the current
-      // elevation model cannot express; until it can, flat beats wrong.
-      slopePull: 62, overspeed: 22,
+      // A road that only ever goes down. `hill` is a sum of sines and can only
+      // give a descent followed by its own climb; `drop` is a constant
+      // gradient laid on top, so The Core falls for its whole length. At 0.055
+      // that is about three degrees — 2.6 m lost per chunk, 190 m over the
+      // zone — which the existing gradient rule turns into speed for free.
+      drop: 0.055, slopePull: 62, overspeed: 22,
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,
