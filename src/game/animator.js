@@ -19,6 +19,21 @@ const CLIPS = {
   jump: 'anim/jump.fbx',
   knocked: 'anim/knocked.fbx',
   fly: 'anim/fly.fbx',
+  // Trick clips. These are played over the top of the state machine for a
+  // fixed length and then hand control straight back.
+  flip: 'anim/flip.fbx',
+  runflip: 'anim/runflip.fbx',
+  evade: 'anim/evade.fbx',
+  victory: 'anim/victory.fbx',
+};
+
+/** Which trick gets a real clip, and how long it is allowed to hold the body. */
+const TRICK_CLIPS = {
+  spin360: 'flip',
+  spin720: 'flip',
+  bigAir: 'flip',
+  boing: 'runflip',
+  grab: 'evade',
 };
 
 const FADE = 0.18;
@@ -55,6 +70,9 @@ export class Animator {
     this.actions = {};
     this.current = null;
     this.ready = false;
+    /** Seconds a trick clip still owns the body. Zero means the state machine. */
+    this.trickT = 0;
+    this.trickAir = false;
   }
 
   /**
@@ -84,6 +102,11 @@ export class Animator {
       this.actions.knocked.setLoop(THREE.LoopOnce, 1);
       this.actions.knocked.clampWhenFinished = true;
     }
+    for (const name of ['flip', 'runflip', 'evade', 'victory']) {
+      if (!this.actions[name]) continue;
+      this.actions[name].setLoop(THREE.LoopOnce, 1);
+      this.actions[name].clampWhenFinished = true;
+    }
     this.ready = true;
     this.play('skate');
     return true;
@@ -96,6 +119,40 @@ export class Animator {
     next.reset().fadeIn(FADE).play();
     if (this.current && this.current !== next) this.current.fadeOut(FADE);
     this.current = next;
+  }
+
+  /**
+   * Hand the body to a trick clip for the length of the trick.
+   *
+   * @param {string} key trick key, e.g. `spin720`
+   * @param {number} window seconds the trick should last — the pose duration
+   *   for a spin, the remaining airtime for a flip. The clip is retimed to fit
+   *   it, because a 2 s Mixamo flip inside a 0.67 s jump lands her upside down.
+   * @param {boolean} inAir true if landing should cut the clip short
+   * @returns {boolean} false when there is no clip, so the caller falls back
+   *   to its procedural pose.
+   */
+  playTrick(key, window, inAir) {
+    const name = TRICK_CLIPS[key];
+    const action = this.ready && name && this.actions[name];
+    if (!action) return false;
+    // Wide ceiling on purpose: EVADE is a 3.67 s clip and a grab lasts under
+    // half a second, so anything tighter shows only the wind-up.
+    action.timeScale = THREE.MathUtils.clamp(action.getClip().duration / window, 0.5, 7);
+    this.trickT = window;
+    this.trickAir = inAir;
+    this.play(name, { restart: true });
+    return true;
+  }
+
+  /** The finish line. Plays out and holds; nothing interrupts it. */
+  celebrate() {
+    if (!this.ready || !this.actions.victory) return false;
+    this.actions.victory.timeScale = 1;
+    this.trickT = 99;
+    this.trickAir = false;
+    this.play('victory', { restart: true });
+    return true;
   }
 
   /**
@@ -120,6 +177,12 @@ export class Animator {
     if (!this.ready) return;
     // Re-fit on the next take-off, not every frame: vy falls through the arc.
     if (!player.airborne || player.grinding) this._fitted = false;
+    // A crash outranks a trick; landing ends an air trick early so she is
+    // never still flipping with her skates on the road.
+    if (player.stunned > 0) this.trickT = 0;
+    else if (this.trickAir && !player.airborne) this.trickT = 0;
+    else if (this.trickT > 0) return;
+
     if (player.stunned > 0) this.play('knocked');
     else if (player.flying) this.play('fly');
     // A grind sets `airborne` because her feet are off the road, but it is a
@@ -131,6 +194,7 @@ export class Animator {
   }
 
   update(dt) {
+    if (this.trickT > 0) this.trickT = Math.max(0, this.trickT - dt);
     if (this.mixer) this.mixer.update(dt);
   }
 }

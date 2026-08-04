@@ -233,11 +233,31 @@ export class Player {
     return this.grinding ? 0.12 : 0;
   }
 
-  /** Fired by the game when a trick lands. Unknown keys are ignored. */
+  /**
+   * Fired by the game when a trick lands. Unknown keys are ignored.
+   *
+   * A real clip wins over the procedural pose and the pose is cleared: running
+   * both spins the body twice, once from the skeleton and once from the tilt
+   * group, which reads as a glitch rather than as a bigger trick.
+   */
   playPose(key) {
     if (!POSES[key]) return;
+    if (this.animated) {
+      // Time the clip to the air she actually has left, so a flip finishes
+      // exactly as she lands instead of being cut off halfway.
+      const air = this.airborne && this.physics.gravity < 0
+        ? Math.max(0.28, (this.vy + Math.sqrt(Math.max(0, this.vy * this.vy - 2 * this.physics.gravity * this.y))) / -this.physics.gravity)
+        : POSES[key].time;
+      if (this.animator.playTrick(key, air, this.airborne)) { this.pose = null; return; }
+    }
     this.pose = POSES[key];
     this.poseT = 0;
+  }
+
+  /** The finish line. Falls back to nothing if she is not rigged. */
+  celebrate() {
+    this.pose = null;
+    if (this.animated) this.animator.celebrate();
   }
 
   /**

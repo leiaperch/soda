@@ -125,6 +125,9 @@ export class Game {
     this.tricks.reset();
     this.airSpins = 0;
     this._lastSpin = -99;
+    this._clearT = 0;
+    this._clearPanel = 0;
+    this._clearArgs = null;
     this.hud.showRun(records.zone(this.zone.id), this.zone);
     this.hud.showZoneIntro(this.zone, ZONES.indexOf(this.zone) + 1);
     if (this.audio) { this.audio.unlock(); this.audio.playRun(this.zone); }
@@ -144,10 +147,15 @@ export class Game {
     this._bankChain();
     this.state = 'clear';
     this.run.cleared = true;
+    this.player.celebrate();
     const beat = records.submit(this.zone.id, this.run);
-    this.hud.showClear(this.run, beat, this.zone, this.nextZone());
     this.sfx.finish();
     if (this.audio) this.audio.duck();
+    // The clear panel is opaque and full screen, so showing it now would bury
+    // the celebration under it. Hold on her for a beat, then bring the numbers
+    // in. Long enough to read the pose, short enough not to feel like a wait.
+    this._clearPanel = 1.3;
+    this._clearArgs = [this.run, beat, this.zone, this.nextZone()];
   }
 
   /** Next built zone after this one, or null at the end of what exists. */
@@ -491,6 +499,25 @@ export class Game {
   _camera(dt) {
     const cam = this.stage.camera;
     const p = this.player;
+
+    // Crossing the line, swing round to her front. The victory clip is a
+    // celebration and the chase camera looks at the back of her head, so from
+    // the default angle it may as well not exist.
+    if (this.state === 'clear') {
+      this._clearT = Math.min(1, (this._clearT || 0) + dt * 0.75);
+      const e = 1 - Math.pow(1 - this._clearT, 3);
+      const ang = e * Math.PI * 0.87;
+      // Close in as it swings: from eight metres back she is a thumbnail, and
+      // the clear panel takes the bottom of the screen, so she has to be both
+      // bigger and higher in frame than the chase camera leaves her.
+      const r = 7.8 - e * 3.9;
+      const ground = hillAt(p.z, this.hill);
+      cam.position.set(p.x + Math.sin(ang) * r, ground + 2.3 + e * 0.5, p.z + Math.cos(ang) * r);
+      this._tmp.set(p.x, ground + 1.9, p.z);
+      cam.lookAt(this._tmp);
+      return;
+    }
+
     const targetX = p.x * 0.55;
     // Flying, the camera has to track her altitude much more closely or she
     // leaves the frame the moment she climbs.
@@ -581,11 +608,19 @@ export class Game {
       if (!this._wasAirborne && this.player.airborne) {
         this._airFrom = this.time;
         this.airSpins = 0;
+        this._bigAir = false;
         this._teach('spin', 'TAP IN THE AIR TO SPIN');
+      }
+      // Awarded the moment the jump is long enough, not on landing. It used to
+      // fire as her skates touched down, which meant the flip clip started
+      // with her already on the road.
+      if (this.player.airborne && !this._bigAir && !this.player.grinding
+          && this.time - this._airFrom > TUNE.bigAirTime) {
+        this._bigAir = true;
+        this._trick('bigAir');
       }
       if (this._wasAirborne && !this.player.airborne) {
         this.sfx.land();
-        if (this.time - this._airFrom > TUNE.bigAirTime) this._trick('bigAir');
       }
       this._wasAirborne = this.player.airborne;
 
@@ -608,10 +643,21 @@ export class Game {
       // Slow drift on the title screen so the city is alive before you press play.
       this.player.z -= 6 * dt;
       this.player.update(dt, 6, this.time);
+    } else if (this.state === 'clear') {
+      // She still has to be ticked or the victory clip is a frozen first frame.
+      this.player.update(dt, 0, this.time);
     }
 
     bendUniforms.uPlayerZ.value = this.player.z;
     this.track.update(this.player.z, this.tier, this.time);
+    if (this._clearPanel > 0) {
+      this._clearPanel -= dt;
+      if (this._clearPanel <= 0) {
+        this.hud.showClear(...this._clearArgs);
+        this._clearArgs = null;
+      }
+    }
+
     this._camera(dt);
   }
 

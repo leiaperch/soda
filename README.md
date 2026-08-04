@@ -254,6 +254,33 @@ while the world is already moving under her. When no skeleton is found the
 animator returns false and the procedural lean/tuck/bob takes over, so a bad
 export degrades instead of breaking.
 
+**Trick clips sit on top of the state machine, not inside it.** FLIP, RUNFLIP,
+EVADE and VICTORY are one-shots that take the body for a fixed window
+(`animator.trickT`) and then hand it straight back, so the state machine never
+has to know a trick exists. Three rules make them behave:
+
+- **Retimed to the trick, not played at their own length.** The Mixamo flip is
+  1.67 s and a jump is 0.67 s; played raw she lands upside down. Each clip is
+  scaled to the airtime she actually has left, computed from `vy` and gravity.
+  EVADE is 3.67 s against a sub-half-second grab, which is why the ceiling on
+  that scale is 7 and not the 4 it started at — anything tighter shows only the
+  wind-up.
+- **A clip cancels the procedural pose.** Running both spins her twice, once
+  from the skeleton and once from the tilt group, which reads as a glitch
+  rather than as a bigger trick.
+- **Landing and crashing both cut a clip short**, so she is never still
+  flipping with her skates on the road.
+
+BIG AIR had to move for this: it used to be awarded on landing, so the flip
+started with her already down. It now fires the moment the jump is long enough,
+while she is still in the air.
+
+VICTORY needed the screen as much as the clip. The clear panel is opaque and
+full screen, so playing a celebration behind it was worth nothing; the panel
+now waits 1.3 s while the camera swings from behind her to her front and closes
+from 7.8 m to 3.9 m. Long enough to read the pose, short enough not to feel
+like a wait.
+
 **The rigged mesh is deliberately untextured, and that is a known problem.**
 Mixamo did not only rig the model, it reprocessed the geometry: the glTF has
 7412 triangles, the returned FBX has 6984, and the UV layout no longer matches
