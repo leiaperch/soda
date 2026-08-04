@@ -617,9 +617,35 @@ export class Game {
     }
   }
 
+  /**
+   * Bends the road sideways, and rolls the camera into the bend.
+   *
+   * `uBendX` already existed as a fixed lateral curve — the far road drifting
+   * off to one side, which is what made The Ring read as a ring. Driving it
+   * from the player's own z turns that constant into a road that snakes, for
+   * no new geometry: the same parabola, re-aimed every frame.
+   *
+   * The bend is purely visual. Lanes and collisions live in flat space, so a
+   * turn cannot make an obstacle unfair — and the camera roll is what stops it
+   * reading as the world sliding, which is what a bend without a roll looks
+   * like. Two frequencies rather than one, so the road never repeats a rhythm
+   * you can learn.
+   */
+  _curve(dt) {
+    const amp = this.zone.props.curve;
+    if (!amp) { this.roll = THREE.MathUtils.lerp(this.roll || 0, 0, 0.06); return; }
+    const z = this.player.z;
+    const shape = Math.sin(z * 0.0062) * 0.68 + Math.sin(z * 0.0143 + 1.7) * 0.32;
+    bendUniforms.uBendX.value = 0.00042 + shape * amp;
+    // Roll follows the bend, damped: a camera that snapped to it would read as
+    // the horizon twitching rather than as a corner being taken.
+    this.roll = THREE.MathUtils.lerp(this.roll || 0, -shape * 0.16, Math.min(1, 2.4 * dt));
+  }
+
   _camera(dt) {
     const cam = this.stage.camera;
     const p = this.player;
+    this._curve(dt);
 
     // Crossing the line, swing round to her front. The victory clip is a
     // celebration and the chase camera looks at the back of her head, so from
@@ -683,6 +709,7 @@ export class Game {
       p.z - 16,
     );
     cam.lookAt(this._tmp);
+    if (this.roll) cam.rotateZ(this.roll);
 
     // Speed sells itself through FOV, not through numbers.
     const t = (this.speed - this.pace.start) / (this.pace.max - this.pace.start);

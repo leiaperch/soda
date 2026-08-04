@@ -55,6 +55,7 @@ export const ZONES = [
       lampEvery: 12, streetEvery: 16, billboardChance: 0.7,
       palmChance: 0.5, podChance: 0.5, stallChance: 0,
       skylineChance: 0.72, backRowChance: 0.55, waterSides: false,
+      curve: 0.00030,
       lotMin: 8, lotMax: 16, towerStacks: [2, 4], feature: null,
     },
   },
@@ -144,6 +145,7 @@ export const ZONES = [
       lampEvery: 20, streetEvery: 12, billboardChance: 0.1,
       palmChance: 0.7, podChance: 0.15, stallChance: 0,
       skylineChance: 0.3, backRowChance: 0.15, waterSides: false, waterRoad: false,
+      curve: 0.00046,
       lotMin: 12, lotMax: 24, towerStacks: [1, 2], feature: null,
     },
   },
@@ -573,7 +575,7 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
       // machinery is intact — `uDrop` in materials.js and its mirror in
       // hillAt/slopeAt — so re-enabling it is one value, once the reason my
       // captures disagreed with the game has actually been found.
-      drop: 0.30, slopePull: 62, overspeed: 22,
+      drop: 0.30, curve: 0.00085, slopePull: 62, overspeed: 22,
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,
