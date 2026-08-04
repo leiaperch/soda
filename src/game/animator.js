@@ -23,18 +23,25 @@ const CLIPS = {
   // fixed length and then hand control straight back.
   flip: 'anim/flip.fbx',
   runflip: 'anim/runflip.fbx',
-  evade: 'anim/evade.fbx',
   victory: 'anim/victory.fbx',
 };
 
-/** Which trick gets a real clip, and how long it is allowed to hold the body. */
+/**
+ * Which tricks get a real clip.
+ *
+ * Only the two slow ones. A clip has to be squeezed into the airtime it is
+ * given, and the tap tricks do not have enough of it: the flip ran at 5x and
+ * the 3.67 s evade at 7x, which is a twitch, not a trick. Everything fast is
+ * back on the procedural spin — she turns on herself on her skates, which is
+ * readable at any speed because it is authored at the speed it plays.
+ */
 const TRICK_CLIPS = {
-  spin360: 'flip',
-  spin720: 'flip',
   bigAir: 'flip',
   boing: 'runflip',
-  grab: 'evade',
 };
+
+/** Past this the clip stops reading as a move and starts reading as a stutter. */
+const MAX_TRICK_SPEED = 2;
 
 const FADE = 0.18;
 
@@ -102,7 +109,7 @@ export class Animator {
       this.actions.knocked.setLoop(THREE.LoopOnce, 1);
       this.actions.knocked.clampWhenFinished = true;
     }
-    for (const name of ['flip', 'runflip', 'evade', 'victory']) {
+    for (const name of ['flip', 'runflip', 'victory']) {
       if (!this.actions[name]) continue;
       this.actions[name].setLoop(THREE.LoopOnce, 1);
       this.actions[name].clampWhenFinished = true;
@@ -136,9 +143,11 @@ export class Animator {
     const name = TRICK_CLIPS[key];
     const action = this.ready && name && this.actions[name];
     if (!action) return false;
-    // Wide ceiling on purpose: EVADE is a 3.67 s clip and a grab lasts under
-    // half a second, so anything tighter shows only the wind-up.
-    action.timeScale = THREE.MathUtils.clamp(action.getClip().duration / window, 0.5, 7);
+    // Refuse rather than cram. Below this the clip cannot finish before she
+    // lands even at full speed, and a flip cut off halfway is worse than the
+    // procedural pose it would have replaced.
+    if (action.getClip().duration / MAX_TRICK_SPEED > window * 1.15) return false;
+    action.timeScale = THREE.MathUtils.clamp(action.getClip().duration / window, 0.5, MAX_TRICK_SPEED);
     this.trickT = window;
     this.trickAir = inAir;
     this.play(name, { restart: true });

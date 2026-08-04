@@ -453,6 +453,10 @@ export class Game {
           p.vy = Math.abs(p.physics.jump) * TUNE.springBoost;
           this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.springCharge);
           this._trick('boing');
+          // A spring launch is a big air by definition, but BOING is the more
+          // specific reward and owns the animation. Claiming it here stops the
+          // take-off check below from firing a second trick on the same frame.
+          this._bigAir = true;
           this.sfx.jump();
         }
         continue;
@@ -608,17 +612,18 @@ export class Game {
       if (!this._wasAirborne && this.player.airborne) {
         this._airFrom = this.time;
         this.airSpins = 0;
-        this._bigAir = false;
         this._teach('spin', 'TAP IN THE AIR TO SPIN');
+        // Awarded at take-off on the jump's predicted length, not part-way
+        // through it. Waiting until 0.62 s had elapsed left less air than the
+        // flip clip needs, so BIG AIR could never actually show its animation.
+        const g = this.player.physics.gravity;
+        const air = g < 0 ? (2 * this.player.vy) / -g : 0;
+        if (!this._bigAir && air > TUNE.bigAirTime) {
+          this._bigAir = true;
+          this._trick('bigAir');
+        }
       }
-      // Awarded the moment the jump is long enough, not on landing. It used to
-      // fire as her skates touched down, which meant the flip clip started
-      // with her already on the road.
-      if (this.player.airborne && !this._bigAir && !this.player.grinding
-          && this.time - this._airFrom > TUNE.bigAirTime) {
-        this._bigAir = true;
-        this._trick('bigAir');
-      }
+      if (!this.player.airborne) this._bigAir = false;
       if (this._wasAirborne && !this.player.airborne) {
         this.sfx.land();
       }

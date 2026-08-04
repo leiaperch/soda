@@ -254,26 +254,39 @@ while the world is already moving under her. When no skeleton is found the
 animator returns false and the procedural lean/tuck/bob takes over, so a bad
 export degrades instead of breaking.
 
-**Trick clips sit on top of the state machine, not inside it.** FLIP, RUNFLIP,
-EVADE and VICTORY are one-shots that take the body for a fixed window
+**Trick clips sit on top of the state machine, not inside it.** FLIP, RUNFLIP
+and VICTORY are one-shots that take the body for a fixed window
 (`animator.trickT`) and then hand it straight back, so the state machine never
-has to know a trick exists. Three rules make them behave:
+has to know a trick exists. Four rules make them behave:
 
-- **Retimed to the trick, not played at their own length.** The Mixamo flip is
-  1.67 s and a jump is 0.67 s; played raw she lands upside down. Each clip is
-  scaled to the airtime she actually has left, computed from `vy` and gravity.
-  EVADE is 3.67 s against a sub-half-second grab, which is why the ceiling on
-  that scale is 7 and not the 4 it started at — anything tighter shows only the
-  wind-up.
+- **Only the slow tricks get one.** BIG AIR and BOING, nothing else. A clip has
+  to be squeezed into the airtime it is given, and the tap tricks do not have
+  enough: the flip ended up at 5x and the 3.67 s evade at 7x, which is a twitch
+  rather than a trick. Everything fast stayed on the procedural spin, which is
+  readable at any speed because it is authored at the speed it plays. EVADE is
+  parked in `assets-src/anim/` — kept, but out of `public/` so it is not 372 kB
+  of dead weight in the APK.
+- **Retimed to the trick, not played at their own length**, from `vy` and the
+  zone's gravity — but never past 2x (`MAX_TRICK_SPEED`).
+- **Refused rather than crammed.** If the clip cannot finish before she lands
+  even at 2x, `playTrick` returns false and the procedural pose runs instead. A
+  flip cut off halfway is worse than the pose it replaced.
 - **A clip cancels the procedural pose.** Running both spins her twice, once
   from the skeleton and once from the tilt group, which reads as a glitch
-  rather than as a bigger trick.
-- **Landing and crashing both cut a clip short**, so she is never still
-  flipping with her skates on the road.
+  rather than as a bigger trick. Landing and crashing both cut a clip short.
 
-BIG AIR had to move for this: it used to be awarded on landing, so the flip
-started with her already down. It now fires the moment the jump is long enough,
-while she is still in the air.
+BIG AIR moved twice for this. It was awarded on landing, so the flip started
+with her already on the road; moving it to 0.62 s into the jump then left less
+air than the flip needs, so it was refused every time. It is now awarded at
+**take-off**, on the jump's predicted length, which is the only point where the
+whole airtime is still available. Measured: greenhouse 0.93 s of air runs the
+flip at 1.82x, docks 1.02 s at 1.67x, a greenhouse spring 1.43 s runs RUNFLIP
+at 1.55x — none of them held a single frame on the clamp. The Ring's 0.67 s
+jump is correctly refused and falls back to the pose.
+
+A spring claims `_bigAir` when it fires, because a launch is a big air by
+definition and BOING is the more specific reward: without that, both tricks
+fire on the same frame and the second clip overwrites the first.
 
 VICTORY needed the screen as much as the clip. The clear panel is opaque and
 full screen, so playing a celebration behind it was worth nothing; the panel
