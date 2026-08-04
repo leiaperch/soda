@@ -268,6 +268,64 @@ function bumper(b, pal, x, z, s) {
   b.dome('emissive', x, 0.4 + s.h * 0.5 + r * 0.8, z, r * 0.3, 0.26, 8, 3, shade(pal.lane, 1.1));
 }
 
+// ---------- The Storm: things the wind tore off the city --------------------
+//
+// The zone's whole premise is that the road is coming apart, so its three
+// forms are all pieces of the city that used to be somewhere else. They keep
+// the contracts exactly — low and solid, clear underneath, tall and opaque —
+// because the grammar is what a player reads at speed, not the story.
+//
+// Nothing here leans, and that is a constraint rather than a choice: the
+// matrix stack only rotates around Y. Wreckage reads as wreckage through
+// offset stacking and yaw instead, which is cheaper anyway.
+
+/** Barrier: a hoarding blown flat across the lane, still lit. */
+function hoard(b, pal, x, z, s) {
+  b.at(x, 0, z, 0.16, 1, 1, 1);
+  b.box('toon', 0, 0, 0, s.w, s.h * 0.72, s.d * 0.8, shade(pal.kerb, 0.86));
+  b.box('toon', -s.w * 0.12, s.h * 0.66, 0.08, s.w * 0.78, s.h * 0.3, s.d * 0.7, shade(pal.kerb, 1.0));
+  // the ad face, half torn off
+  b.box('emissive', s.w * 0.06, s.h * 0.34, s.d * 0.42, s.w * 0.56, s.h * 0.34, 0.06, shade(pal.accent, 0.5));
+  b.box('emissive', -s.w * 0.3, s.h * 0.2, s.d * 0.42, s.w * 0.2, s.h * 0.16, 0.06, shade(pal.accentGlow, 0.45));
+  b.pop();
+  // the snapped legs it stood on
+  for (const side of [-1, 1]) {
+    b.cyl('chrome', x + side * s.w * 0.42, 0, z - s.d * 0.3, 0.11, 0.09, s.h * 0.5, 6, shade(pal.chrome, 0.8));
+  }
+}
+
+/** Gate: a service walkway sheared off its building and jammed overhead. */
+function skywalk(b, pal, x, z, s) {
+  const y = s.base;
+  b.box('toon', x, y + s.h * 0.42, z, s.w + 0.5, s.h * 0.34, s.d, shade(pal.deck, 1.3));
+  b.box('toon', x, y + s.h * 0.2, z, s.w, s.h * 0.22, s.d * 0.7, shade(pal.kerb, 0.8));
+  // handrail still attached, the tell that people used to walk on this
+  for (const side of [-1, 1]) {
+    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.82, z, 0.1, 0.5, s.d, shade(pal.chrome, 0.9));
+    b.box('chrome', x + side * (s.w * 0.5 + 0.2), y + s.h * 0.82 + 0.5, z, 0.16, 0.1, s.d, shade(pal.chrome, 1.0));
+  }
+  // torn cabling hanging into the gap you slide through
+  for (let i = -1; i <= 1; i++) {
+    b.cyl('toon', x + i * s.w * 0.3, y - 0.34, z + (i % 2) * 0.2, 0.05, 0.04, 0.36, 5, shade(pal.deck, 0.8));
+  }
+  b.box('emissive', x, y + 0.06, z, s.w * 0.85, 0.12, s.d * 0.8, shade(pal.accentGlow, 0.5));
+}
+
+/** Block: a comms mast down in the lane, dish and all. */
+function mast(b, pal, x, z, s) {
+  b.at(x, 0, z, -0.22, 1, 1, 1);
+  b.box('toon', 0, 0, 0, s.w * 0.5, s.h * 0.28, s.d * 0.9, shade(pal.deck, 1.2));
+  b.cyl('chrome', 0, s.h * 0.24, 0, 0.3, 0.2, s.h * 0.6, 7, shade(pal.chrome, 0.85));
+  // lattice, the silhouette that says mast rather than pillar
+  for (let i = 0; i < 4; i++) {
+    const yy = s.h * 0.3 + i * s.h * 0.16;
+    b.box('chrome', 0, yy, 0, 0.9 - i * 0.13, 0.09, 0.9 - i * 0.13, shade(pal.chrome, 0.95));
+  }
+  b.dome('toon', 0.34, s.h * 0.7, 0, 0.62, 0.34, 9, 3, shade(pal.kerb, 0.9));
+  b.box('emissive', 0, s.h * 0.88, 0, 0.2, 0.42, 0.2, shade(pal.accent, 0.6));
+  b.pop();
+}
+
 // ---------- drift: the only obstacle that lives in the air ------------------
 
 /**
@@ -304,6 +362,10 @@ function drift(b, pal, x, z, s) {
   b.cyl('emissive', x, 0.03, z, s.w * 0.34, s.w * 0.30, 0.04, 16, shade(pal.accentGlow, 0.34));
   b.cyl('emissive', x, 0.03, z, s.w * 0.20, s.w * 0.16, 0.04, 14, shade(pal.accent, 0.28));
 }
+
+BARRIERS.hoard = hoard;
+GATES.skywalk = skywalk;
+BLOCKS.mast = mast;
 
 const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'hedge' };
 

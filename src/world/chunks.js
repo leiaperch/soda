@@ -3,7 +3,7 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
-  springPad, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
+  springPad, launchRamp, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
 import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
@@ -140,9 +140,11 @@ function conflicts(o, features) {
     // exists to clear spans all of them.
     if (f.kind === 'spring') return o.z > f.z - 6 && o.z < f.z + 15;
     if (f.kind === 'ring') return o.lane === f.lane && Math.abs(o.z - f.z) < 8;
-    // The launch pad spans every lane and the whole run-up under the deck has
-    // to stay clear: she is committed the moment she touches the pad.
-    if (f.kind === 'deck') return o.z > f.pad - 6 && o.z < f.to + 3;
+    // Only the pad and the run-up to the deck's leading edge are cleared: she
+    // is committed and airborne over that stretch and could not dodge if she
+    // wanted to. Clearing the whole span instead, once decks were extended to
+    // the chunk boundary, silently emptied every storm chunk of obstacles.
+    if (f.kind === 'deck') return o.z > f.pad - 6 && o.z < f.from + 4;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
@@ -213,10 +215,10 @@ function upperDeck(b, pal, f) {
 const STORM_PATTERNS = [
   { tier: 0, obstacles: [{ t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 }], cells: [{ lane: 0, z: 26, n: 4 }] },
   { tier: 0, obstacles: [{ t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 }], cells: [{ lane: 1, z: 30, n: 4 }] },
-  { tier: 1, obstacles: [{ t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'drift', lane: 1, z: 34 }], cells: [{ lane: 0, z: 36, n: 3 }] },
-  { tier: 1, obstacles: [{ t: 'barrier', lane: 1, z: 11 }, { t: 'drift', lane: 0, z: 23 }, { t: 'drift', lane: 2, z: 23 }], cells: [{ lane: 1, z: 26, n: 5 }] },
-  { tier: 2, obstacles: [{ t: 'barrier', lane: 0, z: 10 }, { t: 'barrier', lane: 1, z: 10 }, { t: 'drift', lane: 2, z: 23 }, { t: 'drift', lane: 1, z: 35 }], cells: [{ lane: 0, z: 37, n: 3 }] },
-  { tier: 2, obstacles: [{ t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 }, { t: 'drift', lane: 0, z: 31 }, { t: 'drift', lane: 2, z: 42 }], cells: [{ lane: 1, z: 34, n: 4 }] },
+  { tier: 1, obstacles: [{ t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'block', lane: 1, z: 34 }], cells: [{ lane: 0, z: 36, n: 3 }] },
+  { tier: 1, obstacles: [{ t: 'gate', lane: 1, z: 12 }, { t: 'drift', lane: 0, z: 24 }, { t: 'drift', lane: 2, z: 24 }], cells: [{ lane: 1, z: 27, n: 5 }] },
+  { tier: 2, obstacles: [{ t: 'block', lane: 0, z: 10 }, { t: 'gate', lane: 1, z: 10 }, { t: 'drift', lane: 2, z: 23 }, { t: 'barrier', lane: 1, z: 35 }], cells: [{ lane: 0, z: 37, n: 3 }] },
+  { tier: 2, obstacles: [{ t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 }, { t: 'block', lane: 0, z: 31 }, { t: 'gate', lane: 2, z: 42 }], cells: [{ lane: 1, z: 34, n: 4 }] },
 ];
 
 export function pickPattern(rng, tier, flight, storm) {
@@ -743,7 +745,7 @@ export function buildChunk(rng, pattern, materials, zone) {
       // continuation span has no pad, and building one at `-undefined` would
       // put NaN in the vertex buffer and take the whole chunk with it.
       if (f.pad !== undefined) {
-        for (const lane of [0, 1, 2]) springPad(b, pal, LANE_X[lane], -f.pad);
+        for (const lane of [0, 1, 2]) launchRamp(b, pal, LANE_X[lane], -f.pad);
       }
     }
   }

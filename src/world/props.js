@@ -339,6 +339,45 @@ export function cloudBank(b, rng, pal, x, z) {
  * and wide so it never reads as something to avoid, which is the opposite of
  * every other object on the track.
  */
+/**
+ * The Storm's launch ramp: a kicker, not a flower.
+ *
+ * The bloom pad it replaced was a ring of petals, which is the right shape for
+ * a greenhouse and the wrong shape for anything else — nothing about it said
+ * "you will be thrown forwards and upwards". A wedge does, because it is the
+ * shape of the arc it produces, and it says it from a long way off.
+ *
+ * She travels towards -z, so the wedge rises that way and the lip is the far
+ * edge. Built from quads rather than boxes because the matrix stack only
+ * rotates around Y, so a slope cannot be made by tilting a box.
+ */
+export function launchRamp(b, pal, x, z) {
+  const w = 2.45, len = 6.2, top = 1.25;
+  const zNear = z + len / 2, zFar = z - len / 2;
+  const P = (dx, y, zz) => [x + dx, y, zz];
+  const deck = shade(pal.kerb, 0.95);
+  const side = shade(pal.deck, 1.2);
+  // slope, then the two flanks and the back face that stop it reading as paper
+  b.quad('toon', P(-w, 0, zNear), P(w, 0, zNear), P(w, top, zFar), P(-w, top, zFar), deck);
+  // The flanks are right triangles in profile, not quads: a quad here would
+  // have two coincident corners and collapse to a zero-area face.
+  b.tri('toon', P(w, 0, zNear), P(w, 0, zFar), P(w, top, zFar), side);
+  b.tri('toon', P(-w, 0, zFar), P(-w, 0, zNear), P(-w, top, zFar), side);
+  b.box('toon', x, 0, zFar - 0.3, w * 2, top, 0.6, shade(pal.deck, 1.05));
+  // Chevrons up the slope. They point the way she is going, and they are the
+  // part that reads at distance, so they climb with the surface.
+  for (let i = 0; i < 4; i++) {
+    const t = (i + 0.6) / 4.6;
+    b.box('emissive', x, 0.03 + top * t, zNear - len * t, w * 1.5, 0.09, 0.45,
+      shade(pal.accentGlow, 0.3 + i * 0.09));
+  }
+  // lit lip: the exact line she leaves the ground on
+  b.box('emissive', x, top, zFar - 0.12, w * 2, 0.16, 0.3, shade(pal.accent, 0.62));
+  for (const s of [-1, 1]) {
+    b.cyl('chrome', x + s * (w + 0.14), 0, zFar + 0.4, 0.13, 0.11, top + 0.5, 6, shade(pal.chrome, 0.9));
+  }
+}
+
 export function springPad(b, pal, x, z) {
   const petals = 7;
   for (let i = 0; i < petals; i++) {

@@ -479,7 +479,7 @@ export const ZONES = [
     props: {
       road: 'street',
       storm: true,
-      obstacleKit: { barrier: 'slab', gate: 'beam', block: 'wreck' },
+      obstacleKit: { barrier: 'hoard', gate: 'skywalk', block: 'mast' },
       // Sparse on purpose. At one gantry every 12 m the mint emissive stacked
       // into a solid wall of light the moment she was airborne and looking
       // along the road, which is exactly when she needs to read a drift.
