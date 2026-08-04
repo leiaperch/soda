@@ -42,13 +42,34 @@ const BARRIERS = {
   },
 
   /** Stacked crates with a strapped lid. */
+  /**
+   * A pallet stack that has come apart: one crate split open, one slid off,
+   * strapping still holding the rest. Three aligned boxes read as one box with
+   * seams; the read comes from the pieces NOT lining up.
+   */
   crate(b, pal, x, z, s) {
     const col = pal.facades[2];
-    b.box('toon', x - s.w * 0.22, 0, z, s.w * 0.52, s.h * 0.62, s.d, shade(col, 1.3));
-    b.box('toon', x + s.w * 0.24, 0, z + 0.1, s.w * 0.48, s.h * 0.9, s.d * 0.9, shade(col, 1.05));
-    b.box('toon', x, s.h * 0.9, z, s.w, s.h * 0.18, s.d, shade(col, 1.5));
-    b.box('chrome', x, s.h * 0.9, z, s.w + 0.1, 0.12, 0.24, shade(pal.chrome, 0.9));
-    b.box('emissive', x, s.h * 0.45, z + s.d * 0.5, s.w * 0.7, 0.12, 0.06, shade(pal.accentGlow, 1.15));
+    b.at(x, 0, z, 0.19, 1, 1, 1);
+    // pallet under it, which is what makes the stack sit on the road
+    b.box('toon', 0, 0, 0, s.w * 1.04, 0.12, s.d * 1.1, shade(pal.deck, 1.2));
+    for (let i = 0; i < 3; i++) {
+      b.box('toon', -s.w * 0.4 + i * s.w * 0.38, 0.02, 0, 0.1, 0.1, s.d * 1.14, shade(pal.deck, 0.9));
+    }
+    // the intact one, square on
+    b.box('toon', -s.w * 0.2, 0.12, 0, s.w * 0.5, s.h * 0.66, s.d * 0.92, shade(col, 1.25));
+    b.box('chrome', -s.w * 0.2, 0.12 + s.h * 0.3, 0, s.w * 0.54, 0.07, s.d * 0.96, shade(pal.chrome, 0.9));
+    // the split one: lid lifted at an angle, contents showing
+    const cx = s.w * 0.26, cy = 0.12, cw = s.w * 0.46, ch = s.h * 0.5, cd = s.d * 0.86;
+    b.box('toon', cx, cy, 0, cw, ch, cd, shade(col, 1.0));
+    b.quad('toon', [cx - cw / 2, cy + ch, -cd / 2], [cx + cw / 2, cy + ch, -cd / 2],
+      [cx + cw / 2, cy + ch * 1.5, cd / 2], [cx - cw / 2, cy + ch * 1.5, cd / 2], shade(col, 1.5));
+    b.box('emissive', cx, cy + ch * 0.55, 0, cw * 0.6, 0.22, cd * 0.5, shade(pal.accentGlow, 0.6));
+    // one that slid off and landed short
+    b.box('toon', -s.w * 0.52, 0.02, s.d * 0.5, s.w * 0.34, s.h * 0.34, s.d * 0.6, shade(col, 0.85));
+    // strapping over the top
+    b.box('chrome', -s.w * 0.2, 0.12 + s.h * 0.66, 0, s.w * 0.56, 0.06, 0.16, shade(pal.chrome, 1.0));
+    b.box('emissive', -s.w * 0.2, 0.12 + s.h * 0.34, s.d * 0.47, s.w * 0.34, 0.14, 0.05, shade(pal.accent, 0.62));
+    b.pop();
   },
 
   /** A slab of the floor heaved up, still glowing along the crack. */
@@ -273,15 +294,36 @@ const BLOCKS = {
   },
 
   /** Shipping container stood on end. */
+  /**
+   * A shipping can stood on its end, dented, with its doors hanging open.
+   *
+   * Laid flat it was a box with stripes, which is indistinguishable from every
+   * other block at speed. On end it is tall and narrow with a clear top edge,
+   * and the open doors break the outline on one side only.
+   */
   container(b, pal, x, z, s) {
-    const col = pal.facades[1];
-    b.box('toon', x, 0, z, s.w, s.h, s.d, shade(col, 1.15));
+    const col = pal.facades[3];
+    b.at(x, 0, z, 0.11, 1, 1, 1);
+    b.box('toon', 0, 0, 0, s.w * 0.78, s.h * 0.92, s.d * 0.82, shade(col, 1.15));
+    // corrugation: vertical ribs, the thing that says shipping can
     for (let i = -3; i <= 3; i++) {
-      b.box('toon', x + i * (s.w / 8), s.h / 2, z + s.d / 2 + 0.05, s.w / 16, s.h * 0.9, 0.08, shade(col, 0.82));
+      b.box('toon', i * s.w * 0.105, 0.1, s.d * 0.4, 0.07, s.h * 0.8, 0.09, shade(col, 1.45));
+      b.box('toon', i * s.w * 0.105, 0.1, -s.d * 0.4, 0.07, s.h * 0.8, 0.09, shade(col, 0.9));
     }
-    b.box('chrome', x, s.h - 0.22, z, s.w + 0.16, 0.22, s.d + 0.16, shade(pal.chrome, 0.9));
-    b.box('chrome', x, 0, z, s.w + 0.16, 0.22, s.d + 0.16, shade(pal.chrome, 0.85));
-    b.box('emissive', x, s.h * 0.62, z + s.d / 2 + 0.06, s.w * 0.55, 0.16, 0.05, shade(pal.accentGlow, 1.2));
+    // corner castings top and bottom
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      for (const y of [0, s.h * 0.86]) {
+        b.box('chrome', sx * s.w * 0.37, y, sz * s.d * 0.39, 0.24, 0.2, 0.24, shade(pal.chrome, 0.92));
+      }
+    }
+    // doors swung open on one side, plus the dent in the top corner
+    b.quad('toon', [s.w * 0.38, 0.1, s.d * 0.4], [s.w * 0.86, 0.1, s.d * 0.72],
+      [s.w * 0.86, s.h * 0.6, s.d * 0.72], [s.w * 0.38, s.h * 0.72, s.d * 0.4], shade(col, 0.8));
+    b.tri('toon', [-s.w * 0.39, s.h * 0.92, -s.d * 0.41], [-s.w * 0.39, s.h * 0.7, s.d * 0.41],
+      [-s.w * 0.1, s.h * 0.92, s.d * 0.41], shade(col, 1.6));
+    b.box('emissive', 0, s.h * 0.5, s.d * 0.42, s.w * 0.42, 0.26, 0.05, shade(pal.accentGlow, 0.6));
+    b.box('emissive', 0, s.h * 0.88, 0, s.w * 0.8, 0.08, s.d * 0.84, shade(pal.accent, 0.5));
+    b.pop();
   },
 
   /** Overgrown trunk with a canopy that hides the top. */

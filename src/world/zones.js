@@ -505,24 +505,31 @@ export const ZONES = [
     length: 3600,
     track: 'audio/the-core.mp3',
     physics: { startSpeed: 25, maxSpeed: 54, speedRamp: 0.34 },
+    // The Core and The Market were both a dark city lit by warm neon, amber on
+    // one side and orange on the other, and at speed they read as the same
+    // place. The Market keeps the warmth; the Core goes cold. Same darkness,
+    // opposite temperature, and the red is now reserved for danger instead of
+    // being the whole picture.
     sky: [
-      [0.00, '#120206'], [0.26, '#3d0812'], [0.48, '#8e1a1a'],
-      [0.66, '#e0521a'], [0.82, '#ffa53a'], [1.00, '#2a0608'],
+      [0.00, '#04060f'], [0.26, '#0a1430'], [0.48, '#123a5e'],
+      [0.66, '#2f7fa8'], [0.82, '#cfeeff'], [1.00, '#060a1c'],
     ],
-    fog: { color: '#8e1a1a', near: 140, far: 290 },
-    sun: { color: '#ffd0a0', intensity: 1.6 },
-    hemi: { sky: '#ff8a4a', ground: '#1a0308', intensity: 0.5 },
-    backdrop: { sun: '#fff0c0', halo: '#ff5a1a', arc: '#c04a2a', planet: '#5a1010' },
+    fog: { color: '#123a5e', near: 140, far: 290 },
+    sun: { color: '#e8f8ff', intensity: 1.9 },
+    hemi: { sky: '#7fd4ff', ground: '#050a16', intensity: 0.5 },
+    backdrop: { sun: '#ffffff', halo: '#4fc8ff', arc: '#2f6f9e', planet: '#0e2a4a' },
     colors: {
-      road: '#1a0d12',
-      kerb: '#4a1f1a',
-      deck: '#2a1014',
-      edge: '#ff5a1a',
-      lane: '#ffd98a',
+      road: '#0e1020',
+      kerb: '#b8d8ea',
+      deck: '#151c34',
+      // Emissive channels stay low-luminance on purpose: this palette is one
+      // step from the white-sheet blowout the first Storm palette produced.
+      edge: '#2f8fb0',
+      lane: '#dcefff',
       accent: '#ff2e5a',
-      accentGlow: '#ff8a1a',
+      accentGlow: '#3f9ec0',
     },
-    facades: ['#3a121a', '#4a1a12', '#2a0e18', '#521c14', '#331020', '#40161a'],
+    facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
     props: {
       road: 'street',
       walls: true,
