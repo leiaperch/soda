@@ -279,14 +279,30 @@ function bumper(b, pal, x, z, s) {
 // matrix stack only rotates around Y. Wreckage reads as wreckage through
 // offset stacking and yaw instead, which is cheaper anyway.
 
+/**
+ * A lit footprint under a storm obstacle.
+ *
+ * The zone runs on a near-black road and a near-black deck, and this family is
+ * matte and pale, so at speed the obstacles simply did not register — on the
+ * upper deck they were reported as missing entirely. Every other zone gets its
+ * read from an emissive strip somewhere on the form; these get a base ring,
+ * which works on both levels because it travels with the object.
+ */
+function stormMark(b, pal, x, z, s) {
+  b.cyl('emissive', x, 0.02, z, s.w * 0.62, s.w * 0.56, 0.05, 16, shade(pal.accent, 0.5));
+  b.cyl('emissive', x, 0.02, z, s.w * 0.34, s.w * 0.28, 0.05, 12, shade(pal.accentGlow, 0.42));
+}
+
 /** Barrier: a hoarding blown flat across the lane, still lit. */
 function hoard(b, pal, x, z, s) {
+  stormMark(b, pal, x, z, s);
   b.at(x, 0, z, 0.16, 1, 1, 1);
   b.box('toon', 0, 0, 0, s.w, s.h * 0.72, s.d * 0.8, shade(pal.kerb, 0.86));
   b.box('toon', -s.w * 0.12, s.h * 0.66, 0.08, s.w * 0.78, s.h * 0.3, s.d * 0.7, shade(pal.kerb, 1.0));
   // the ad face, half torn off
-  b.box('emissive', s.w * 0.06, s.h * 0.34, s.d * 0.42, s.w * 0.56, s.h * 0.34, 0.06, shade(pal.accent, 0.5));
-  b.box('emissive', -s.w * 0.3, s.h * 0.2, s.d * 0.42, s.w * 0.2, s.h * 0.16, 0.06, shade(pal.accentGlow, 0.45));
+  b.box('emissive', s.w * 0.06, s.h * 0.34, s.d * 0.42, s.w * 0.56, s.h * 0.34, 0.06, shade(pal.accent, 0.72));
+  b.box('emissive', -s.w * 0.3, s.h * 0.2, s.d * 0.42, s.w * 0.2, s.h * 0.16, 0.06, shade(pal.accentGlow, 0.66));
+  b.box('emissive', 0, s.h * 0.72, 0, s.w * 1.02, 0.12, s.d * 0.85, shade(pal.accentGlow, 0.6));
   b.pop();
   // the snapped legs it stood on
   for (const side of [-1, 1]) {
@@ -296,6 +312,7 @@ function hoard(b, pal, x, z, s) {
 
 /** Gate: a service walkway sheared off its building and jammed overhead. */
 function skywalk(b, pal, x, z, s) {
+  stormMark(b, pal, x, z, s);
   const y = s.base;
   b.box('toon', x, y + s.h * 0.42, z, s.w + 0.5, s.h * 0.34, s.d, shade(pal.deck, 1.3));
   b.box('toon', x, y + s.h * 0.2, z, s.w, s.h * 0.22, s.d * 0.7, shade(pal.kerb, 0.8));
@@ -308,11 +325,15 @@ function skywalk(b, pal, x, z, s) {
   for (let i = -1; i <= 1; i++) {
     b.cyl('toon', x + i * s.w * 0.3, y - 0.34, z + (i % 2) * 0.2, 0.05, 0.04, 0.36, 5, shade(pal.deck, 0.8));
   }
-  b.box('emissive', x, y + 0.06, z, s.w * 0.85, 0.12, s.d * 0.8, shade(pal.accentGlow, 0.5));
+  // A gate's underside is the edge you have to read, so it is the brightest
+  // thing on it: that line is where the clearance stops.
+  b.box('emissive', x, y - 0.04, z, s.w * 0.95, 0.16, s.d * 0.9, shade(pal.accentGlow, 0.78));
+  b.box('emissive', x, y + s.h * 0.6, z, s.w + 0.5, 0.1, s.d * 0.9, shade(pal.accent, 0.5));
 }
 
 /** Block: a comms mast down in the lane, dish and all. */
 function mast(b, pal, x, z, s) {
+  stormMark(b, pal, x, z, s);
   b.at(x, 0, z, -0.22, 1, 1, 1);
   b.box('toon', 0, 0, 0, s.w * 0.5, s.h * 0.28, s.d * 0.9, shade(pal.deck, 1.2));
   b.cyl('chrome', 0, s.h * 0.24, 0, 0.3, 0.2, s.h * 0.6, 7, shade(pal.chrome, 0.85));
@@ -322,7 +343,12 @@ function mast(b, pal, x, z, s) {
     b.box('chrome', 0, yy, 0, 0.9 - i * 0.13, 0.09, 0.9 - i * 0.13, shade(pal.chrome, 0.95));
   }
   b.dome('toon', 0.34, s.h * 0.7, 0, 0.62, 0.34, 9, 3, shade(pal.kerb, 0.9));
-  b.box('emissive', 0, s.h * 0.88, 0, 0.2, 0.42, 0.2, shade(pal.accent, 0.6));
+  b.box('emissive', 0, s.h * 0.88, 0, 0.22, 0.46, 0.22, shade(pal.accent, 0.75));
+  // banding up the lattice: a tall thin silhouette needs vertical light or it
+  // disappears into a dark sky the moment it is not against a building
+  for (let i = 0; i < 3; i++) {
+    b.box('emissive', 0, s.h * (0.34 + i * 0.17), 0, 0.82 - i * 0.14, 0.09, 0.82 - i * 0.14, shade(pal.accentGlow, 0.5));
+  }
   b.pop();
 }
 
