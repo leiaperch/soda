@@ -684,10 +684,17 @@ export class Game {
       // way up and get it back on the way down. Nothing else needed to make a
       // hill felt rather than just seen.
       if (this.hill) {
+        // Both the pull and the ceiling are per zone. The Sugar Flats are
+        // rolling country where the hills colour the pace; The Core is a
+        // plunge, and a plunge that cannot take you past your own top speed is
+        // just a texture on the road. The overspeed is what makes a descent
+        // something you feel in your thumbs rather than something you look at.
         const slope = slopeAt(this.player.z, this.hill);
+        const pull = this.zone.props.slopePull ?? TUNE.slopePull;
+        const over = this.zone.props.overspeed ?? 8;
         this.speed = Math.max(
           this.pace.start * 0.6,
-          Math.min(this.pace.max + 8, this.speed + slope * TUNE.slopePull * dt),
+          Math.min(this.pace.max + over, this.speed + slope * pull * dt),
         );
       }
 

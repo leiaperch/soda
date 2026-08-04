@@ -500,7 +500,7 @@ export const ZONES = [
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',
-    mechanic: 'The floor drops away. Ride the trench, ramp back out.',
+    mechanic: 'A real descent. Speed you gain falling, speed you lose climbing.',
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
@@ -538,7 +538,12 @@ export const ZONES = [
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
       palmChance: 0, podChance: 0.3, stallChance: 0.4,
       skylineChance: 1, backRowChance: 0.9, waterSides: false, waterRoad: false,
-      lotMin: 5, lotMax: 9, towerStacks: [3, 5], feature: 'dive',
+      // A physical descent, not a ramp. Nearly twice the Sugar Flats' relief,
+      // with the gradient pulling almost twice as hard and a ceiling 22 above
+      // the zone's own top speed, so a long drop genuinely spikes and the
+      // climb after it genuinely costs.
+      hill: 9.0, slopePull: 62, overspeed: 22,
+      lotMin: 5, lotMax: 9, towerStacks: [3, 5], feature: null,
     },
   },
 ];
