@@ -263,8 +263,26 @@ export function swell(b, pal, z) {
       b.box('emissive', x, hc * 0.94 + 0.22, z + depth * 0.24, w * 1.03, 0.06, 1.55, shade(pal.lane, 0.62));
     }
   }
-}
+  // A wave you cannot see is not a mechanic. The swell is turquoise water on a
+  // turquoise sea and its crest tops out barely over a metre, so at speed it
+  // arrived as a texture rather than as a thing to jump. Three reads, in the
+  // order they become visible: a foam line along the crest, a lit rope across
+  // the face, and a marker on the water ahead of it.
+  const crest = 0.06 + 1.05;
+  for (let i = 0; i < 15; i++) {
+    const tx = (i + 0.5) / 15;
+    const x = -span / 2 + span * tx;
+    const across = Math.pow(Math.sin(tx * Math.PI), 0.45);
+    const wob = Math.sin(i * 1.7) * 0.12;
+    b.box('emissive', x, crest * across * 0.92 + wob, z, span / 15 * 0.86, 0.16, 1.1,
+      shade(pal.lane, 0.5 + across * 0.2));
+    b.dome('toon', x, crest * across * 0.9 + wob, z - 0.5, span / 30, 0.3 + across * 0.2, 6, 2,
+      shade(pal.lane, 0.9));
+  }
+  b.box('emissive', 0, 0.5, z + 1.3, span * 0.86, 0.12, 0.22, shade(pal.accentGlow, 0.6));
+  b.box('emissive', 0, 0.06, z + 7.5, span * 0.7, 0.05, 0.7, shade(pal.accentGlow, 0.34));
 
+}
 /**
  * A grind rail in one lane of The Market: chrome tube on posts with a lit top
  * edge so it is obvious from far away that it is standable, not an obstacle.

@@ -89,6 +89,15 @@ requestAnimationFrame(frame);
 // Expose the running scene for debugging captures. `capture` forces a fixed
 // viewport, steps the simulation deterministically and POSTs a PNG to the dev
 // server, because reading a live WebGL canvas over the automation bridge stalls.
+// Escape pauses and resumes. The pause button is sized as a thumb target for
+// a phone; on a keyboard there is no reason to go and find it with a mouse.
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'Escape') return;
+  e.preventDefault();
+  if (game.state === 'running') game.pause();
+  else if (game.state === 'paused') game.resume();
+});
+
 window.__soda = {
   stage, game, audio, sfx, THREE, describeViewport,
   async capture(name, { w = 900, h = 1600, steps = 0, dt = 1 / 60 } = {}) {
