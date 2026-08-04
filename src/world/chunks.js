@@ -281,49 +281,44 @@ const STORM_PATTERNS = [
   // Lower road: barriers put you in the air, drifts are waiting when you get
   // there. Upper deck (`deck: true`): its own obstacles.
   //
-  // Deck obstacles are spread ACROSS the span, not clustered at its far end.
-  // The first pass put them at z 33 to 45 on a deck running 24 to 48, so the
-  // stretch she actually lands on — around z 30 — was empty and the deck read
-  // as decoration you occasionally stood on. Both spans are stocked, including
-  // the 0-to-18 stub that carries over from the previous chunk, because that
-  // stub is the second half of a deck she is already standing on.
+  // TWO per deck span, never more, and never closer than eleven metres.
+  //
+  // The count went to five per chunk when deck obstacles could not be seen at
+  // all — but they were invisible because they were unlit, not because they
+  // were rare, and once lit that density made the deck unreadable: a phrase
+  // needs air around it or it is just a wall of things. A deck stint lasts
+  // about two seconds, so two obstacles is one decision and a breath, which is
+  // all the time up there can honestly carry.
   { tier: 0, obstacles: [
     { t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 },
-    { t: 'barrier', lane: 1, z: 31, deck: true }, { t: 'block', lane: 0, z: 42, deck: true },
-    { t: 'barrier', lane: 2, z: 8, deck: true },
+    { t: 'barrier', lane: 1, z: 31, deck: true }, { t: 'block', lane: 0, z: 44, deck: true },
   ], cells: [{ lane: 0, z: 26, n: 4 }] },
 
   { tier: 0, obstacles: [
     { t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 },
-    { t: 'block', lane: 2, z: 30, deck: true }, { t: 'barrier', lane: 1, z: 40, deck: true },
-    { t: 'block', lane: 0, z: 9, deck: true },
+    { t: 'block', lane: 2, z: 30, deck: true }, { t: 'barrier', lane: 1, z: 43, deck: true },
   ], cells: [{ lane: 1, z: 30, n: 4 }] },
 
   { tier: 1, obstacles: [
     { t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'block', lane: 1, z: 34 },
-    { t: 'gate', lane: 1, z: 30, deck: true }, { t: 'barrier', lane: 0, z: 39, deck: true },
-    { t: 'block', lane: 2, z: 46, deck: true }, { t: 'barrier', lane: 1, z: 10, deck: true },
+    { t: 'gate', lane: 1, z: 30, deck: true }, { t: 'barrier', lane: 0, z: 43, deck: true },
   ], cells: [{ lane: 0, z: 36, n: 3 }] },
 
   { tier: 1, obstacles: [
     { t: 'gate', lane: 1, z: 12 }, { t: 'drift', lane: 0, z: 24 }, { t: 'drift', lane: 2, z: 24 },
-    { t: 'block', lane: 1, z: 8, deck: true }, { t: 'barrier', lane: 2, z: 32, deck: true },
-    { t: 'gate', lane: 0, z: 41, deck: true },
+    { t: 'block', lane: 1, z: 8, deck: true }, { t: 'barrier', lane: 2, z: 34, deck: true },
   ], cells: [{ lane: 1, z: 27, n: 5 }] },
 
   { tier: 2, obstacles: [
     { t: 'block', lane: 0, z: 10 }, { t: 'gate', lane: 1, z: 10 },
     { t: 'drift', lane: 2, z: 23 }, { t: 'barrier', lane: 1, z: 35 },
-    { t: 'block', lane: 0, z: 29, deck: true }, { t: 'barrier', lane: 1, z: 37, deck: true },
-    { t: 'gate', lane: 2, z: 45, deck: true }, { t: 'barrier', lane: 0, z: 7, deck: true },
+    { t: 'block', lane: 0, z: 29, deck: true }, { t: 'gate', lane: 2, z: 44, deck: true },
   ], cells: [{ lane: 0, z: 37, n: 3 }] },
 
   { tier: 2, obstacles: [
     { t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 },
     { t: 'block', lane: 0, z: 31 }, { t: 'gate', lane: 2, z: 42 },
-    { t: 'barrier', lane: 1, z: 6, deck: true }, { t: 'block', lane: 2, z: 14, deck: true },
-    { t: 'barrier', lane: 0, z: 30, deck: true }, { t: 'gate', lane: 1, z: 38, deck: true },
-    { t: 'block', lane: 2, z: 46, deck: true },
+    { t: 'barrier', lane: 1, z: 6, deck: true }, { t: 'block', lane: 2, z: 33, deck: true },
   ], cells: [{ lane: 1, z: 34, n: 4 }] },
 ];
 
