@@ -171,14 +171,32 @@ const GATES = {
    */
   pipe(b, pal, x, z, s) {
     const y = s.base + s.h * 0.45;
-    b.box('chrome', x, y, z, s.w + 3.6, 1.15, 1.15, shade(pal.chrome, 0.85));
-    b.box('chrome', x, y - 0.1, z, s.w + 4.0, 0.28, 1.35, shade(pal.chrome, 0.7));
-    b.box('toon', x, s.base, z, s.w * 0.85, s.h * 0.5, s.d, shade(pal.road, 2.0));
-    b.box('emissive', x, s.base - 0.14, z, s.w * 0.8, 0.14, s.d + 0.06, shade(pal.accentGlow, 1.3));
-    // valve wheels on the run, so it reads as plumbing rather than a girder
+    const run = s.w + 3.6;
+    // A round profile faked in three slabs. The old one was a single box, so a
+    // six-metre pipe read as a flat bar with wheels stuck on it; a pipe is a
+    // silhouette with no corners, and the matrix stack cannot roll a box, so
+    // the roundness has to be stacked.
+    const prof = [[-0.46, 0.34, 0.86], [-0.12, 0.5, 1.0], [0.38, 0.3, 0.8]];
+    for (const [dy, h, w] of prof) {
+      b.box('chrome', x, y + dy, z, run, h, 1.2 * w, shade(pal.chrome, 0.78 + (dy + 0.5) * 0.4));
+    }
+    // flanges along the run: joints are what give a pipe its rhythm
+    for (let i = -2; i <= 2; i++) {
+      const fx = x + i * (run / 5);
+      b.box('chrome', fx, y - 0.5, z, 0.22, 1.02, 1.42, shade(pal.chrome, 1.0));
+      b.box('emissive', fx, y - 0.44, z + 0.72, 0.16, 0.5, 0.05, shade(pal.accentGlow, 0.5));
+    }
+    // hangers up to whatever is above, so it is carried rather than floating
     for (const side of [-1, 1]) {
-      b.cyl('chrome', x + side * (s.w * 0.5 + 1.1), y + 0.55, z, 0.42, 0.42, 0.22, 8, shade(pal.chrome, 0.95));
-      b.box('emissive', x + side * (s.w * 0.5 + 0.4), y - 0.6, z, 0.5, 0.16, 0.5, shade(pal.edge, 1.0));
+      b.box('chrome', x + side * run * 0.3, y + 0.44, z, 0.12, 1.5, 0.12, shade(pal.chrome, 0.7));
+    }
+    // the load it is carrying, and the lit lip that marks the clearance
+    b.taper('toon', x, s.base, z, s.w * 0.85, s.h * 0.42, s.d, 0.08, shade(pal.road, 2.2));
+    b.box('emissive', x, s.base - 0.12, z, s.w * 0.88, 0.16, s.d + 0.08, shade(pal.accentGlow, 0.8));
+    // valve wheels, out at the ends where they do not crowd the clearance
+    for (const side of [-1, 1]) {
+      b.cyl('chrome', x + side * (run * 0.42), y + 0.62, z, 0.4, 0.4, 0.2, 8, shade(pal.chrome, 0.98));
+      b.cyl('chrome', x + side * (run * 0.42), y + 0.3, z, 0.1, 0.09, 0.34, 6, shade(pal.chrome, 0.8));
     }
   },
 };
