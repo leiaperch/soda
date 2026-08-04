@@ -2,6 +2,7 @@ import { CHUNK_LEN, LANE_X, buildChunk, pickPattern } from './chunks.js';
 import { CellPool, RelayPool, FinishGate, PowerPool } from './pickups.js';
 import { disposeGroup } from '../core/builder.js';
 import { POWERUPS, POWER_KEYS } from '../game/powerups.js';
+import { ZONES as ZONE_LIST } from './zones.js';
 
 const VARIANTS = 10;      // pre-built chunk meshes, recycled forever
 const ACTIVE = 8;         // slots alive at once (~380 units of visible road)
@@ -52,9 +53,22 @@ export class Track {
     if (this.zone && this.zone.id === zone.id) return;
     this.zone = zone;
     this._disposeVariants();
+    // A medley zone builds each of its ten variants from a DIFFERENT zone:
+    // that zone's palette, road, obstacle family and mechanic, all of it. The
+    // colours are baked per variant, so a run through recycled chunks cycles
+    // through every zone in the game for no rendering cost at all — and each
+    // chunk brings its own verb with it, which is the whole point of a finale.
+    //
+    // Flight donors are excluded on purpose: their obstacles are placed at
+    // altitudes only a flying player can reach, and the medley host is not
+    // flying, so they would be scenery you cannot interact with.
+    const donors = zone.props.medley
+      ? ZONE_LIST.filter((z) => z.built && z.id !== zone.id && !z.props.flight)
+      : null;
     for (let i = 0; i < VARIANTS; i++) {
-      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, zone.props.flight, zone.props.storm);
-      const chunk = buildChunk(this.rng, pattern, this.materials, zone);
+      const src = donors ? donors[i % donors.length] : zone;
+      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, src.props.flight, src.props.storm);
+      const chunk = buildChunk(this.rng, pattern, this.materials, src);
       chunk.group.visible = false;
       this.scene.add(chunk.group);
       this.variants.push(chunk);

@@ -500,7 +500,7 @@ export const ZONES = [
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',
-    mechanic: 'Everything at once, and faster.',
+    mechanic: 'Every zone at once. Every colour, every verb, and faster.',
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
@@ -543,6 +543,9 @@ export const ZONES = [
       // Core wants a road that only ever goes down, which the current
       // elevation model cannot express; until it can, flat beats wrong.
       slopePull: 62, overspeed: 22,
+      // Each chunk is a slice of another zone. The Core keeps its own physics
+      // — its speed envelope is its identity — and borrows everything else.
+      medley: true,
       lotMin: 5, lotMax: 9, towerStacks: [3, 5], feature: null,
     },
   },
