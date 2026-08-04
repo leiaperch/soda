@@ -525,8 +525,12 @@ export const ZONES = [
       [0.60, '#ff9ec4'], [0.80, '#ffd9a8'], [1.00, '#8fe0e0'],
     ],
     fog: { color: '#c89ad0', near: 170, far: 330 },
-    sun: { color: '#fff4e6', intensity: 2.8 },
-    hemi: { sky: '#ffe4f4', ground: '#3a2a5a', intensity: 0.62 },
+    // 2.8 was too much: it put the colour back but burned every pale surface,
+    // so the road read white and the roadside props became one undifferentiated
+    // mass. Brightness is not saturation — the colour has to come from the
+    // paint, not from the lamp.
+    sun: { color: '#fff4e6', intensity: 1.9 },
+    hemi: { sky: '#ffd0ea', ground: '#2a1c48', intensity: 0.5 },
     backdrop: { sun: '#fffaf0', halo: '#ff9ec4', arc: '#c9a8ff', planet: '#6ad0c0' },
     colors: {
       road: '#1a1230',
