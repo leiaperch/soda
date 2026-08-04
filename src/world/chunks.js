@@ -135,12 +135,18 @@ const FEATURES = {
     [{ from: 17, to: 46, out: 40 }],
     [{ from: 13, to: 40, out: 34 }],
   ],
+  // One missing panel per chunk, and shorter. Two of them meant the second
+  // opened while you were still committed to the lane the first pushed you
+  // into, so the zone asked for a decision you had already been denied. The
+  // two-hole phrases are kept but pushed to the very end of the chunk, which
+  // leaves a full stretch of intact deck to make the second choice on.
   hole: [
-    [{ lane: 0, from: 12, to: 30 }],
-    [{ lane: 2, from: 9, to: 27 }],
-    [{ lane: 1, from: 14, to: 33 }],
-    [{ lane: 0, from: 6, to: 22 }, { lane: 2, from: 28, to: 45 }],
-    [{ lane: 1, from: 8, to: 24 }, { lane: 0, from: 30, to: 46 }],
+    [{ lane: 0, from: 14, to: 28 }],
+    [{ lane: 2, from: 11, to: 25 }],
+    [{ lane: 1, from: 16, to: 30 }],
+    [{ lane: 0, from: 10, to: 22 }],
+    [{ lane: 2, from: 13, to: 27 }],
+    [{ lane: 1, from: 8, to: 20 }, { lane: 0, from: 36, to: 46 }],
   ],
 };
 
@@ -839,8 +845,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     buildObstacle(b, pal, { ...o, lift: o.deck ? DECK_Y : 0 }, LANE_X[o.lane], zone.props.obstacleKit);
   }
   for (const f of features) {
-    if (f.kind === 'swell') swell(b, pal, -f.z);
-    else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
+    if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
     else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
     else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);

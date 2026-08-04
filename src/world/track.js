@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { Builder, disposeGroup as disposeSwell } from '../core/builder.js';
+import { swell as buildSwell, resolvePalette } from './props.js';
 import { CHUNK_LEN, LANE_X, buildChunk, pickPattern } from './chunks.js';
 import { CellPool, RelayPool, FinishGate, PowerPool } from './pickups.js';
 import { disposeGroup } from '../core/builder.js';
@@ -22,6 +25,63 @@ function relayEvery(zone) {
 }
 
 /**
+ * Moving swell.
+ *
+ * A wave used to be baked into the chunk like a lamp post, which made it a
+ * thing you drove at. A swell travels: it comes up behind you, overtakes and
+ * passes under. That cannot be baked, so the geometry is built once and then
+ * repositioned, and the wave carries its own z.
+ *
+ * The wave is deliberately only a little faster than the player. Too fast and
+ * the moment of the jump is taken away from you entirely — the same failure as
+ * a move that outranges its spacing, one axis over.
+ */
+const WAVE_GAP = 3.1;        // seconds between swells
+const WAVE_OVERTAKE = 1.22;  // wave speed relative to the player's
+
+class SwellPool {
+  constructor(scene, materials, max = 5) {
+    this.scene = scene;
+    this.materials = materials;
+    this.meshes = [];
+    this.max = max;
+    this.group = null;
+  }
+
+  setZone(zone) {
+    this.dispose();
+    if (!zone.props.movingSwell) return;
+    // Built once at the origin, then cloned: every wave is the same water.
+    const b = new Builder();
+    buildSwell(b, resolvePalette(zone), 0);
+    const proto = b.toGroup(this.materials);
+    this.group = proto;
+    for (let i = 0; i < this.max; i++) {
+      const m = i === 0 ? proto : proto.clone();
+      m.visible = false;
+      m.frustumCulled = false;
+      this.scene.add(m);
+      this.meshes.push(m);
+    }
+  }
+
+  update(waves) {
+    for (const [i, m] of this.meshes.entries()) {
+      const w = waves[i];
+      m.visible = !!w;
+      if (w) m.position.z = w.z;
+    }
+  }
+
+  dispose() {
+    for (const m of this.meshes) this.scene.remove(m);
+    if (this.group) disposeSwell(this.group);
+    this.meshes.length = 0;
+    this.group = null;
+  }
+}
+
+/**
  * Streams a zone. Chunk geometry is built once per zone and then recycled by
  * repositioning, so a run never allocates geometry mid-flight and never
  * hitches. Changing zone throws the geometry away and rebuilds, which only
@@ -39,6 +99,9 @@ export class Track {
     this.relayPool = new RelayPool(scene, materials, 5);
     this.finishGate = new FinishGate(scene, materials);
     this.powerPool = new PowerPool(scene, materials);
+    this.swellPool = new SwellPool(scene, materials);
+    this.waves = [];
+    this.waveT = 0;
     this.finishZ = null;
 
     this.slots = [];
@@ -74,6 +137,7 @@ export class Track {
       this.variants.push(chunk);
     }
     this.relayPool.setZone(zone);
+    this.swellPool.setZone(zone);
     this.finishGate.setZone(zone);
     this.reset();
   }
@@ -98,6 +162,8 @@ export class Track {
     this.cells.length = 0;
     this.relays.length = 0;
     this.powers.length = 0;
+    this.waves.length = 0;
+    this.waveT = 0;
     this.chunkIndex = 0;
     this.frontZ = CHUNK_LEN; // one chunk of runway behind the start line
     this.finishZ = this.zone && this.zone.length ? -this.zone.length : null;
@@ -186,6 +252,25 @@ export class Track {
       });
     }
     this.slots.push(slot);
+  }
+
+  /**
+   * @param {number} playerZ  where she is
+   * @param {number} speed    her speed, which sets the wave's
+   * @param {number} dt
+   */
+  updateWaves(playerZ, speed, dt) {
+    if (!this.zone || !this.zone.props.movingSwell) return;
+    this.waveT += dt;
+    if (this.waveT >= WAVE_GAP && this.waves.length < this.swellPool.max) {
+      this.waveT = 0;
+      // Spawned behind her, far enough back that it arrives as something she
+      // watches come rather than something that appears on top of her.
+      this.waves.push({ z: playerZ + 58, done: false });
+    }
+    for (const w of this.waves) w.z -= speed * WAVE_OVERTAKE * dt;
+    this.waves = this.waves.filter((w) => w.z > playerZ - 70);
+    this.swellPool.update(this.waves);
   }
 
   update(playerZ, tier, time) {

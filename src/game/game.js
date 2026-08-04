@@ -223,6 +223,36 @@ export class Game {
     this.sfx.relay();
   }
 
+  /**
+   * A wave overtaking her. It is caught the frame it passes her, which is the
+   * frame its z crosses hers — the same test the static swell used, except the
+   * wave is what moves now, so the crossing can happen while she stands still.
+   */
+  _waves(dt) {
+    const p = this.player;
+    this.track.updateWaves(p.z, this.speed, dt);
+    for (const w of this.track.waves) {
+      if (w.done || w.z > p.z) continue;
+      w.done = true;
+      if (p.airborne) {
+        this.speed = Math.min(this.pace.max + 6, this.speed * TUNE.surfBoost);
+        this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.surfCharge);
+        this._trick('surf');
+        this.sfx.surf();
+      } else {
+        this.speed = Math.max(this.pace.start * 0.85, this.speed * TUNE.splashCut);
+        this.charge += TUNE.splashCharge;
+        this.hud.toast('SPLASH', 'warn');
+        this.sfx.splash();
+      }
+    }
+    // Taught off the nearest wave still behind her, so the prompt lands while
+    // there is still something to do about it.
+    if (this.track.waves.some((w) => !w.done && w.z - p.z < 34)) {
+      this._teach('swell', 'JUMP THE WAVE — IT CATCHES YOU');
+    }
+  }
+
   _collisions() {
     const p = this.player;
     const pTop = p.y + p.height;
@@ -528,7 +558,9 @@ export class Game {
         continue;
       }
 
-      if (f.kind === 'swell') {
+      if (f.kind === 'swell') continue;   // swells move now; see _waves()
+
+      if (f.kind === '__never__') {
         if (f.done || p.z > f.z - 0.1) continue;
         f.done = true;
         if (p.airborne) {
@@ -702,6 +734,7 @@ export class Game {
       this.run.time += dt;
       this._collisions();
       this._features(dt);
+      this._waves(dt);
 
       // Landing is a state transition, not an event the player object emits.
       if (!this._wasAirborne && this.player.airborne) {

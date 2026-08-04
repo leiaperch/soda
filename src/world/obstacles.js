@@ -187,7 +187,21 @@ const GATES = {
   /** Crane beam with a slung load. */
   beam(b, pal, x, z, s) {
     b.box('chrome', x, s.base + s.h * 0.55, z, s.w + 3.4, 0.5, 0.6, shade(pal.chrome, 0.9));
-    b.box('toon', x, s.base, z, s.w * 0.8, s.h * 0.55, s.d * 1.4, shade(pal.facades[0], 1.4));
+    // The load used to be one untextured box. On The Heights, whose whole
+    // palette is white, that is a blank white rectangle hanging over the road
+    // — the single ugliest object in the game. It is now a strapped bale with
+    // banding, a lit face and a corner cut off, so it reads even when its
+    // colour and the sky's are the same.
+    const w = s.w * 0.8, h = s.h * 0.55, d = s.d * 1.4;
+    b.box('toon', x, s.base, z, w, h, d, shade(pal.deck, 1.35));
+    b.box('toon', x, s.base + h * 0.18, z, w * 1.04, h * 0.42, d * 0.9, shade(pal.facades[0], 1.15));
+    for (const side of [-1, 1]) {
+      b.box('chrome', x + side * w * 0.28, s.base - 0.04, z, 0.14, h + 0.08, d + 0.06, shade(pal.chrome, 0.9));
+    }
+    b.box('chrome', x, s.base + h * 0.5, z, w + 0.1, 0.12, d + 0.08, shade(pal.chrome, 1.0));
+    b.tri('toon', [x + w / 2, s.base + h, z - d / 2], [x + w / 2, s.base + h * 0.55, z - d / 2],
+      [x + w * 0.18, s.base + h, z - d / 2], shade(pal.deck, 1.7));
+    b.box('emissive', x, s.base + h * 0.26, z + d * 0.51, w * 0.6, h * 0.3, 0.05, shade(pal.accent, 0.6));
     b.box('chrome', x, s.base + s.h * 0.55, z, 0.16, -0.3, 0.16, shade(pal.chrome, 0.8));
     b.box('emissive', x, s.base - 0.12, z, s.w * 0.75, 0.12, s.d * 1.3, shade(pal.accentGlow, 1.25));
     b.box('emissive', x, s.base + s.h * 0.55, z, s.w + 3.4, 0.08, 0.66, shade(pal.edge, 0.8));

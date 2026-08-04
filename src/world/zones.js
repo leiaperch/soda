@@ -63,7 +63,7 @@ export const ZONES = [
     id: 'shore',
     name: 'THE SHORE',
     subtitle: 'ARTIFICIAL OCEAN, GOLDEN HOUR',
-    mechanic: 'Surf the swell. Waves taken clean give a boost.',
+    mechanic: 'The swell comes up behind you. Be in the air when it passes.',
     introduces: 'magnet',
     built: true,
     length: 1900,
@@ -96,7 +96,11 @@ export const ZONES = [
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0, stallChance: 0,
       skylineChance: 0.22, backRowChance: 0.05, waterSides: false,
-      lotMin: 14, lotMax: 26, towerStacks: [1, 2], feature: 'swell',
+      // The swell is no longer a chunk feature: it moves, so it lives on the
+      // track rather than in the geometry. `feature: null` leaves the chunks
+      // to the obstacles alone.
+      movingSwell: true,
+      lotMin: 14, lotMax: 26, towerStacks: [1, 2], feature: null,
     },
   },
 
@@ -323,9 +327,11 @@ export const ZONES = [
     subtitle: 'ABOVE THE WEATHER',
     mechanic: 'The deck is missing. Be in a lane that still exists.',
     built: true,
-    length: 3200,
+    // Shorter and slower. It was the longest zone in the game bar the finale,
+    // run on the narrowest road, with the drop on both sides.
+    length: 2600,
     track: 'audio/the-heights.mp3',
-    physics: {},
+    physics: { maxSpeed: 34, speedRamp: 0.18 },
     sky: [
       [0.00, '#2c6fd0'], [0.24, '#7fb8f0'], [0.44, '#cfe8ff'],
       [0.60, '#ffe6f2'], [0.78, '#ffd0e4'], [1.00, '#ffffff'],
