@@ -25,6 +25,14 @@ export const RAIL_H = 1.25;
  */
 export const DECK_Y = 6.4;
 
+/**
+ * The Core's trench floor. Negative because it is the same mechanism as the
+ * upper deck read the other way: the deck raises `player.floor`, this lowers
+ * it, and everything between — landing, falling, camera, gravity — is code
+ * that already exists and was already proven on the deck.
+ */
+export const DIVE_Y = -5.2;
+
 export const OBSTACLE = {
   barrier: { w: 2.3, h: 1.05, d: 0.7, base: 0 },      // jump it
   gate:    { w: 2.4, h: 2.2, d: 0.7, base: 1.35 },    // slide under it

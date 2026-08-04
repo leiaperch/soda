@@ -500,7 +500,7 @@ export const ZONES = [
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',
-    mechanic: 'Everything at once, and faster.',
+    mechanic: 'The floor drops away. Ride the trench, ramp back out.',
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
@@ -538,7 +538,7 @@ export const ZONES = [
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
       palmChance: 0, podChance: 0.3, stallChance: 0.4,
       skylineChance: 1, backRowChance: 0.9, waterSides: false, waterRoad: false,
-      lotMin: 5, lotMax: 9, towerStacks: [3, 5], feature: 'rail',
+      lotMin: 5, lotMax: 9, towerStacks: [3, 5], feature: 'dive',
     },
   },
 ];

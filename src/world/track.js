@@ -131,6 +131,12 @@ export class Track {
             startZ: zStart - f.from, endZ: zStart - f.to,
             padZ: zStart - f.pad, done: false,
           });
+        } else if (f.kind === 'dive') {
+          slot.features.push({
+            kind: 'dive',
+            startZ: zStart - f.from, endZ: zStart - f.to,
+            outZ: zStart - f.out, done: false,
+          });
         } else if (f.kind === 'hole') {
           slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {

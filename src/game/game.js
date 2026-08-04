@@ -5,7 +5,7 @@ import { records } from './records.js';
 import { bendUniforms, hillAt, slopeAt } from '../render/materials.js';
 import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
-import { RAIL_H, DECK_Y } from '../world/layout.js';
+import { RAIL_H, DECK_Y, DIVE_Y } from '../world/layout.js';
 import { PowerState, POWERUPS } from './powerups.js';
 import { TrickChain, SPIN_LADDER } from './tricks.js';
 
@@ -41,6 +41,7 @@ const TUNE = {
   // Steep, because RELAYs refill to full: a gentle tax between checkpoints is
   // something a player can simply ignore, and then the lane choice is fake.
   beltDrainFactor: 3.4,
+  diveBoost: 1.14,    // top speed while down in The Core's trench
   springBoost: 1.55,  // bloom pads, relative to a normal jump
   springCharge: 3,
   ringBoost: 1.08,    // threading a hoop in The Vault
@@ -443,6 +444,43 @@ export class Game {
         continue;
       }
 
+      if (f.kind === 'dive') {
+        const inside = p.z <= f.startZ && p.z >= f.endZ;
+        // Running off the lip. No input, no trick to earn: the floor is gone
+        // and that is the whole idea. She keeps her forward speed and picks up
+        // more on the way down, which is what makes a descent worth taking.
+        if (inside && p.floor === 0 && !f.done) {
+          f.done = true;
+          p.floor = DIVE_Y;
+          this._teach('dive', 'THE FLOOR IS GONE');
+          this.sfx.slide();
+        }
+        // The ramp back out, fired only from down in the trench so it cannot
+        // be triggered by someone who is already airborne over it.
+        if (!f.usedOut && p.floor === DIVE_Y && p.z <= f.outZ && p.z > f.outZ - 6 && !p.airborne) {
+          f.usedOut = true;
+          p.airborne = true;
+          p.sliding = 0;
+          p.vy = Math.sqrt(2 * -p.gravityNow * (-DIVE_Y + 2.2));
+          this._trick('bigAir');
+          this._bigAir = true;
+          this.sfx.jump();
+        }
+        // Leaving is decided in exactly one place, and it is not here. Two
+        // trenches are in range at once and testing `!inside` against each one
+        // separately meant the trench she was NOT in kept lifting her out of
+        // the one she was — she fell to -1.98 and got snapped back to the
+        // road, every time. Only the climb-out is decided per feature, because
+        // only the feature that fired the ramp knows she used it.
+        if (p.floor === DIVE_Y && f.usedOut && p.y >= -0.1) p.floor = 0;
+        // Speed is the payout: steeper than the ramp gives back, so taking the
+        // trench is faster than staying up even after the climb out.
+        if (p.floor === DIVE_Y) {
+          this.speed = Math.min(this.pace.max * TUNE.diveBoost, this.speed + 14 * dt);
+        }
+        continue;
+      }
+
       if (f.kind === 'deck') {
         // The launch: enough vy to clear DECK_Y with margin, taken from the
         // zone's own gravity rather than a magic number, so retuning the
@@ -532,7 +570,7 @@ export class Game {
     // so it also pays: you kept it for as long as you kept it.
     if (p.floor !== 0) {
       const held = this.track.nearFeatures(p.z, 70)
-        .some((f) => f.kind === 'deck' && p.z <= f.startZ && p.z >= f.endZ);
+        .some((f) => (f.kind === 'deck' || f.kind === 'dive') && p.z <= f.startZ && p.z >= f.endZ);
       if (!held) {
         p.floor = 0;
         this._trick('carried');
@@ -571,7 +609,13 @@ export class Game {
     // Follow the deck, not the road. On the upper deck her height IS the
     // floor, so a camera that only tracks `y * 0.32` sits level with her head
     // and the road she is meant to be looking down at is off the top.
-    const ground = hillAt(p.z + 7.8, this.hill) + p.floor;
+    // The camera follows the floor, but not all the way down. It sits 7.8 m
+    // behind her, so at the bottom of a 5.2 m trench a straight follow put it
+    // below road level and inside the wall behind her — the shot was solid
+    // geometry. Keeping most of the drop means it looks down INTO the trench,
+    // which is the angle that sells the descent anyway.
+    const lift = p.floor < 0 ? -p.floor * 0.78 : 0;
+    const ground = hillAt(p.z + 7.8, this.hill) + p.floor + lift;
     const air = p.y - p.floor;
     const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + air * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
@@ -588,7 +632,7 @@ export class Game {
     // actually shows you the far side instead of the sky.
     this._tmp.set(
       p.x * 0.3,
-      hillAt(p.z - 16, this.hill) + p.floor + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + air * 0.28),
+      hillAt(p.z - 16, this.hill) + p.floor + lift * 0.45 + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + air * 0.28),
       p.z - 16,
     );
     cam.lookAt(this._tmp);

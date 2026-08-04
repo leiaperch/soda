@@ -5,10 +5,10 @@ import {
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
   springPad, launchRamp, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
-import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, OBSTACLE } from './layout.js';
+import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
 
-export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, OBSTACLE };
+export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE };
 
 /**
  * Authored obstacle patterns. Placement is never random: random obstacle
@@ -123,6 +123,18 @@ const FEATURES = {
     [{ pad: 7, from: 28, to: 48 }, { from: 0, to: 18 }],
     [{ pad: 3, from: 23, to: 48 }, { from: 0, to: 14 }],
   ],
+  // The Core: the floor drops away. She runs off the lip, falls into the
+  // trench and rides it fast; `out` is the ramp that fires her back up.
+  //
+  // The lip is at `from`, so nothing may be authored across it — she is
+  // committed the moment she passes it and has no input that changes the fall.
+  // The ramp sits short of `to` by the length of the climb, not at the end.
+  dive: [
+    [{ from: 14, to: 44, out: 38 }],
+    [{ from: 11, to: 42, out: 36 }],
+    [{ from: 17, to: 46, out: 40 }],
+    [{ from: 13, to: 40, out: 34 }],
+  ],
   hole: [
     [{ lane: 0, from: 12, to: 30 }],
     [{ lane: 2, from: 9, to: 27 }],
@@ -150,6 +162,11 @@ function conflicts(o, features) {
     // variants holding one obstacle each. Deck obstacles are exempt outright:
     // they are up there, not on the pad.
     if (f.kind === 'deck') return !o.deck && Math.abs(o.z - f.pad) < 7;
+    // The lip and the landing, plus the ramp back out. Everything between is
+    // trench floor and is exactly where obstacles belong.
+    if (f.kind === 'dive') {
+      return (o.z > f.from - 6 && o.z < f.from + 12) || Math.abs(o.z - f.out) < 7;
+    }
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
@@ -223,6 +240,35 @@ function upperDeck(b, pal, f) {
       b.cyl('toon', side * (half - 0.2), 0, -z, 0.34, 0.26, DECK_Y - 0.5, 6, shade(pal.deck, 1.05));
     }
   }
+}
+
+/**
+ * The Core's trench: a channel cut below the road.
+ *
+ * Built as walls plus a floor rather than as a hole, because the thing that
+ * sells a descent is seeing the walls rise past you. The lip at the near end
+ * is lit across the full width: it is the last thing she sees at road level
+ * and the only warning she gets.
+ */
+function trench(b, pal, f) {
+  const len = f.to - f.from;
+  const mid = -(f.from + len / 2);
+  const half = ROAD_HALF;
+  b.box('toon', 0, DIVE_Y, mid, half * 2, 0.4, len, shade(pal.road, 2.2));
+  b.box('emissive', 0, DIVE_Y + 0.4, mid, half * 2 - 1.2, 0.05, len, shade(pal.accentGlow, 0.3));
+  for (const side of [-1, 1]) {
+    b.box('toon', side * (half + 0.5), DIVE_Y, mid, 1.0, -DIVE_Y + 0.4, len, shade(pal.deck, 1.35));
+    b.box('emissive', side * half, DIVE_Y + 0.5, mid, 0.14, 0.3, len, shade(pal.edge, 0.45));
+    // rungs up the wall, which is what makes the depth readable as you fall
+    for (let z = f.from + 2; z < f.to; z += 3.5) {
+      b.box('chrome', side * (half - 0.1), DIVE_Y + 1.2, -z, 0.16, 0.12, 0.9, shade(pal.chrome, 0.7));
+      b.box('chrome', side * (half - 0.1), DIVE_Y + 3.0, -z, 0.16, 0.12, 0.9, shade(pal.chrome, 0.7));
+    }
+  }
+  // the lip: the edge she runs off, lit right across
+  b.box('emissive', 0, 0.04, -f.from, half * 2, 0.16, 0.5, shade(pal.accent, 0.7));
+  b.box('toon', 0, -0.5, -f.from, half * 2, 0.5, 0.6, shade(pal.deck, 1.2));
+  for (const lane of [0, 1, 2]) launchRamp(b, pal, LANE_X[lane], -f.out);
 }
 
 const STORM_PATTERNS = [
@@ -798,6 +844,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
     else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
+    else if (f.kind === 'dive') trench(b, pal, f);
     else if (f.kind === 'deck') {
       upperDeck(b, pal, f);
       // The pad spans the road: the launch is not a lane decision, it is a
