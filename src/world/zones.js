@@ -470,10 +470,15 @@ export const ZONES = [
       road: '#191030',
       kerb: '#c8b0e8',
       deck: '#251848',
-      edge: '#5ce8d0',
-      lane: '#f0e2ff',
+      // Mint, but dark mint. The first pass used #5ce8d0 for both the edge and
+      // the glow: high-luminance on an emissive channel, spread along every
+      // lane line and both deck lips at once, which bloom turned into a solid
+      // white sheet across the middle of the screen. The hue is the same, the
+      // luminance is roughly halved, and that is the whole fix.
+      edge: '#2f9e8a',
+      lane: '#c9b4e8',
       accent: '#ff5ac8',
-      accentGlow: '#5ce8d0',
+      accentGlow: '#2fa892',
     },
     facades: ['#3a2468', '#52306e', '#2a2a5e', '#6a3a78', '#34265c', '#472a6a'],
     props: {

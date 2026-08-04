@@ -375,6 +375,16 @@ const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'he
 export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
   const spec = o.spec || OBSTACLE[o.t];
   const z = -o.z;
+  // An obstacle on The Storm's upper deck is the same obstacle, moved up. The
+  // whole form is translated rather than its `base` being raised, because the
+  // forms use `base` to mean their own clearance and raising it would move a
+  // gate's gap instead of the gate.
+  if (o.lift) {
+    b.at(0, o.lift, 0, 0);
+    buildObstacle(b, pal, { ...o, lift: 0 }, x, kit);
+    b.pop();
+    return undefined;
+  }
   if (o.t === 'panel') return panel(b, pal, x, z, spec);
   if (o.t === 'hedge') return hedge(b, pal, x, z, spec);
   if (o.t === 'bumper') return bumper(b, pal, x, z, spec);

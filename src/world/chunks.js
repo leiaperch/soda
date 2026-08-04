@@ -144,7 +144,7 @@ function conflicts(o, features) {
     // is committed and airborne over that stretch and could not dodge if she
     // wanted to. Clearing the whole span instead, once decks were extended to
     // the chunk boundary, silently emptied every storm chunk of obstacles.
-    if (f.kind === 'deck') return o.z > f.pad - 6 && o.z < f.from + 4;
+    if (f.kind === 'deck') return !o.deck && o.z > f.pad - 6 && o.z < f.from + 4;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
@@ -213,12 +213,42 @@ function upperDeck(b, pal, f) {
 }
 
 const STORM_PATTERNS = [
-  { tier: 0, obstacles: [{ t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 }], cells: [{ lane: 0, z: 26, n: 4 }] },
-  { tier: 0, obstacles: [{ t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 }], cells: [{ lane: 1, z: 30, n: 4 }] },
-  { tier: 1, obstacles: [{ t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'block', lane: 1, z: 34 }], cells: [{ lane: 0, z: 36, n: 3 }] },
-  { tier: 1, obstacles: [{ t: 'gate', lane: 1, z: 12 }, { t: 'drift', lane: 0, z: 24 }, { t: 'drift', lane: 2, z: 24 }], cells: [{ lane: 1, z: 27, n: 5 }] },
-  { tier: 2, obstacles: [{ t: 'block', lane: 0, z: 10 }, { t: 'gate', lane: 1, z: 10 }, { t: 'drift', lane: 2, z: 23 }, { t: 'barrier', lane: 1, z: 35 }], cells: [{ lane: 0, z: 37, n: 3 }] },
-  { tier: 2, obstacles: [{ t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 }, { t: 'block', lane: 0, z: 31 }, { t: 'gate', lane: 2, z: 42 }], cells: [{ lane: 1, z: 34, n: 4 }] },
+  // Lower road: barriers put you in the air, drifts are waiting when you get
+  // there. Upper deck (`deck: true`): its own obstacles, placed inside the
+  // deck spans in FEATURES.deck — 26 to 48, and the 0 to 16 stub that joins on
+  // from the previous chunk. Being up there is a shortcut, not a rest.
+  { tier: 0, obstacles: [
+    { t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 },
+    { t: 'barrier', lane: 1, z: 36, deck: true },
+  ], cells: [{ lane: 0, z: 26, n: 4 }] },
+
+  { tier: 0, obstacles: [
+    { t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 },
+    { t: 'block', lane: 2, z: 38, deck: true },
+  ], cells: [{ lane: 1, z: 30, n: 4 }] },
+
+  { tier: 1, obstacles: [
+    { t: 'barrier', lane: 2, z: 10 }, { t: 'drift', lane: 2, z: 22 }, { t: 'block', lane: 1, z: 34 },
+    { t: 'gate', lane: 1, z: 33, deck: true }, { t: 'barrier', lane: 0, z: 44, deck: true },
+  ], cells: [{ lane: 0, z: 36, n: 3 }] },
+
+  { tier: 1, obstacles: [
+    { t: 'gate', lane: 1, z: 12 }, { t: 'drift', lane: 0, z: 24 }, { t: 'drift', lane: 2, z: 24 },
+    { t: 'block', lane: 1, z: 8, deck: true }, { t: 'barrier', lane: 2, z: 40, deck: true },
+  ], cells: [{ lane: 1, z: 27, n: 5 }] },
+
+  { tier: 2, obstacles: [
+    { t: 'block', lane: 0, z: 10 }, { t: 'gate', lane: 1, z: 10 },
+    { t: 'drift', lane: 2, z: 23 }, { t: 'barrier', lane: 1, z: 35 },
+    { t: 'block', lane: 0, z: 32, deck: true }, { t: 'gate', lane: 2, z: 43, deck: true },
+  ], cells: [{ lane: 0, z: 37, n: 3 }] },
+
+  { tier: 2, obstacles: [
+    { t: 'barrier', lane: 1, z: 9 }, { t: 'drift', lane: 1, z: 20 },
+    { t: 'block', lane: 0, z: 31 }, { t: 'gate', lane: 2, z: 42 },
+    { t: 'barrier', lane: 1, z: 10, deck: true },
+    { t: 'block', lane: 2, z: 34, deck: true }, { t: 'barrier', lane: 0, z: 45, deck: true },
+  ], cells: [{ lane: 1, z: 34, n: 4 }] },
 ];
 
 export function pickPattern(rng, tier, flight, storm) {
@@ -756,6 +786,11 @@ export function buildChunk(rng, pattern, materials, zone) {
     z: -o.z,
     type: o.t,
     spec: o.spec || OBSTACLE[o.t],
+    // `deck: true` in a pattern puts the obstacle on the upper road. Kept as a
+    // lift on top of the spec rather than baked into `base`, because the forms
+    // read `base` for their own shape (a gate's clearance) and adding the deck
+    // height to it would move the gap, not the gate.
+    lift: o.deck ? DECK_Y : 0,
   }));
   return { group, obstacles, cells, features };
 }

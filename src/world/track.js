@@ -112,7 +112,7 @@ export class Track {
     // Skip obstacles on the very first chunk: nobody should die at t=0.
     if (index > 0) {
       for (const o of variant.obstacles) {
-        slot.obstacles.push({ x: LANE_X[o.lane], z: zStart + o.z, spec: o.spec, type: o.type, hit: false });
+        slot.obstacles.push({ x: LANE_X[o.lane], z: zStart + o.z, spec: o.spec, type: o.type, lift: o.lift || 0, hit: false });
       }
       for (const f of (variant.features || [])) {
         if (f.kind === 'swell') {

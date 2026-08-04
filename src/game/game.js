@@ -230,8 +230,9 @@ export class Game {
       const dx = Math.abs(o.x - p.x);
 
       if (!o.hit && dz < o.spec.d / 2 + 0.55 && dx < o.spec.w / 2 + PLAYER.radius) {
-        const oTop = o.spec.base + o.spec.h;
-        if (p.y < oTop && pTop > o.spec.base) {
+        const base = o.spec.base + (o.lift || 0);
+        const oTop = base + o.spec.h;
+        if (p.y < oTop && pTop > base) {
           o.hit = true;
           if (o.type === 'bumper') this._bounce(o);
           else this._hit();
