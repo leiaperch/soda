@@ -62,7 +62,7 @@ export const HILL_B = 0.0209;   // 2*PI/300
  * placed with this, and the world is drawn with the other.
  */
 export function hillAt(z, amp) {
-  const drop = bendUniforms.uDrop.value * z;
+  const drop = bendUniforms.uDrop.value * (z - bendUniforms.uPlayerZ.value);
   if (!amp) return drop;
   return amp * (Math.sin(z * HILL_A) * 0.65 + Math.sin(z * HILL_B) * 0.35) + drop;
 }
@@ -98,10 +98,14 @@ const BEND_PROJECT = /* glsl */`
   sodaWorld.y -= sodaD2 * uBendY;
   sodaWorld.x += sodaD2 * uBendX;
   sodaWorld.y += uHill * (sin(sodaWorld.z * 0.0449) * 0.65 + sin(sodaWorld.z * 0.0209) * 0.35);
-  // A constant gradient on top of the waves. World z runs negative ahead of
-  // her, so a positive uDrop lowers everything in front: the road only ever
-  // goes down, which a sum of sines can never express on its own.
-  sodaWorld.y += uDrop * sodaWorld.z;
+  // A constant gradient, measured FROM HER, not from the world origin.
+  //
+  // Using absolute z made this a shear of the entire world about z = 0: the
+  // road ahead went down, but everything behind the camera went UP by just as
+  // much and reared into frame as two grey walls. Relative to the player it is
+  // what it should be — a local slope that travels with her, with nothing
+  // sinking without bound over three kilometres.
+  sodaWorld.y += uDrop * (sodaWorld.z - uPlayerZ);
   mvPosition = viewMatrix * sodaWorld;
   gl_Position = projectionMatrix * mvPosition;
 `;

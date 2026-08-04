@@ -524,7 +524,10 @@ export const ZONES = [
       [0.00, '#2a1a4e'], [0.22, '#6a4aa8'], [0.42, '#c86ac0'],
       [0.60, '#ff9ec4'], [0.80, '#ffd9a8'], [1.00, '#8fe0e0'],
     ],
-    fog: { color: '#c89ad0', near: 170, far: 330 },
+    // Pulled in and pinked. The fog colour IS the far half of the screen, so
+    // a desaturated one greys the picture no matter what the geometry is
+    // painted with — which is where the last of the grey was coming from.
+    fog: { color: '#ff8fd0', near: 120, far: 260 },
     // 2.8 was too much: it put the colour back but burned every pale surface,
     // so the road read white and the roadside props became one undifferentiated
     // mass. Brightness is not saturation — the colour has to come from the
@@ -552,10 +555,14 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
       skylineChance: 1, backRowChance: 0.9, waterSides: false, waterRoad: false,
       // A road that only ever goes down. `hill` is a sum of sines and can only
       // give a descent followed by its own climb; `drop` is a constant
-      // gradient laid on top, so The Core falls for its whole length. At 0.055
-      // that is about three degrees — 2.6 m lost per chunk, 190 m over the
-      // zone — which the existing gradient rule turns into speed for free.
-      drop: 0.055, slopePull: 62, overspeed: 22,
+      // gradient laid on top, so The Core falls for its whole length.
+      //
+      // 0.055 was three degrees. That is a car park ramp: a real descent by
+      // the numbers and nothing at all to look at, which is exactly what got
+      // reported. 0.30 is seventeen degrees — a black run — and over the 48 m
+      // of a chunk the road drops fourteen metres, so the fall is the first
+      // thing you see rather than something you have to be told about.
+      drop: 0.30, slopePull: 62, overspeed: 22,
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,
