@@ -213,7 +213,9 @@ export class Animator {
     const jump = this.actions.jump;
     if (!jump || this._fitted) return;
     this._fitted = true;
-    const g = player.physics.gravity;
+    // gravityNow, not the zone's: on an upper deck the two differ and the
+    // clip would be stretched over a jump twice the length of the real one.
+    const g = player.gravityNow;
     const air = g < 0 ? (2 * Math.max(player.vy, 1)) / -g : 0.67;
     jump.timeScale = THREE.MathUtils.clamp(jump.getClip().duration / air, 0.45, 1.6);
   }

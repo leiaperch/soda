@@ -660,7 +660,7 @@ export class Game {
         // Awarded at take-off on the jump's predicted length, not part-way
         // through it. Waiting until 0.62 s had elapsed left less air than the
         // flip clip needs, so BIG AIR could never actually show its animation.
-        const g = this.player.physics.gravity;
+        const g = this.player.gravityNow;
         const air = g < 0 ? (2 * this.player.vy) / -g : 0;
         if (!this._bigAir && air > TUNE.bigAirTime) {
           this._bigAir = true;

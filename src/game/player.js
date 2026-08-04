@@ -11,6 +11,8 @@ import { Animator, loadClips } from './animator.js';
 const MODEL_FACING = Math.PI;
 
 export const GRAVITY = -34;
+/** What gravity becomes while standing on an upper deck. See `gravityNow`. */
+const DECK_GRAVITY = -34;
 export const JUMP_V = 11.4;
 const SLIDE_TIME = 0.58;
 /** How long the stand-up flourish runs after a slide ends. */
@@ -248,8 +250,9 @@ export class Player {
     if (this.animated) {
       // Time the clip to the air she actually has left, so a flip finishes
       // exactly as she lands instead of being cut off halfway.
-      const air = this.airborne && this.physics.gravity < 0
-        ? Math.max(0.28, (this.vy + Math.sqrt(Math.max(0, this.vy * this.vy - 2 * this.physics.gravity * this.y))) / -this.physics.gravity)
+      const g = this.gravityNow;
+      const air = this.airborne && g < 0
+        ? Math.max(0.28, (this.vy + Math.sqrt(Math.max(0, this.vy * this.vy - 2 * g * (this.y - this.floor)))) / -g)
         : POSES[key].time;
       if (this.animator.playTrick(key, air, this.airborne)) { this.pose = null; return; }
     }
@@ -297,6 +300,20 @@ export class Player {
     return -0.5 * Math.sin(t * Math.PI * 2.3) * decay;
   }
 
+  /**
+   * Gravity right now, which is not the same as the zone's gravity.
+   *
+   * The Storm floats at 0.40 so the launch ramp can actually reach the upper
+   * deck. Up there that float is wrong: a normal jump lasted 1.68 s and 37 m
+   * against a deck barely 22 m long, so hopping a barrier threw you off the
+   * end of the road you were standing on. The deck runs at ordinary gravity —
+   * a small jump for a small road — and the float comes back the instant she
+   * is off it, which is also what makes the drop back down read as long.
+   */
+  get gravityNow() {
+    return this.floor > 0 ? Math.min(this.physics.gravity, DECK_GRAVITY) : this.physics.gravity;
+  }
+
   get height() {
     if (this.flying) return PLAYER.flightHeight;
     return this.sliding > 0 ? PLAYER.slideHeight : PLAYER.standHeight;
@@ -334,7 +351,7 @@ export class Player {
         this.vy = 0;
       }
     } else if (this.airborne) {
-      this.vy += this.physics.gravity * dt;
+      this.vy += this.gravityNow * dt;
       this.y += this.vy * dt;
       // `floor` is the surface under her, which is 0 everywhere except The
       // Storm, where an upper deck raises it. Landing has to resolve against

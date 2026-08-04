@@ -197,7 +197,15 @@ function upperDeck(b, pal, f) {
   const mid = -(f.from + len / 2);
   const half = ROAD_HALF * 0.82;
   b.box('toon', 0, DECK_Y - 0.3, mid, half * 2, 0.5, len, shade(pal.deck, 1.25));
-  b.box('toon', 0, DECK_Y, mid, half * 2, 0.12, len, shade(pal.road, 1.5));
+  b.box('toon', 0, DECK_Y, mid, half * 2, 0.12, len, shade(pal.road, 2.6));
+  // Lane dashes, same grammar as the road below. Without them the deck was a
+  // black sheet: you could tell you were up there, but not which lane you were
+  // in, which is the one thing you need to know when an obstacle arrives.
+  for (const lx of [-2.6 * 0.5 - 1.3, 2.6 * 0.5 + 1.3]) {
+    for (let z = f.from + 2; z < f.to - 1; z += 4.5) {
+      b.box('emissive', lx, DECK_Y + 0.13, -z, 0.18, 0.04, 2.0, shade(pal.lane, 0.42));
+    }
+  }
   // lit lips, so the ends read as edges rather than as the deck ending in fog
   for (const end of [-(f.from), -(f.to)]) {
     b.box('emissive', 0, DECK_Y + 0.06, end, half * 2, 0.14, 0.5, shade(pal.accentGlow, 0.55));
@@ -761,7 +769,13 @@ export function buildChunk(rng, pattern, materials, zone) {
 
   buildRoad(b, pal, zone.props, features, rng);
   buildScenery(b, rng, pal, zone.props);
-  for (const o of [...kept, ...extra]) buildObstacle(b, pal, o, LANE_X[o.lane], zone.props.obstacleKit);
+  // `lift` has to be resolved HERE as well as on the collision record below.
+  // Setting it only on the record drew every deck obstacle down on the road
+  // while it went on colliding at deck height: invisible, and lethal from a
+  // place with nothing in it.
+  for (const o of [...kept, ...extra]) {
+    buildObstacle(b, pal, { ...o, lift: o.deck ? DECK_Y : 0 }, LANE_X[o.lane], zone.props.obstacleKit);
+  }
   for (const f of features) {
     if (f.kind === 'swell') swell(b, pal, -f.z);
     else if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
