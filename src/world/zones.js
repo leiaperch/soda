@@ -521,8 +521,8 @@ export const ZONES = [
     // them grey — a rainbow lit by one blue lamp is a blue picture. Neutral
     // and bright, so each chunk's own colour is what you see.
     sky: [
-      [0.00, '#2a1a4e'], [0.22, '#6a4aa8'], [0.42, '#c86ac0'],
-      [0.60, '#ff9ec4'], [0.80, '#ffd9a8'], [1.00, '#8fe0e0'],
+      [0.00, '#0a0018'], [0.20, '#3d0a6e'], [0.40, '#a815b0'],
+      [0.58, '#ff2ea0'], [0.76, '#ff8a3a'], [1.00, '#00e5c8'],
     ],
     // Pulled in and pinked. The fog colour IS the far half of the screen, so
     // a desaturated one greys the picture no matter what the geometry is
@@ -573,7 +573,7 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
       // machinery is intact — `uDrop` in materials.js and its mirror in
       // hillAt/slopeAt — so re-enabling it is one value, once the reason my
       // captures disagreed with the game has actually been found.
-      slopePull: 62, overspeed: 22,   // `drop` removed — see the note above
+      drop: 0.30, slopePull: 62, overspeed: 22,
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,

@@ -47,30 +47,25 @@ function relayEvery(zone) {
 function pastelStep(i, n) {
   const hue = (i / n) * 360;
   const h = (deg, sat, light) => `hsl(${Math.round((hue + deg) % 360)} ${sat}% ${light}%)`;
-  // The pastel lives on the TOON surfaces — facades, kerbs — where it is just
-  // a colour. `edge`, `lane`, `accent` and `accentGlow` all end up on emissive
-  // geometry, and a pastel is by definition a high-lightness colour, so the
-  // first version put 90%-lightness paint on every glowing surface at once and
-  // bloom turned the whole screen white. Same failure as The Storm's first
-  // palette. Hue stays, lightness comes down hard.
+  // NEON, not pastel. The first version desaturated everything to avoid a
+  // bloom blowout and produced grey — which is the failure it was trying to
+  // avoid, arrived at from the other side. What blows out is LIGHTNESS, so
+  // saturation goes to the ceiling and lightness is what stays in check: a
+  // 95%-saturated colour at 52% lightness is vivid and bloom-safe, while the
+  // same hue at 85% lightness is white however saturated you claim it is.
   return {
     colors: {
-      // Pulling the lightness down to stop the blowout took the colour with
-      // it and left grey. Saturation is what carries a hue at low lightness,
-      // so it goes UP as the lightness comes down — that is the difference
-      // between a dark pastel and a dirty one.
-      road: h(0, 46, 9),
-      kerb: h(24, 80, 72),
-      deck: h(340, 58, 26),
-      edge: h(160, 82, 46),
-      lane: h(40, 78, 70),
-      accent: h(0, 92, 62),
-      accentGlow: h(200, 86, 50),
+      road: h(0, 60, 10),
+      kerb: h(24, 96, 62),
+      deck: h(340, 78, 28),
+      edge: h(160, 100, 52),
+      lane: h(40, 96, 66),
+      accent: h(0, 100, 60),
+      accentGlow: h(200, 100, 54),
     },
-    // Spread the facade lightness. All six sitting within four points of each
-    // other is what turned the roadside into a single pale blob: nothing had
-    // an edge against its neighbour.
-    facades: [h(0, 76, 68), h(46, 72, 82), h(92, 68, 58), h(300, 74, 76), h(200, 70, 50), h(140, 66, 72)],
+    // Wide spread of lightness across the six, so a row of buildings has edges
+    // against itself instead of merging into one mass.
+    facades: [h(0, 92, 58), h(46, 88, 70), h(92, 90, 46), h(300, 94, 62), h(200, 90, 40), h(140, 86, 54)],
   };
 }
 
