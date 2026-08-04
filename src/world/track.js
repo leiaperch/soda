@@ -46,7 +46,11 @@ function relayEvery(zone) {
  */
 function pastelStep(i, n) {
   const hue = (i / n) * 360;
-  const h = (deg, sat, light) => `hsl(${Math.round((hue + deg) % 360)} ${sat}% ${light}%)`;
+  // COMMAS. three.js parses `hsl(h, s%, l%)` and nothing else — the modern
+  // comma-free CSS form silently fails to match its regex and leaves the colour
+  // white. Every chunk in this zone was built from unparsed strings, which is
+  // why the finale came out grey however hard the saturation was pushed.
+  const h = (deg, sat, light) => `hsl(${Math.round((hue + deg) % 360)}, ${sat}%, ${light}%)`;
   // NEON, not pastel. The first version desaturated everything to avoid a
   // bloom blowout and produced grey — which is the failure it was trying to
   // avoid, arrived at from the other side. What blows out is LIGHTNESS, so
