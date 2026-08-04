@@ -5,10 +5,10 @@ import {
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
   springPad, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
-import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE } from './layout.js';
+import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
 
-export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, OBSTACLE };
+export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, OBSTACLE };
 
 /**
  * Authored obstacle patterns. Placement is never random: random obstacle
@@ -105,6 +105,24 @@ const FEATURES = {
     [{ lane: 1, from: 10, to: 40, dir: -1 }, { lane: 2, from: 10, to: 24, dir: 1 }, { lane: 0, from: 26, to: 40, dir: 1 }],
     [{ lane: 1, from: 5, to: 44, dir: -1 }, { lane: 0, from: 5, to: 22, dir: 1 }, { lane: 2, from: 24, to: 44, dir: 1 }],
   ],
+  // The Storm: an upper deck running over the road, entered off a launch pad.
+  // `pad` is where the pad sits, `from`/`to` the span of the deck itself.
+  //
+  // The gap between them is not decoration. At that zone's gravity a launch
+  // takes ~1.1 s to reach deck height and she covers ~24 m in that time, so a
+  // deck that started at the pad would be a ceiling she smacks into. Every
+  // entry gives her 22 m of run-up and the deck outlasts the arc, so there is
+  // always something under her when she comes down.
+  // Every deck runs to the chunk boundary and every chunk opens with a stub of
+  // deck, so two storm chunks back to back read as one continuous upper road
+  // rather than as a row of separate platforms. It also means the deck she is
+  // standing on ends at a seam she can see coming, not under her feet.
+  deck: [
+    [{ pad: 5, from: 26, to: 48 }, { from: 0, to: 16 }],
+    [{ pad: 4, from: 24, to: 48 }, { from: 0, to: 12 }],
+    [{ pad: 7, from: 28, to: 48 }, { from: 0, to: 18 }],
+    [{ pad: 3, from: 23, to: 48 }, { from: 0, to: 14 }],
+  ],
   hole: [
     [{ lane: 0, from: 12, to: 30 }],
     [{ lane: 2, from: 9, to: 27 }],
@@ -122,6 +140,9 @@ function conflicts(o, features) {
     // exists to clear spans all of them.
     if (f.kind === 'spring') return o.z > f.z - 6 && o.z < f.z + 15;
     if (f.kind === 'ring') return o.lane === f.lane && Math.abs(o.z - f.z) < 8;
+    // The launch pad spans every lane and the whole run-up under the deck has
+    // to stay clear: she is committed the moment she touches the pad.
+    if (f.kind === 'deck') return o.z > f.pad - 6 && o.z < f.to + 3;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
@@ -161,6 +182,34 @@ export function panelSpec(alt) {
  * 1.1 s — both while she is still up, which is the only time a drift means
  * anything. Past ~40 m she has landed and it is scenery.
  */
+/**
+ * The Storm's upper deck: a second road slung over the first.
+ *
+ * Both ends are cut off square and lit, because the only thing a player needs
+ * to read from below is where it starts, and the only thing they need to read
+ * from on top is where it stops. The launch pad that gets you up there is
+ * built separately, at `f.pad`.
+ */
+function upperDeck(b, pal, f) {
+  const len = f.to - f.from;
+  const mid = -(f.from + len / 2);
+  const half = ROAD_HALF * 0.82;
+  b.box('toon', 0, DECK_Y - 0.3, mid, half * 2, 0.5, len, shade(pal.deck, 1.25));
+  b.box('toon', 0, DECK_Y, mid, half * 2, 0.12, len, shade(pal.road, 1.5));
+  // lit lips, so the ends read as edges rather than as the deck ending in fog
+  for (const end of [-(f.from), -(f.to)]) {
+    b.box('emissive', 0, DECK_Y + 0.06, end, half * 2, 0.14, 0.5, shade(pal.accentGlow, 0.55));
+  }
+  for (const side of [-1, 1]) {
+    b.box('toon', side * half, DECK_Y + 0.36, mid, 0.22, 0.72, len, shade(pal.kerb, 0.95));
+    b.box('emissive', side * half, DECK_Y + 0.72, mid, 0.3, 0.09, len, shade(pal.accent, 0.45));
+    // pylons down to the road, spaced so the deck reads as carried, not floating
+    for (let z = f.from + 3; z < f.to; z += 9) {
+      b.cyl('toon', side * (half - 0.2), 0, -z, 0.34, 0.26, DECK_Y - 0.5, 6, shade(pal.deck, 1.05));
+    }
+  }
+}
+
 const STORM_PATTERNS = [
   { tier: 0, obstacles: [{ t: 'barrier', lane: 1, z: 12 }, { t: 'drift', lane: 1, z: 24 }], cells: [{ lane: 0, z: 26, n: 4 }] },
   { tier: 0, obstacles: [{ t: 'barrier', lane: 0, z: 14 }, { t: 'drift', lane: 0, z: 27 }], cells: [{ lane: 1, z: 30, n: 4 }] },
@@ -687,6 +736,16 @@ export function buildChunk(rng, pattern, materials, zone) {
     else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
     else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
+    else if (f.kind === 'deck') {
+      upperDeck(b, pal, f);
+      // The pad spans the road: the launch is not a lane decision, it is a
+      // yes-or-no. Three of them so it reads as a ramp you cannot miss. A
+      // continuation span has no pad, and building one at `-undefined` would
+      // put NaN in the vertex buffer and take the whole chunk with it.
+      if (f.pad !== undefined) {
+        for (const lane of [0, 1, 2]) springPad(b, pal, LANE_X[lane], -f.pad);
+      }
+    }
   }
 
   const group = b.toGroup(materials);

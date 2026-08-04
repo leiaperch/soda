@@ -487,7 +487,7 @@ export const ZONES = [
       lampEvery: 20, streetEvery: 10, billboardChance: 0.4,
       palmChance: 0, podChance: 0.5, stallChance: 0,
       skylineChance: 0.9, backRowChance: 0.7, waterSides: false, waterRoad: false,
-      lotMin: 6, lotMax: 12, towerStacks: [2, 4], feature: 'rail',
+      lotMin: 6, lotMax: 12, towerStacks: [2, 4], feature: 'deck',
     },
   },
 

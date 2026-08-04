@@ -18,6 +18,13 @@ export const CHUNK_LEN = 48;
  *  a grinding player clears barriers for free. That is the point of grinding. */
 export const RAIL_H = 1.25;
 
+/**
+ * The Storm's upper deck. High enough that reaching it is a real launch and
+ * not a tall jump, low enough that the chase camera can follow the change
+ * without cutting to a different shot.
+ */
+export const DECK_Y = 6.4;
+
 export const OBSTACLE = {
   barrier: { w: 2.3, h: 1.05, d: 0.7, base: 0 },      // jump it
   gate:    { w: 2.4, h: 2.2, d: 0.7, base: 1.35 },    // slide under it

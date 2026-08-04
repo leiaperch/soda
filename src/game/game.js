@@ -5,7 +5,7 @@ import { records } from './records.js';
 import { bendUniforms, hillAt, slopeAt } from '../render/materials.js';
 import { makeRng } from '../core/rng.js';
 import { DEFAULT_ZONE, ZONES } from '../world/zones.js';
-import { RAIL_H } from '../world/layout.js';
+import { RAIL_H, DECK_Y } from '../world/layout.js';
 import { PowerState, POWERUPS } from './powerups.js';
 import { TrickChain, SPIN_LADDER } from './tricks.js';
 
@@ -442,6 +442,32 @@ export class Game {
         continue;
       }
 
+      if (f.kind === 'deck') {
+        // The launch: enough vy to clear DECK_Y with margin, taken from the
+        // zone's own gravity rather than a magic number, so retuning the
+        // zone's float cannot silently leave the deck out of reach.
+        if (!f.done && p.z <= f.padZ && p.z > f.padZ - 6 && p.floor === 0 && p.y < 1.8) {
+          f.done = true;
+          p.grinding = null;
+          p.airborne = true;
+          p.sliding = 0;
+          p.vy = Math.sqrt(2 * -p.physics.gravity * (DECK_Y + 1.6));
+          this._trick('bigAir');
+          this._bigAir = true;
+          this.sfx.jump();
+          this._teach('deck', 'LAND ON THE UPPER DECK');
+        }
+        // Arriving: she only takes the deck if she is over it and coming down
+        // onto it. Checking the apex instead would snap her up through it.
+        const over = p.z <= f.startZ && p.z >= f.endZ;
+        if (over && p.floor === 0 && p.vy <= 0 && p.y >= DECK_Y) p.floor = DECK_Y;
+        // Leaving is decided after the loop, not here. A chunk carries two
+        // deck spans so they join across the seam, and dropping her whenever
+        // she was not over *this* one meant the second span cancelled the
+        // first every frame and the deck could never be stood on at all.
+        continue;
+      }
+
       if (f.kind === 'spring') {
         // Fires you up whether you were running or already falling onto it,
         // which is what lets pads chain into a bounce instead of a stutter.
@@ -499,6 +525,18 @@ export class Game {
       // A grind pays for every second you hold it, not once on landing.
       this.tricks.addContinuous('grind', dt);
     }
+
+    // Falling off the upper deck, decided once against every span rather than
+    // once per span. Running out of deck is the entire risk of being up there,
+    // so it also pays: you kept it for as long as you kept it.
+    if (p.floor !== 0) {
+      const held = this.track.nearFeatures(p.z, 70)
+        .some((f) => f.kind === 'deck' && p.z <= f.startZ && p.z >= f.endZ);
+      if (!held) {
+        p.floor = 0;
+        this._trick('carried');
+      }
+    }
   }
 
   _camera(dt) {
@@ -529,8 +567,12 @@ export class Game {
     // Sample the hill under the CAMERA, not under the player. The camera sits
     // eight metres back, and on a slope that difference is exactly enough to
     // bury it in the road or fling it into the air.
-    const ground = hillAt(p.z + 7.8, this.hill);
-    const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + p.y * 0.32);
+    // Follow the deck, not the road. On the upper deck her height IS the
+    // floor, so a camera that only tracks `y * 0.32` sits level with her head
+    // and the road she is meant to be looking down at is off the top.
+    const ground = hillAt(p.z + 7.8, this.hill) + p.floor;
+    const air = p.y - p.floor;
+    const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + air * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
     cam.position.y += (targetY - cam.position.y) * Math.min(1, 5 * dt);
     cam.position.z = p.z + 7.8;
@@ -545,7 +587,7 @@ export class Game {
     // actually shows you the far side instead of the sky.
     this._tmp.set(
       p.x * 0.3,
-      hillAt(p.z - 16, this.hill) + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + p.y * 0.28),
+      hillAt(p.z - 16, this.hill) + p.floor + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + air * 0.28),
       p.z - 16,
     );
     cam.lookAt(this._tmp);

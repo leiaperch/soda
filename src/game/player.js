@@ -180,6 +180,8 @@ export class Player {
     this.y = this.flying ? ALT_Y[0] : 0;
     this.z = 0;
     this.vy = 0;
+    /** Height of the surface under her. Raised by an upper deck. */
+    this.floor = 0;
     this.airborne = false;
     this.sliding = 0;
     this.stunned = 0;
@@ -334,7 +336,20 @@ export class Player {
     } else if (this.airborne) {
       this.vy += this.physics.gravity * dt;
       this.y += this.vy * dt;
-      if (this.y <= 0) { this.y = 0; this.vy = 0; this.airborne = false; this.landedAt = time; }
+      // `floor` is the surface under her, which is 0 everywhere except The
+      // Storm, where an upper deck raises it. Landing has to resolve against
+      // it rather than against zero, or she falls straight through the deck.
+      if (this.y <= this.floor) {
+        this.y = this.floor;
+        this.vy = 0;
+        this.airborne = false;
+        this.landedAt = time;
+      }
+    } else if (this.y !== this.floor) {
+      // The deck ended under her feet. Falling is not a jump: no take-off, no
+      // trick, she is simply not standing on anything any more.
+      this.airborne = true;
+      this.vy = Math.min(this.vy, 0);
     }
     if (this.sliding > 0) this.sliding = Math.max(0, this.sliding - dt);
 
