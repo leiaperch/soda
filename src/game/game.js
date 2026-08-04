@@ -671,7 +671,15 @@ export class Game {
     // actually shows you the far side instead of the sky.
     this._tmp.set(
       p.x * 0.3,
-      hillAt(p.z - 16, this.hill) + p.floor + lift * 0.45 + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + air * 0.28),
+      // Aimed level with HER, not with the road sixteen metres ahead.
+      //
+      // This is why the descent could not be seen. A constant gradient moves
+      // the world, the player AND the camera by the same amount, and the
+      // camera was also aimed down the slope — so the road sat exactly where
+      // it sits on the flat and the whole thing was invisible. Holding the aim
+      // at her own height lets the road fall away below the horizon, which is
+      // the only thing that actually reads as descending.
+      hillAt(p.z, this.hill) + p.floor + lift * 0.45 + (p.flying ? 0.9 + p.y * 0.8 : 1.7 + air * 0.28),
       p.z - 16,
     );
     cam.lookAt(this._tmp);

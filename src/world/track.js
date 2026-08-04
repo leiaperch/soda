@@ -55,15 +55,19 @@ function pastelStep(i, n) {
   // palette. Hue stays, lightness comes down hard.
   return {
     colors: {
-      road: h(0, 24, 11),
-      kerb: h(24, 56, 78),
-      deck: h(340, 32, 22),
-      edge: h(160, 40, 40),
-      lane: h(40, 44, 62),
-      accent: h(0, 58, 56),
-      accentGlow: h(200, 44, 44),
+      // Pulling the lightness down to stop the blowout took the colour with
+      // it and left grey. Saturation is what carries a hue at low lightness,
+      // so it goes UP as the lightness comes down — that is the difference
+      // between a dark pastel and a dirty one.
+      road: h(0, 44, 13),
+      kerb: h(24, 84, 80),
+      deck: h(340, 58, 26),
+      edge: h(160, 82, 46),
+      lane: h(40, 78, 70),
+      accent: h(0, 92, 62),
+      accentGlow: h(200, 86, 50),
     },
-    facades: [h(0, 52, 76), h(46, 48, 80), h(92, 44, 74), h(300, 50, 78), h(200, 46, 76), h(140, 42, 80)],
+    facades: [h(0, 78, 76), h(46, 74, 80), h(92, 70, 74), h(300, 76, 78), h(200, 72, 76), h(140, 68, 80)],
   };
 }
 

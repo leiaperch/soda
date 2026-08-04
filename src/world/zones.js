@@ -516,26 +516,28 @@ export const ZONES = [
     // place. The Market keeps the warmth; the Core goes cold. Same darkness,
     // opposite temperature, and the red is now reserved for danger instead of
     // being the whole picture.
+    // The lighting is zone-level, not per chunk, so it colours every pastel in
+    // the medley. The cold reactor light this zone used to have turned all of
+    // them grey — a rainbow lit by one blue lamp is a blue picture. Neutral
+    // and bright, so each chunk's own colour is what you see.
     sky: [
-      [0.00, '#04060f'], [0.26, '#0a1430'], [0.48, '#123a5e'],
-      [0.66, '#2f7fa8'], [0.82, '#cfeeff'], [1.00, '#060a1c'],
+      [0.00, '#2a1a4e'], [0.22, '#6a4aa8'], [0.42, '#c86ac0'],
+      [0.60, '#ff9ec4'], [0.80, '#ffd9a8'], [1.00, '#8fe0e0'],
     ],
-    fog: { color: '#123a5e', near: 140, far: 290 },
-    sun: { color: '#e8f8ff', intensity: 1.9 },
-    hemi: { sky: '#7fd4ff', ground: '#050a16', intensity: 0.5 },
-    backdrop: { sun: '#ffffff', halo: '#4fc8ff', arc: '#2f6f9e', planet: '#0e2a4a' },
+    fog: { color: '#c89ad0', near: 170, far: 330 },
+    sun: { color: '#fff4e6', intensity: 2.8 },
+    hemi: { sky: '#ffe4f4', ground: '#3a2a5a', intensity: 0.62 },
+    backdrop: { sun: '#fffaf0', halo: '#ff9ec4', arc: '#c9a8ff', planet: '#6ad0c0' },
     colors: {
-      road: '#0e1020',
-      kerb: '#b8d8ea',
-      deck: '#151c34',
-      // Emissive channels stay low-luminance on purpose: this palette is one
-      // step from the white-sheet blowout the first Storm palette produced.
-      edge: '#2f8fb0',
-      lane: '#dcefff',
-      accent: '#ff2e5a',
-      accentGlow: '#3f9ec0',
+      road: '#1a1230',
+      kerb: '#e8d4f0',
+      deck: '#2e2050',
+      edge: '#5fc8b0',
+      lane: '#f0e0ff',
+      accent: '#ff5ac8',
+      accentGlow: '#4aa8c8',
     },
-    facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
+facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
     props: {
       road: 'street',
       walls: true,
