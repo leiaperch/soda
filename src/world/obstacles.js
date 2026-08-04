@@ -52,12 +52,35 @@ const BARRIERS = {
   },
 
   /** A slab of the floor heaved up, still glowing along the crack. */
+  /**
+   * A slab of the floor heaved up, still glowing along the crack.
+   *
+   * Free points, not a taper: the plate is levered up on one edge and sits at
+   * an angle, with the hole it came out of open behind it. A symmetrical
+   * taper reads as a moulded object placed on the road, which is the opposite
+   * of the idea — this is the road, broken.
+   */
   slab(b, pal, x, z, s) {
-    b.at(x, 0, z, 0, 1, 1, 1);
-    b.taper('toon', 0, 0, 0, s.w, s.h, s.d, 0.35, shade(pal.road, 1.7));
-    b.box('emissive', 0, s.h * 0.5, 0, s.w * 0.92, 0.1, s.d + 0.04, shade(pal.accentGlow, 1.25));
-    b.box('emissive', 0, 0.05, 0, s.w * 1.15, 0.06, s.d * 1.6, shade(pal.edge, 0.9));
-    b.pop();
+    const w = s.w * 0.5, d = s.d * 1.1;
+    // Nothing may stand above the collision box. A first pass reached 1.57 on a
+    // hitbox topping out at 1.05, which is the "visible post you pass through"
+    // failure this project has already shipped five times.
+    const lo = 0.06, hi = s.h * 0.94;
+    const P = (dx, y, dz) => [x + dx, y, z + dz];
+    const face = shade(pal.road, 2.4);
+    // the tilted plate: high edge towards her, low edge dropping into the hole
+    b.quad('toon', P(-w, lo, d), P(w, lo * 1.6, d), P(w * 0.86, hi, -d * 0.5), P(-w * 0.86, hi * 0.82, -d * 0.5), face);
+    b.quad('toon', P(-w, lo, d), P(-w * 0.86, hi * 0.82, -d * 0.5), P(w * 0.86, hi, -d * 0.5), P(w, lo * 1.6, d), shade(pal.road, 1.5));
+    // broken side edges, uneven on purpose
+    b.tri('toon', P(-w, lo, d), P(-w * 0.86, hi * 0.82, -d * 0.5), P(-w * 0.7, 0, -d), shade(pal.road, 1.9));
+    b.tri('toon', P(w, lo * 1.6, d), P(w * 0.7, 0, -d), P(w * 0.86, hi, -d * 0.5), shade(pal.road, 1.9));
+    // the crack it came out of, lit from underneath
+    b.box('emissive', x, 0.02, z - d * 0.75, s.w * 1.2, 0.05, s.d * 0.8, shade(pal.accentGlow, 0.72));
+    b.box('emissive', x, hi * 0.9, z - d * 0.5, s.w * 0.9, 0.1, 0.12, shade(pal.edge, 0.66));
+    // rebar left sticking out of the break
+    for (const [dx, h] of [[-0.55, 0.22], [0.1, 0.3], [0.62, 0.16]]) {
+      b.box('chrome', x + dx, hi * 0.62, z - d * 0.45, 0.07, h, 0.07, shade(pal.chrome, 0.85));
+    }
   },
 
   /**
@@ -255,14 +278,33 @@ const BLOCKS = {
   },
 
   /** Hydraulic press column, clamped shut. */
+  /**
+   * Forge press: an anvil, two guide columns, a ram hanging between them.
+   *
+   * The old one was three boxes and a cylinder in a vertical line, which is
+   * the same silhouette as a pillar with a bulge. A press is read from the gap
+   * between the ram and the bed — so the gap is built, and lit, even though
+   * nothing passes through it.
+   */
   press(b, pal, x, z, s) {
-    b.box('toon', x, 0, z, s.w, s.h * 0.28, s.d * 1.2, shade(pal.road, 2.2));
-    b.cyl('chrome', x, s.h * 0.28, z, s.w * 0.3, s.w * 0.3, s.h * 0.45, 8, shade(pal.chrome, 0.8));
-    b.box('toon', x, s.h * 0.7, z, s.w * 1.05, s.h * 0.3, s.d * 1.2, shade(pal.road, 2.6));
-    for (let i = 0; i < 3; i++) {
-      b.box('emissive', x, s.h * (0.32 + i * 0.12), z + s.d * 0.62, s.w * 0.8, 0.1, 0.06, shade(pal.accentGlow, 1.3));
+    // bed
+    b.taper('toon', x, 0, z, s.w * 1.05, s.h * 0.2, s.d * 1.3, 0.1, shade(pal.road, 2.2));
+    b.box('chrome', x, s.h * 0.2, z, s.w * 0.8, 0.12, s.d, shade(pal.chrome, 0.8));
+    // guide columns, outside the ram so the gap between them reads
+    for (const side of [-1, 1]) {
+      b.cyl('chrome', x + side * s.w * 0.46, s.h * 0.2, z, 0.15, 0.13, s.h * 0.72, 7, shade(pal.chrome, 0.9));
+      b.box('chrome', x + side * s.w * 0.46, s.h * 0.5, z, 0.3, 0.1, 0.3, shade(pal.chrome, 1.05));
     }
-    b.box('emissive', x, s.h * 0.68, z, s.w * 1.1, 0.09, s.d * 1.25, shade(pal.edge, 1.0));
+    // crown and the ram slung under it
+    b.box('toon', x, s.h * 0.86, z, s.w * 1.15, s.h * 0.16, s.d * 1.15, shade(pal.road, 2.8));
+    b.taper('toon', x, s.h * 0.56, z, s.w * 0.62, s.h * 0.3, s.d * 0.7, -0.08, shade(pal.deck, 1.8));
+    b.box('chrome', x, s.h * 0.5, z, s.w * 0.68, 0.1, s.d * 0.76, shade(pal.chrome, 1.0));
+    // the working gap, lit from inside: the one thing that says press
+    b.box('emissive', x, s.h * 0.36, z, s.w * 0.56, 0.12, s.d * 0.6, shade(pal.accentGlow, 0.7));
+    b.box('emissive', x, s.h * 0.24, z, s.w * 0.72, 0.08, s.d * 0.9, shade(pal.edge, 0.5));
+    for (const side of [-1, 1]) {
+      b.box('emissive', x + side * s.w * 0.46, s.h * 0.9, z, 0.2, 0.12, 0.2, shade(pal.accent, 0.6));
+    }
   },
 };
 
