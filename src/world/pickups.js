@@ -161,7 +161,12 @@ export class RelayPool {
     const pal = resolvePalette(zone);
     const b = new Builder();
     const half = ROAD_HALF + 1.3;
-    const top = 6.4;
+    // Raised, and the crossbar slimmed. At 6.4 with a full-height light
+    // curtain the gate filled the middle of a phone screen and hid whatever
+    // obstacle sat just past it — you were asked to read something you could
+    // not see. A checkpoint should be unmissable at distance and out of the
+    // way up close, which means high and thin, not big and bright.
+    const top = 8.6;
     const glow = shade(pal.accentGlow, 1.5);
     const glow2 = shade(pal.edge, 1.45);
 
@@ -177,20 +182,22 @@ export class RelayPool {
     }
 
     // gantry beam and its lit underside
-    b.box('chrome', 0, top, 0, half * 2 + 2.0, 1.15, 2.0, shade(pal.chrome, 0.95));
-    b.box('emissive', 0, top - 0.18, 0, half * 2 + 0.6, 0.22, 2.1, glow);
-    b.box('toon', 0, top + 1.15, 0, half * 2 - 1.0, 0.5, 1.6, shade(pal.accent, 0.75));
+    b.box('chrome', 0, top, 0, half * 2 + 2.0, 0.7, 1.4, shade(pal.chrome, 0.95));
+    b.box('emissive', 0, top - 0.14, 0, half * 2 + 0.6, 0.18, 1.5, glow);
     for (let i = -3; i <= 3; i++) {
-      b.box('emissive', i * 2.5, top + 1.2, 0, 1.5, 0.45, 1.7, shade(pal.lane, 1.25));
+      b.box('emissive', i * 2.5, top + 0.7, 0, 1.5, 0.3, 1.2, shade(pal.lane, 1.25));
     }
 
     // Light curtain: banded so it fades upward without needing a gradient map.
     // Kept under 1.0 because six additive bands plus bloom will otherwise
     // clip to a white hole, which is exactly what happens at night.
-    for (let i = 0; i < 6; i++) {
-      const y = 0.35 + i * 0.95;
-      const k = 1 - i / 7;
-      b.box('beam', 0, y, 0, half * 2 - 0.6, 0.9, 0.06, shade(glow2, 0.85 * k));
+    // Three bands, and they stop below head height. The curtain is the part
+    // that actually occludes, so it now reads as a threshold on the floor
+    // rather than as a screen hung across the road.
+    for (let i = 0; i < 3; i++) {
+      const y = 0.3 + i * 0.62;
+      const k = 1 - i / 3.4;
+      b.box('beam', 0, y, 0, half * 2 - 0.6, 0.58, 0.06, shade(glow2, 0.7 * k));
     }
 
     // Chevrons painted on the road, apex pointing INTO the gate (-Z).

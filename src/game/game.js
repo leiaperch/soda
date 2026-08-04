@@ -112,6 +112,12 @@ export class Game {
 
   start(zone = this.zone || DEFAULT_ZONE) {
     this.setZone(zone);
+    // Re-asserted here, not left to setZone. setZone returns early when the
+    // zone has not changed, so replaying a zone — or any path that reaches a
+    // run without a change of zone — left the world on the previous zone's
+    // elevation. The Core simply did not descend.
+    bendUniforms.uHill.value = this.hill;
+    bendUniforms.uDrop.value = this.zone.props.drop || 0;
     this.track.reset();
     this.player.reset();
     this.state = 'running';

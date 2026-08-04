@@ -36,6 +36,37 @@ function relayEvery(zone) {
  * the moment of the jump is taken away from you entirely — the same failure as
  * a move that outranges its spacing, one axis over.
  */
+/**
+ * One step of a pastel rainbow, as a drop-in replacement for a zone's colours.
+ *
+ * Saturation is deliberately low and lightness high: at full saturation this
+ * is a clown, and the brief has been bubblegum from the first line. The road
+ * stays dark in every step, because the obstacles are read against it and a
+ * pale road would swallow them.
+ */
+function pastelStep(i, n) {
+  const hue = (i / n) * 360;
+  const h = (deg, sat, light) => `hsl(${Math.round((hue + deg) % 360)} ${sat}% ${light}%)`;
+  // The pastel lives on the TOON surfaces — facades, kerbs — where it is just
+  // a colour. `edge`, `lane`, `accent` and `accentGlow` all end up on emissive
+  // geometry, and a pastel is by definition a high-lightness colour, so the
+  // first version put 90%-lightness paint on every glowing surface at once and
+  // bloom turned the whole screen white. Same failure as The Storm's first
+  // palette. Hue stays, lightness comes down hard.
+  return {
+    colors: {
+      road: h(0, 24, 11),
+      kerb: h(24, 56, 78),
+      deck: h(340, 32, 22),
+      edge: h(160, 40, 40),
+      lane: h(40, 44, 62),
+      accent: h(0, 58, 56),
+      accentGlow: h(200, 44, 44),
+    },
+    facades: [h(0, 52, 76), h(46, 48, 80), h(92, 44, 74), h(300, 50, 78), h(200, 46, 76), h(140, 42, 80)],
+  };
+}
+
 const WAVE_GAP = 3.1;        // seconds between swells
 const WAVE_OVERTAKE = 1.22;  // wave speed relative to the player's
 
@@ -129,7 +160,12 @@ export class Track {
       ? ZONE_LIST.filter((z) => z.built && z.id !== zone.id && !z.props.flight)
       : null;
     for (let i = 0; i < VARIANTS; i++) {
-      const src = donors ? donors[i % donors.length] : zone;
+      // A medley chunk borrows the donor's ROAD and MECHANIC, but not its
+      // colours. Played raw, the finale was eleven zones' palettes shown in a
+      // row — a slideshow of other levels rather than a place of its own. Each
+      // chunk is instead recoloured onto one step of a pastel rainbow, so the
+      // zone reads as a single arc you descend through.
+      const src = donors ? { ...donors[i % donors.length], ...pastelStep(i, VARIANTS) } : zone;
       const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, src.props.flight, src.props.storm);
       const chunk = buildChunk(this.rng, pattern, this.materials, src);
       chunk.group.visible = false;
