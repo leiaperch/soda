@@ -296,18 +296,28 @@ function stormMark(b, pal, x, z, s) {
 /** Barrier: a hoarding blown flat across the lane, still lit. */
 function hoard(b, pal, x, z, s) {
   stormMark(b, pal, x, z, s);
-  b.at(x, 0, z, 0.16, 1, 1, 1);
-  b.box('toon', 0, 0, 0, s.w, s.h * 0.72, s.d * 0.8, shade(pal.kerb, 0.86));
-  b.box('toon', -s.w * 0.12, s.h * 0.66, 0.08, s.w * 0.78, s.h * 0.3, s.d * 0.7, shade(pal.kerb, 1.0));
-  // the ad face, half torn off
-  b.box('emissive', s.w * 0.06, s.h * 0.34, s.d * 0.42, s.w * 0.56, s.h * 0.34, 0.06, shade(pal.accent, 0.72));
-  b.box('emissive', -s.w * 0.3, s.h * 0.2, s.d * 0.42, s.w * 0.2, s.h * 0.16, 0.06, shade(pal.accentGlow, 0.66));
-  b.box('emissive', 0, s.h * 0.72, 0, s.w * 1.02, 0.12, s.d * 0.85, shade(pal.accentGlow, 0.6));
-  b.pop();
-  // the snapped legs it stood on
+  // A leaning panel, not a stack of boxes. The face is four free points, so it
+  // tilts back along z and its top corner is cut away — an outline you can name
+  // at a glance. A box, however it is shaded, only ever reads as a box.
+  const w = s.w * 0.5, top = s.h * 1.05, lean = s.d * 0.55;
+  const P = (dx, y, dz) => [x + dx, y, z + dz];
+  const face = shade(pal.kerb, 1.0);
+  const back = shade(pal.kerb, 0.7);
+  // the torn corner: the top edge stops short on one side
+  const cut = w * 0.35;
+  b.quad('toon', P(-w, 0.06, lean), P(w, 0.06, lean), P(w, top * 0.62, -lean), P(-w, top, -lean), face);
+  b.quad('toon', P(-w, 0.06, lean + 0.16), P(-w, top, -lean + 0.16), P(w, top * 0.62, -lean + 0.16), P(w, 0.06, lean + 0.16), back);
+  // ragged strip hanging off the tall side
+  b.tri('toon', P(-w, top, -lean), P(-w + cut, top * 0.78, -lean), P(-w + cut * 0.4, top * 0.5, -lean), face);
+  // frame rails along both long edges, which is what gives it a hard outline
+  b.box('chrome', x, 0.06, z + lean, s.w + 0.12, 0.14, 0.16, shade(pal.chrome, 0.9));
   for (const side of [-1, 1]) {
-    b.cyl('chrome', x + side * s.w * 0.42, 0, z - s.d * 0.3, 0.11, 0.09, s.h * 0.5, 6, shade(pal.chrome, 0.8));
+    b.cyl('chrome', x + side * (w + 0.06), 0, z + lean * 0.4, 0.09, 0.07, s.h * 0.85, 6, shade(pal.chrome, 0.85));
   }
+  // the ad still burning on the face
+  b.quad('emissive', P(-w * 0.72, s.h * 0.3, lean * 0.2), P(w * 0.42, s.h * 0.26, lean * 0.2),
+    P(w * 0.42, s.h * 0.66, -lean * 0.2), P(-w * 0.72, s.h * 0.74, -lean * 0.2), shade(pal.accent, 0.66));
+  b.box('emissive', x - w * 0.2, top * 0.86, z - lean, s.w * 0.5, 0.1, 0.14, shade(pal.accentGlow, 0.58));
 }
 
 /** Gate: a service walkway sheared off its building and jammed overhead. */
@@ -335,20 +345,40 @@ function skywalk(b, pal, x, z, s) {
 function mast(b, pal, x, z, s) {
   stormMark(b, pal, x, z, s);
   b.at(x, 0, z, -0.22, 1, 1, 1);
-  b.box('toon', 0, 0, 0, s.w * 0.5, s.h * 0.28, s.d * 0.9, shade(pal.deck, 1.2));
-  b.cyl('chrome', 0, s.h * 0.24, 0, 0.3, 0.2, s.h * 0.6, 7, shade(pal.chrome, 0.85));
-  // lattice, the silhouette that says mast rather than pillar
-  for (let i = 0; i < 4; i++) {
-    const yy = s.h * 0.3 + i * s.h * 0.16;
-    b.box('chrome', 0, yy, 0, 0.9 - i * 0.13, 0.09, 0.9 - i * 0.13, shade(pal.chrome, 0.95));
+  // Four legs that draw in as they rise, with braces between them. The old
+  // version was five stacked plates and read as a pile of crates; a truss is
+  // read from its gaps, so the gaps are the point.
+  const legs = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  const rad = (t) => 0.62 - t * 0.34;
+  const steps = 5;
+  for (const [sx, sz] of legs) {
+    for (let i = 0; i < steps; i++) {
+      const t0 = i / steps, t1 = (i + 1) / steps;
+      const y0 = 0.1 + t0 * s.h * 0.82, y1 = 0.1 + t1 * s.h * 0.82;
+      const r0 = rad(t0), r1 = rad(t1);
+      b.quad('chrome',
+        [sx * r0 - 0.05, y0, sz * r0], [sx * r0 + 0.05, y0, sz * r0],
+        [sx * r1 + 0.05, y1, sz * r1], [sx * r1 - 0.05, y1, sz * r1],
+        shade(pal.chrome, 0.8 + t0 * 0.3));
+    }
   }
-  b.dome('toon', 0.34, s.h * 0.7, 0, 0.62, 0.34, 9, 3, shade(pal.kerb, 0.9));
-  b.box('emissive', 0, s.h * 0.88, 0, 0.22, 0.46, 0.22, shade(pal.accent, 0.75));
-  // banding up the lattice: a tall thin silhouette needs vertical light or it
-  // disappears into a dark sky the moment it is not against a building
-  for (let i = 0; i < 3; i++) {
-    b.box('emissive', 0, s.h * (0.34 + i * 0.17), 0, 0.82 - i * 0.14, 0.09, 0.82 - i * 0.14, shade(pal.accentGlow, 0.5));
+  // horizontal collars and one diagonal per bay, alternating side
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, y = 0.1 + t * s.h * 0.82, r = rad(t);
+    b.box('chrome', 0, y, 0, r * 2, 0.08, r * 2, shade(pal.chrome, 1.0));
+    if (i < steps) {
+      const t1 = (i + 1) / steps, y1 = 0.1 + t1 * s.h * 0.82, r1 = rad(t1);
+      const dir = i % 2 ? 1 : -1;
+      b.quad('chrome', [-r * dir, y, r], [r * dir, y, r], [r1 * dir, y1, r1], [-r1 * dir, y1, r1],
+        shade(pal.chrome, 0.7));
+    }
+    if (i % 2 === 0) b.box('emissive', 0, y, 0, r * 2.05, 0.06, r * 2.05, shade(pal.accentGlow, 0.46));
   }
+  // base plate, dish and the beacon on top
+  b.taper('toon', 0, 0, 0, s.w * 0.62, 0.22, s.d * 0.9, 0.12, shade(pal.deck, 1.3));
+  b.dome('toon', 0.42, s.h * 0.66, 0, 0.66, 0.36, 10, 3, shade(pal.kerb, 0.92));
+  b.cyl('chrome', 0.2, s.h * 0.66, 0, 0.07, 0.06, 0.5, 5, shade(pal.chrome, 0.9));
+  b.box('emissive', 0, s.h * 0.9, 0, 0.2, 0.44, 0.2, shade(pal.accent, 0.78));
   b.pop();
 }
 
