@@ -140,11 +140,16 @@ function conflicts(o, features) {
     // exists to clear spans all of them.
     if (f.kind === 'spring') return o.z > f.z - 6 && o.z < f.z + 15;
     if (f.kind === 'ring') return o.lane === f.lane && Math.abs(o.z - f.z) < 8;
-    // Only the pad and the run-up to the deck's leading edge are cleared: she
-    // is committed and airborne over that stretch and could not dodge if she
-    // wanted to. Clearing the whole span instead, once decks were extended to
-    // the chunk boundary, silently emptied every storm chunk of obstacles.
-    if (f.kind === 'deck') return !o.deck && o.z > f.pad - 6 && o.z < f.from + 4;
+    // Only the pad itself. She has to be able to reach it, so nothing may sit
+    // on it — but everything after it she flies over five metres up, so the
+    // ground there is not a hazard and clearing it is pure loss.
+    //
+    // Two versions of this rule have now emptied the zone. Clearing to `f.to`
+    // took the whole chunk once decks ran to the boundary; clearing to
+    // `f.from` still took the first thirty metres of every chunk, which left
+    // variants holding one obstacle each. Deck obstacles are exempt outright:
+    // they are up there, not on the pad.
+    if (f.kind === 'deck') return !o.deck && Math.abs(o.z - f.pad) < 7;
     // A gap spans every lane, so nothing may sit near either lip.
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
