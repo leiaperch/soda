@@ -128,6 +128,42 @@ class CapperPool {
   }
 }
 
+
+/**
+ * Nudge a pooled object away from whatever the chunk already has there.
+ *
+ * Relays and power-ups were dropped at a fixed fraction of the chunk with no
+ * knowledge of its contents — fine when every chunk was the same zone, and a
+ * pile-up in The Core, where each chunk is a different zone's road complete
+ * with its own gantries, decks, trenches and capping frames. Tries the ideal
+ * spot first, then walks outward until it finds air.
+ */
+const ON_THE_ROAD = new Set(['press', 'spring', 'ring', 'swell', 'dive']);
+
+function clearZ(wanted, zStart, features, radius = 9) {
+  // Only what actually stands on the road counts. A deck is six metres up and
+  // a rail is one lane wide, so a relay sharing their z is not a pile-up —
+  // counting those made every chunk look blocked and the guard gave up.
+  const blocked = (z) => features.some((f) => {
+    if (!ON_THE_ROAD.has(f.kind)) return false;
+    if (f.z !== undefined) return Math.abs(z - f.z) < radius;
+    const a = f.startZ, b = f.endZ;
+    if (a === undefined) return false;
+    return z <= a + radius && z >= b - radius;
+  });
+  if (!blocked(wanted)) return wanted;
+  for (let step = 3; step <= CHUNK_LEN * 0.45; step += 3) {
+    for (const cand of [wanted - step, wanted + step]) {
+      // World z runs negative into the chunk, so a valid candidate is BELOW
+      // zStart and above the far edge. Written the other way round it rejected
+      // every legal position and the guard silently never moved anything.
+      if (cand > zStart - 4 || cand < zStart - CHUNK_LEN + 4) continue;
+      if (!blocked(cand)) return cand;
+    }
+  }
+  return wanted;   // a chunk with no air in it: leave it where it was
+}
+
 const WAVE_GAP = 3.1;        // seconds between swells
 const WAVE_OVERTAKE = 1.22;  // wave speed relative to the player's
 
@@ -333,7 +369,7 @@ export class Track {
     }
     // No checkpoint within sight of the finish line: the last stretch is meant
     // to be run on whatever charge you arrive with.
-    const relayZ = zStart - CHUNK_LEN * 0.5;
+    const relayZ = clearZ(zStart - CHUNK_LEN * 0.5, zStart, slot.features);
     const clearOfFinish = this.finishZ === null || relayZ > this.finishZ + 90;
     if (index > 0 && index % relayEvery(this.zone) === 0 && clearOfFinish) {
       this.relays.push({ z: relayZ, slot: index, used: false });
@@ -351,7 +387,7 @@ export class Track {
         colour: POWERUPS[key].colour,
         x: LANE_X[this.rng.int(0, 2)],
         y: this.zone.props.flight ? 2.8 : 1.5,
-        z: zStart - CHUNK_LEN * 0.28,
+        z: clearZ(zStart - CHUNK_LEN * 0.28, zStart, slot.features, 7),
         slot: index,
       });
     }
