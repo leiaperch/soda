@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Builder, disposeGroup as disposeSwell } from '../core/builder.js';
-import { swell as buildSwell, resolvePalette } from './props.js';
+import { swell as buildSwell, capperHead, resolvePalette } from './props.js';
 import { CHUNK_LEN, LANE_X, buildChunk, pickPattern } from './chunks.js';
 import { CellPool, RelayPool, FinishGate, PowerPool } from './pickups.js';
 import { disposeGroup } from '../core/builder.js';
@@ -73,6 +73,61 @@ function pastelStep(i, n) {
   };
 }
 
+/**
+ * Capping heads. One cycle, every head on it, each offset by its own phase.
+ *
+ * `headY(phase, time)` is the single source of truth for where a head is, and
+ * both the mesh and the collision read it. That is deliberate: a timing
+ * mechanic where the drawn head and the lethal head can drift apart is not a
+ * hard level, it is a broken one.
+ */
+export const PRESS_CYCLE = 1.85;   // seconds for a full up-down-up
+export const PRESS_DOWN = 0.42;    // fraction of the cycle spent at the bottom
+
+export function headY(phase, time) {
+  const t = (((time / PRESS_CYCLE) + phase) % 1 + 1) % 1;
+  if (t < PRESS_DOWN) return 0.9;                       // down: the lane is shut
+  const up = (t - PRESS_DOWN) / (1 - PRESS_DOWN);       // rises, hangs, slams
+  return 0.9 + Math.sin(Math.min(1, up * 1.35) * Math.PI * 0.5) * 3.2;
+}
+
+class CapperPool {
+  constructor(scene, materials, max = 8) {
+    this.scene = scene; this.materials = materials; this.max = max;
+    this.meshes = []; this.proto = null;
+  }
+
+  setZone(zone) {
+    this.dispose();
+    if (zone.props.feature !== 'press') return;
+    const b = new Builder();
+    capperHead(b, resolvePalette(zone));
+    this.proto = b.toGroup(this.materials);
+    for (let i = 0; i < this.max; i++) {
+      const m = i === 0 ? this.proto : this.proto.clone();
+      m.visible = false;
+      m.frustumCulled = false;
+      this.scene.add(m);
+      this.meshes.push(m);
+    }
+  }
+
+  update(presses, time) {
+    for (const [i, m] of this.meshes.entries()) {
+      const f = presses[i];
+      m.visible = !!f;
+      if (!f) continue;
+      m.position.set(f.x, headY(f.phase, time), f.z);
+    }
+  }
+
+  dispose() {
+    for (const m of this.meshes) this.scene.remove(m);
+    if (this.proto) disposeSwell(this.proto);
+    this.meshes.length = 0; this.proto = null;
+  }
+}
+
 const WAVE_GAP = 3.1;        // seconds between swells
 const WAVE_OVERTAKE = 1.22;  // wave speed relative to the player's
 
@@ -137,6 +192,7 @@ export class Track {
     this.finishGate = new FinishGate(scene, materials);
     this.powerPool = new PowerPool(scene, materials);
     this.swellPool = new SwellPool(scene, materials);
+    this.capperPool = new CapperPool(scene, materials);
     this.waves = [];
     this.waveT = 0;
     this.finishZ = null;
@@ -180,6 +236,7 @@ export class Track {
     }
     this.relayPool.setZone(zone);
     this.swellPool.setZone(zone);
+    this.capperPool.setZone(zone);
     this.finishGate.setZone(zone);
     this.reset();
   }
@@ -259,6 +316,11 @@ export class Track {
             startZ: zStart - f.from, endZ: zStart - f.to,
             outZ: zStart - f.out, done: false,
           });
+        } else if (f.kind === 'press') {
+          slot.features.push({
+            kind: 'press', lane: f.lane, x: LANE_X[f.lane],
+            z: zStart - f.z, phase: f.phase, done: false,
+          });
         } else if (f.kind === 'hole') {
           slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {
@@ -325,6 +387,7 @@ export class Track {
       this.powers = this.powers.filter((p) => p.slot !== dead.index);
       this._spawn(tier);
     }
+    this.capperPool.update(this.nearFeatures(playerZ, 90).filter((f) => f.kind === 'press'), time);
     this.cellPool.update(this.cells, time);
     this.relayPool.update(this.relays, time);
     this.powerPool.update(this.powers, time);

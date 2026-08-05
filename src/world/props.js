@@ -401,6 +401,36 @@ export function launchRamp(b, pal, x, z) {
   }
 }
 
+/**
+ * The Bottling Plant's capper: the frame it hangs from.
+ *
+ * Frame and head are built separately because only the head moves. The frame
+ * is baked into the chunk like any other scenery; the head is pooled and
+ * driven every frame.
+ */
+export function capperFrame(b, pal, x, z) {
+  for (const side of [-1, 1]) {
+    b.box('toon', x + side * 1.55, 0, z, 0.4, 5.2, 0.7, shade(pal.deck, 1.3));
+    b.box('emissive', x + side * 1.55, 0.2, z + 0.36, 0.16, 4.6, 0.05, shade(pal.accentGlow, 0.5));
+  }
+  b.box('chrome', x, 5.2, z, 3.9, 0.55, 1.0, shade(pal.chrome, 0.95));
+  b.box('toon', x, 4.5, z, 3.2, 0.7, 0.8, shade(pal.deck, 1.5));
+  // Floor plate. The lane a capper owns has to be readable from a long way
+  // back, before the head's timing can even be judged.
+  b.cyl('emissive', x, 0.02, z, 1.5, 1.35, 0.05, 16, shade(pal.accent, 0.5));
+  b.cyl('emissive', x, 0.02, z, 0.95, 0.8, 0.05, 14, shade(pal.accentGlow, 0.42));
+}
+
+/** The head itself, built at the origin: the pool moves it. */
+export function capperHead(b, pal) {
+  b.box('chrome', 0, 0, 0, 2.6, 0.5, 0.9, shade(pal.chrome, 0.9));
+  b.taper('toon', 0, -1.5, 0, 2.2, 1.5, 0.8, 0.25, shade(pal.deck, 1.7));
+  b.box('emissive', 0, -1.6, 0, 2.3, 0.16, 0.9, shade(pal.accent, 0.72));
+  for (const side of [-1, 1]) {
+    b.cyl('chrome', side * 0.85, 0, 0, 0.14, 0.12, 1.2, 6, shade(pal.chrome, 0.8));
+  }
+}
+
 export function springPad(b, pal, x, z) {
   const petals = 7;
   for (let i = 0; i < petals; i++) {

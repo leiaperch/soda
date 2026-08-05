@@ -3,7 +3,7 @@ import { Builder } from '../core/builder.js';
 import {
   resolvePalette, tower, bubbleHab, antennaPalm, palmTree, lamp, billboard,
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
-  springPad, launchRamp, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
+  springPad, launchRamp, capperFrame, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
 import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
@@ -67,6 +67,20 @@ const FEATURES = {
     [{ from: 24, to: 32 }],
     [{ from: 18, to: 25 }],
     [{ from: 22, to: 30 }],
+  ],
+  // The Bottling Plant: capping heads on a cycle. `phase` offsets each head in
+  // that cycle, so a row of them beats across the road instead of together.
+  //
+  // Spacing is the whole design. Two heads closer than fifteen metres and you
+  // are reacting to the second before you have cleared the first, which is not
+  // rhythm, it is a coin flip. Alternating phases across lanes means there is
+  // always a way through: the zone asks for timing, never for luck.
+  press: [
+    [{ lane: 1, z: 14, phase: 0 }, { lane: 0, z: 32, phase: 0.5 }],
+    [{ lane: 0, z: 12, phase: 0.25 }, { lane: 2, z: 30, phase: 0.75 }],
+    [{ lane: 2, z: 16, phase: 0 }, { lane: 1, z: 34, phase: 0.5 }],
+    [{ lane: 1, z: 11, phase: 0.5 }, { lane: 2, z: 27, phase: 0 }, { lane: 0, z: 43, phase: 0.5 }],
+    [{ lane: 0, z: 15, phase: 0 }, { lane: 1, z: 31, phase: 0.33 }, { lane: 2, z: 46, phase: 0.66 }],
   ],
   // The Heights: whole lane panels are missing. Long enough that jumping them
   // is not on the table, so the answer is always "be in another lane".
@@ -158,6 +172,9 @@ function conflicts(o, features) {
     // exists to clear spans all of them.
     if (f.kind === 'spring') return o.z > f.z - 6 && o.z < f.z + 15;
     if (f.kind === 'ring') return o.lane === f.lane && Math.abs(o.z - f.z) < 8;
+    // A capper owns its lane for a long way back: you need clear sight of the
+    // head to time it, and an obstacle in front of it steals exactly that.
+    if (f.kind === 'press') return o.lane === f.lane && o.z > f.z - 16 && o.z < f.z + 5;
     // Only the pad itself. She has to be able to reach it, so nothing may sit
     // on it — but everything after it she flies over five metres up, so the
     // ground there is not a hazard and clearing it is pure loss.
@@ -844,6 +861,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     else if (f.kind === 'ring') ringGate(b, pal, LANE_X[f.lane], -f.z, f.mode, f.alt !== undefined ? ALT_Y[f.alt] : null);
     else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
+    else if (f.kind === 'press') capperFrame(b, pal, LANE_X[f.lane], -f.z);
     else if (f.kind === 'dive') trench(b, pal, f);
     else if (f.kind === 'deck') {
       upperDeck(b, pal, f);

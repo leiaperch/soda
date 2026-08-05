@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Track } from '../world/track.js';
+import { Track, headY } from '../world/track.js';
 import { Player, PLAYER, GRAVITY, JUMP_V } from './player.js';
 import { records } from './records.js';
 import { bendUniforms, hillAt, slopeAt } from '../render/materials.js';
@@ -413,7 +413,7 @@ export class Game {
       else if (f.kind === 'belt') this._teach('belt', 'RIDE THE MINT BELT');
       else if (f.kind === 'ring') {
         this._teach('ring', p.flying ? 'FLY THROUGH THE HOOP' : 'THREAD THE HOOP');
-      }
+      } else if (f.kind === 'press') this._teach('press', 'SLIDE UNDER THE HAMMER');
     }
     if (this.zone.props.bumpers) {
       const b = this.track.nearObstacles(p.z, 60).find((o) => o.type === 'bumper' && p.z - o.z > 10);
@@ -552,6 +552,23 @@ export class Game {
         // deck spans so they join across the seam, and dropping her whenever
         // she was not over *this* one meant the second span cancelled the
         // first every frame and the deck could never be stood on at all.
+        continue;
+      }
+
+      if (f.kind === 'press') {
+        // Caught on the frame she reaches it, against the head's height AT
+        // that moment — the same function the mesh is drawn from. Her own
+        // height matters too: a slide gets under a head that a run does not.
+        if (f.done || p.z > f.z - 0.1 || p.lane !== f.lane) continue;
+        f.done = true;
+        const y = headY(f.phase, this.time);
+        if (p.y + p.height > y) {
+          this._hit();
+        } else {
+          this.charge = Math.min(TUNE.maxCharge, this.charge + TUNE.ringCharge);
+          this._trick('thread');
+          this.sfx.clean();
+        }
         continue;
       }
 

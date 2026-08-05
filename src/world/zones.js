@@ -412,7 +412,7 @@ export const ZONES = [
     id: 'foundry',
     name: 'THE BOTTLING PLANT',
     subtitle: 'WHERE THE SODA IS MADE',
-    mechanic: 'Belt lanes. Mint carries you, red syrup drags and drains you.',
+    mechanic: 'Capping hammers on a beat. Slide under, or wait for the lift.',
     built: true,
     length: 2900,
     track: 'audio/sugar-crash-core.mp3',
@@ -442,12 +442,12 @@ export const ZONES = [
       // identical to The Core with a different palette, which is exactly the
       // trap this project keeps falling into.
       road: 'plant',
-      // Checkpoint spacing is the real difficulty dial, and this zone's whole
-      // mechanic is a charge tax. At the default 144 m a doubled drain is
-      // something you can simply eat, so the lane choice was decorative and
-      // the zone played as the easiest in the game. At 240 m the belt you pick
-      // decides whether you arrive.
-      relayEvery: 5,
+      // 5 was set when the mechanic was a charge tax and the zone needed the
+      // distance to make that tax bite. The hammers are not a tax — they are a
+      // timing test that kills outright — so the spacing goes back down. Two
+      // sources of pressure at once is how a zone stops being about its own
+      // idea and starts being about the bar.
+      relayEvery: 4,
       
       drain: 1.3,
       obstacleKit: { barrier: 'crate', gate: 'pipe', block: 'press' },
@@ -455,7 +455,7 @@ export const ZONES = [
       lampEvery: 0, streetEvery: 0, billboardChance: 0.25,
       palmChance: 0, podChance: 0, stallChance: 0,
       skylineChance: 0.4, backRowChance: 0.25, waterSides: false, waterRoad: false,
-      lotMin: 10, lotMax: 18, towerStacks: [2, 3], feature: 'belt',
+      lotMin: 10, lotMax: 18, towerStacks: [2, 3], feature: 'press',
     },
   },
 
