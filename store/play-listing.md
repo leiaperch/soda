@@ -147,9 +147,21 @@ frames but tends to catch her mid-jump over an obstacle — play them by hand.
 Shown at the top of the listing and in some Play surfaces. No screenshot
 scales into this shape well; make it on purpose.
 
-Left third: the courier in her pink jacket, three-quarter view, mid-spin.
-Middle: the wordmark `SODA` in the game's Titan One, the same pink-to-mint
-gradient the HUD uses. Right third: the neon city receding into magenta.
+**Made: `store/feature-graphic.png`, 1024x500.**
+
+Composited inside the game rather than mocked up outside it, so the city is a
+real frame at the real size and the type is the game's own Titan One and
+Fredoka. The background was picked by rendering 26 candidate frames and scoring
+each on saturation and brightness, because a feature graphic lives or dies on
+whether it reads as colourful at thumbnail size.
+
+Layout: wordmark and tagline in the left half over a scrim that fades out, so
+the city stays legible on the right. Nothing sits in the bottom 15% or the
+right 10%, which some Play layouts crop. The sparkles are the same motif as the
+icon and the splash.
+
+To regenerate after an art change, capture a frame at 1024x500 and re-run the
+compositing step; nothing here is hand-painted.
 
 Two constraints that people get wrong: no text below the bottom 15% or in the
 right 10% (cropped on some layouts), and it must read at 250 px wide, which is
