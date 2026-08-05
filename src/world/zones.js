@@ -519,7 +519,11 @@ export const ZONES = [
     built: true,
     length: 3600,
     track: 'audio/the-core.mp3',
-    physics: { startSpeed: 25, maxSpeed: 54, speedRamp: 0.34 },
+    // Eased. It was the fastest zone in the game, ramping hardest, on a road
+    // that gains you speed for free as it falls — three multipliers stacked on
+    // the one level that also throws every other zone's mechanic at you. The
+    // finale should be the hardest, not a different kind of game.
+    physics: { startSpeed: 22, maxSpeed: 44, speedRamp: 0.24 },
     // The Core and The Market were both a dark city lit by warm neon, amber on
     // one side and orange on the other, and at speed they read as the same
     // place. The Market keeps the warmth; the Core goes cold. Same darkness,
@@ -582,7 +586,7 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
       // machinery is intact — `uDrop` in materials.js and its mirror in
       // hillAt/slopeAt — so re-enabling it is one value, once the reason my
       // captures disagreed with the game has actually been found.
-      drop: 0.30, curve: 0.00085, slopePull: 62, overspeed: 22,
+      drop: 0.22, curve: 0.00085, slopePull: 44, overspeed: 10,
       // Each chunk is a slice of another zone. The Core keeps its own physics
       // — its speed envelope is its identity — and borrows everything else.
       medley: true,

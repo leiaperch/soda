@@ -10,7 +10,11 @@ export const LANE_X = [-2.6, 0, 2.6];
  * axis up: swipe left and right for lane, up and down for altitude, so a
  * sealed tube becomes a 3x3 grid without teaching a single new control.
  */
-export const ALT_Y = [0.4, 2.2, 4.0];
+// The lowest altitude IS the road. At 0.4 she hovered a hand's width above it
+// for the whole zone and could never touch down, so the bottom of the grid was
+// just a lower patch of sky: you could not drop, roll, and take off again,
+// which is the one thing a flight zone should let you do.
+export const ALT_Y = [0, 2.2, 4.0];
 export const ROAD_HALF = 5.6;
 export const CHUNK_LEN = 48;
 
