@@ -8,7 +8,7 @@
  *   node tools/make-icons.mjs
  */
 import { deflateSync } from 'node:zlib';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,16 +43,16 @@ function chunk(type, data) {
 }
 
 /** @param {Uint8Array} rgba - size*size*4 */
-function encodePng(size, rgba) {
-  const stride = size * 4;
-  const raw = Buffer.alloc((stride + 1) * size);
-  for (let y = 0; y < size; y++) {
+function encodePng(w, h, rgba) {
+  const stride = w * 4;
+  const raw = Buffer.alloc((stride + 1) * h);
+  for (let y = 0; y < h; y++) {
     raw[y * (stride + 1)] = 0; // filter: none
     Buffer.from(rgba.buffer, y * stride, stride).copy(raw, y * (stride + 1) + 1);
   }
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
+  ihdr.writeUInt32BE(w, 0);
+  ihdr.writeUInt32BE(h, 4);
   ihdr[8] = 8;   // bit depth
   ihdr[9] = 6;   // colour type: RGBA
   return Buffer.concat([
@@ -114,19 +114,22 @@ function sample(px, py, size, maskable) {
   return [col[0], col[1], col[2], 255];
 }
 
-function render(size, maskable) {
-  const rgba = new Uint8Array(size * size * 4);
+/**
+ * @param {(x:number, y:number) => number[]} sampler  takes 0..1 coordinates
+ */
+function renderRect(w, h, sampler) {
+  const rgba = new Uint8Array(w * h * 4);
   const SS = 3; // supersampling, because there is no anti-aliasing for free
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       let r = 0, g = 0, b = 0, a = 0;
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
-          const c = sample(x + (sx + 0.5) / SS, y + (sy + 0.5) / SS, size, maskable);
+          const c = sampler((x + (sx + 0.5) / SS) / w, (y + (sy + 0.5) / SS) / h);
           r += c[0] * c[3]; g += c[1] * c[3]; b += c[2] * c[3]; a += c[3];
         }
       }
-      const i = (y * size + x) * 4;
+      const i = (y * w + x) * 4;
       if (a > 0) {
         rgba[i] = Math.round(r / a);
         rgba[i + 1] = Math.round(g / a);
@@ -135,8 +138,75 @@ function render(size, maskable) {
       rgba[i + 3] = Math.round(a / (SS * SS));
     }
   }
-  return encodePng(size, rgba);
+  return encodePng(w, h, rgba);
 }
+
+function render(size, maskable) {
+  return renderRect(size, size, (u, v) => sample(u * size, v * size, size, maskable));
+}
+
+/**
+ * The splash.
+ *
+ * Same ramp and same sparkle as the icon, because a launch screen that does
+ * not match the icon reads as the wrong app opening. The sparkle is sized off
+ * the SHORT edge so it is identical in portrait and landscape rather than
+ * stretching with the frame, and it is kept small: a splash is a held breath,
+ * not a poster.
+ */
+function splashSample(u, v, aspect) {
+  const y = v;
+  let col = y < 0.52 ? mix(SKY, PINK, y / 0.52) : mix(PINK, DEEP, (y - 0.52) / 0.48);
+  if (y < 0.44) col = mix(col, [255, 255, 255], (1 - y / 0.44) * 0.34);
+  // centred, corrected for aspect so it stays round
+  const dx = (u - 0.5) * aspect;
+  const dy = v - 0.47;
+  if (sparkle(dx, dy, 0.13)) col = [255, 255, 255];
+  if (sparkle(dx - 0.20, dy - 0.10, 0.042)) col = [255, 255, 255];
+  if (sparkle(dx + 0.17, dy + 0.13, 0.033)) col = mix(PINK, [255, 255, 255], 0.65);
+  return [col[0], col[1], col[2], 255];
+}
+
+// ---------- Android ------------------------------------------------------
+//
+// Capacitor ships a generic splash and a generic launcher icon. Shipping those
+// means the app opens on somebody else's artwork before it opens on yours,
+// which is the single cheapest thing to get wrong.
+const android = resolve(here, '..', 'android', 'app', 'src', 'main', 'res');
+
+const MIPMAP = [['mdpi', 48], ['hdpi', 72], ['xhdpi', 96], ['xxhdpi', 144], ['xxxhdpi', 192]];
+const SPLASH = [
+  ['drawable', 480, 320],
+  ['drawable-land-mdpi', 480, 320], ['drawable-land-hdpi', 800, 480],
+  ['drawable-land-xhdpi', 1280, 720], ['drawable-land-xxhdpi', 1600, 960],
+  ['drawable-land-xxxhdpi', 1920, 1280],
+  ['drawable-port-mdpi', 320, 480], ['drawable-port-hdpi', 480, 800],
+  ['drawable-port-xhdpi', 720, 1280], ['drawable-port-xxhdpi', 960, 1600],
+  ['drawable-port-xxxhdpi', 1280, 1920],
+];
+
+function writeIfDir(dir, name, png) {
+  if (!existsSync(dir)) return false;
+  writeFileSync(resolve(dir, name), png);
+  return true;
+}
+
+let wrote = 0;
+for (const [dpi, px] of MIPMAP) {
+  const dir = resolve(android, `mipmap-${dpi}`);
+  const flat = render(px, false);
+  // The adaptive foreground is the maskable art: it carries the safe inset, so
+  // a launcher that crops it to a circle does not cut the sparkle in half.
+  const fore = render(px, true);
+  for (const [n, png] of [['ic_launcher.png', flat], ['ic_launcher_round.png', flat], ['ic_launcher_foreground.png', fore]]) {
+    if (writeIfDir(dir, n, png)) wrote++;
+  }
+}
+for (const [dir, w, h] of SPLASH) {
+  const png = renderRect(w, h, (u, v) => splashSample(u, v, w / h));
+  if (writeIfDir(resolve(android, dir), 'splash.png', png)) wrote++;
+}
+console.log(`wrote ${wrote} Android assets`);
 
 for (const [name, size, maskable] of [
   ['icon-192.png', 192, false],

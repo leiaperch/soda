@@ -195,3 +195,87 @@ your Data safety form.
 
 What does not drive installs: a long feature list, exclamation marks, and the
 word "addictive".
+
+
+---
+
+# Release checklist
+
+Everything below is what stands between the build and the store. The two
+things I cannot do for you are marked — both involve a password, and I do not
+handle those.
+
+## 1. The signing key — YOU, and only once
+
+```bash
+keytool -genkeypair -v -keystore soda-upload.jks -keyalg RSA -keysize 2048   -validity 10000 -alias soda
+```
+
+Then create `android/keystore.properties` (gitignored, never committed) from
+`keystore.properties.example` and fill in the four values.
+
+**Back the .jks file up somewhere that is not this computer.** Lose it and you
+can never update the app again: not a new build, not a bugfix, nothing. You
+would have to publish a second listing under a new package name and start from
+zero installs. A password manager or an encrypted drive, today, before you
+publish.
+
+## 2. The bundle — verified working
+
+`./gradlew bundleRelease` already produces
+`android/app/build/outputs/bundle/release/app-release.aab`, **43 MB**. Play
+takes the AAB, not an APK. Right now it comes out unsigned; once
+`keystore.properties` exists the same command signs it.
+
+The 44 MB APK on your desktop is a *debug* build — Play rejects those. It is
+for your own phone only.
+
+## 3. Icon and splash — done
+
+Generated from `tools/make-icons.mjs`, which now writes the Android launcher
+icons at all five densities and the splash at all eleven sizes, portrait and
+landscape. Same gradient and sparkle as the icon, because a launch screen that
+does not match the icon reads as the wrong app opening. Re-run the tool if you
+change the artwork; nothing is hand-edited.
+
+## 4. Version numbers
+
+`versionCode 1`, `versionName "1.0"` in `android/app/build.gradle`. Correct for
+a first release. Every subsequent upload must raise `versionCode` — Play
+rejects a repeat — and `versionName` is the string players see.
+
+## 5. Data safety form — draft answers
+
+Check each of these against the app before you submit, because Play holds you
+to the form and it must agree with the privacy policy.
+
+- **Does your app collect or share any user data?** No.
+- **Is all user data encrypted in transit?** Not applicable — nothing is sent.
+- **Do you provide a way to request data deletion?** Not applicable, but say
+  in the listing that clearing app storage erases your records, because that
+  is where they live.
+- Records are kept in the WebView's local storage on the device only. Nothing
+  leaves the phone. There is no account, no analytics, no ad SDK, no crash
+  reporter.
+
+## 6. Content rating
+
+Answer honestly: no violence, no sexual content, no gambling, no user-generated
+content, no data collection, no in-app purchases. It should come back PEGI 3 /
+ESRB Everyone, which is the widest audience you can have.
+
+## 7. Privacy policy
+
+`public/privacy.html` ships in the build, so it is live at
+`https://leiaperch.github.io/soda/privacy.html`. Read it once and confirm it
+says exactly what section 5 says. A policy that promises more than the form
+declares is a rejection.
+
+## 8. Before you press publish
+
+- Install the **release** bundle on a real phone, not the debug APK.
+- Airplane mode, one full run, to earn the word "offline" in the listing.
+- Take a call mid-run: does it pause, does the music come back.
+- Force-close and reopen: are your records still there.
+- One low-end device if you can find one. Everything in this project has been
+  measured on a desktop browser.
