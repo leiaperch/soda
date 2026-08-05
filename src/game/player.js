@@ -51,9 +51,16 @@ export const PLAYER = {
   flightHeight: 1.3,
 };
 
-/** How fast she settles onto a new altitude. Slower than a lane change: the
- *  climb has to be readable as a move you committed to. */
-const ALT_SPEED = 7;
+/**
+ * How fast she settles onto a new altitude.
+ *
+ * It used to be 7 against the lane change's 12, on the theory that a climb
+ * should read as a move you committed to. In practice the two are the same
+ * gesture on a second axis, and making one of them half as responsive as the
+ * other just reads as the game ignoring you: you aim for a gap, the input
+ * registers, and you arrive late anyway. Matched to the lane change.
+ */
+const ALT_SPEED = 12;
 
 const _c = new THREE.Color();
 const shade = (color, m) => _c.copy(color).multiplyScalar(m).clone();
