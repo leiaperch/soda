@@ -1,4 +1,4 @@
-package cloud.pandaerp.soda;
+package com.soda.game;
 
 import com.getcapacitor.BridgeActivity;
 

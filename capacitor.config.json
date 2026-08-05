@@ -1,5 +1,5 @@
 {
-  "appId": "cloud.pandaerp.soda",
+  "appId": "com.soda.game",
   "appName": "SODA",
   "webDir": "dist",
   "android": {
