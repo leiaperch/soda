@@ -115,14 +115,38 @@ Portrait. One thumb. Short runs. Fully playable offline once installed.
 
 ## Screenshots
 
-Play shows the first 2 to 3 in search. Those two are worth more than the other
-six combined, so they carry the pitch, not the prettiest view.
+**Made: `store/screenshots/`, six PNGs at 1080x1920.** Order them as numbered;
+Play shows the first two or three in search, and those two are worth more than
+the rest combined.
 
-Take them at **1080×1920**, from the phone build, with the HUD visible — a
-screenshot with no HUD reads as a render, not as a game.
+| # | Zone | What it proves |
+|---|------|----------------|
+| 1 | THE CORE | full neon, the loudest frame in the game |
+| 2 | THE MARKET | grinding a rail with GRIND x3 on screen — the trick system, which is what separates this from every other runner |
+| 3 | THE SHORE | mid-air over the swell |
+| 4 | THE STORM | standing on the upper deck |
+| 5 | THE VAULT | flying, second axis |
+| 6 | THE GREENHOUSE | launched off a bloom pad, and a colour break from the neon |
 
-| # | Shot | Why |
-|---|------|-----|
+Captions on 1-3 only, in the game's own Titan One. Four to six are left clean.
+
+**How they were made, and the one caveat.** The in-game capture renders the
+canvas at any size you ask for, but the HUD is DOM and is not in it — so the
+HUD is composited on afterwards at 1080x1920, in the game's own fonts and
+colours, from the live values of that exact frame. The charge bar, the
+distance, the speed, the trick banner and the footer are all real numbers from
+the run they were taken in. The layout is a close reproduction rather than a
+pixel-perfect copy of the DOM.
+
+If that bothers you, retake them on the phone: play to the same moments and use
+the device screenshot. Everything else about the images is the real renderer at
+the real resolution.
+
+The chase camera is also nudged up and aimed at her for these. It is tuned for
+playing, where she sits low so you can read the road ahead; a store shot needs
+her in frame more than it needs the next fifty metres.
+
+---|------|-----|
 | 1 | THE CORE mid-run, full neon, a turn in progress with the horizon tilted | Loudest frame in the game. It has to be first |
 | 2 | THE MARKET, grinding a rail, trick banner and multiplier on screen | Shows the trick system exists — the thing that separates this from every endless runner |
 | 3 | THE SHORE, mid-air over the swell with the foam crest under her | The one image that is obviously not a city runner |
