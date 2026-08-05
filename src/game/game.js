@@ -253,10 +253,21 @@ export class Game {
         this.sfx.splash();
       }
     }
-    // Taught off the nearest wave still behind her, so the prompt lands while
-    // there is still something to do about it.
+    // A wave overtakes from behind, and the camera looks forward: there is no
+    // frame in which she can see it coming. Mechanically it worked and it was
+    // still unplayable, because reacting to something off-screen is not a
+    // skill. So the warning IS the tell — one per wave, timed about a second
+    // out, which is a jump's worth of notice.
+    for (const w of this.track.waves) {
+      if (w.done || w.warned) continue;
+      const closing = this.speed * 0.22;                 // WAVE_OVERTAKE - 1
+      if (w.z - p.z > closing * 1.15) continue;
+      w.warned = true;
+      this.hud.toast('WAVE — JUMP', 'warn');
+      this.sfx.surf();
+    }
     if (this.track.waves.some((w) => !w.done && w.z - p.z < 34)) {
-      this._teach('swell', 'JUMP THE WAVE — IT CATCHES YOU');
+      this._teach('swell', 'THE SWELL CATCHES YOU FROM BEHIND');
     }
   }
 

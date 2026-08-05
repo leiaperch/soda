@@ -442,6 +442,13 @@ export const ZONES = [
       // identical to The Core with a different palette, which is exactly the
       // trap this project keeps falling into.
       road: 'plant',
+      // Checkpoint spacing is the real difficulty dial, and this zone's whole
+      // mechanic is a charge tax. At the default 144 m a doubled drain is
+      // something you can simply eat, so the lane choice was decorative and
+      // the zone played as the easiest in the game. At 240 m the belt you pick
+      // decides whether you arrive.
+      relayEvery: 5,
+      
       drain: 1.3,
       obstacleKit: { barrier: 'crate', gate: 'pipe', block: 'press' },
       arches: 'none', archEvery: 0, archTint: ['#ff2e93', '#6ff0d4'],
