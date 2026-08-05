@@ -151,12 +151,19 @@ scales into this shape well; make it on purpose.
 
 Composited inside the game rather than mocked up outside it, so the city is a
 real frame at the real size and the type is the game's own Titan One and
-Fredoka. The background was picked by rendering 26 candidate frames and scoring
-each on saturation and brightness, because a feature graphic lives or dies on
-whether it reads as colourful at thumbnail size.
+Fredoka.
 
-Layout: wordmark and tagline in the left half over a scrim that fades out, so
-the city stays legible on the right. Nothing sits in the bottom 15% or the
+The frame is chosen by search, not by eye: 34 candidates are rendered and each
+is scored on three things at once — saturation, brightness, and whether the
+courier lands in the right third of the screen at more than 150 px tall. The
+first version scored only colour and she came out a speck near a building. On
+a store image the character is what says "game" rather than "tech demo", so
+her placement is a hard requirement, not a preference.
+
+Layout: wordmark and ONE line of type in the left half, over a scrim that
+fades out by halfway so it never touches her. A second line was there and it
+was filler — nobody reads a feature graphic twice, so everything on it has to
+earn its place. Nothing sits in the bottom 15% or the
 right 10%, which some Play layouts crop. The sparkles are the same motif as the
 icon and the splash.
 
