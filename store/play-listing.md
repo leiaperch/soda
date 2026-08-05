@@ -76,7 +76,7 @@ scheme, and it never changes. What changes is what the world asks of it.
 • THE ARCADE — you are the ball. Chain the bumpers or the bar dies
 • THE HEIGHTS — a bare bridge above the weather, with panels missing
 • THE VAULT — flight. Lanes gain a second axis
-• THE BOTTLING PLANT — conveyors that push and drag
+• THE BOTTLING PLANT — capping hammers on a beat. Time it, or wait
 • THE STORM — wreckage in the air, and a second road above the first
 • THE CORE — every world at once, in full neon, and faster
 
