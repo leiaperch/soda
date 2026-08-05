@@ -322,3 +322,41 @@ declares is a rejection.
 - Force-close and reopen: are your records still there.
 - One low-end device if you can find one. Everything in this project has been
   measured on a desktop browser.
+
+---
+
+# Tablets and Google Play Games on PC
+
+All generated from the same pipeline as the phone screenshots: real frames from
+the real renderer, HUD composited on top from that frame's live values. The HUD
+is scaled off the short edge, so it sits identically at every size instead of
+being a phone HUD stretched across a tablet.
+
+## Tablets — `store/tablet7/` and `store/tablet10/`
+
+Four shots each, portrait, because the game is portrait-locked.
+
+- 7 inch: **1200x1920**
+- 10 inch: **1600x2560**
+
+Same four moments both sizes: THE CORE, THE MARKET grinding, THE SHORE over the
+swell, THE STORM on the upper deck. Captions on the first two only.
+
+Play accepts phone screenshots as a fallback for tablets, but a listing with
+real tablet shots is eligible for surfaces a phone-only listing is not.
+
+## Google Play Games on PC — `store/playgames/`
+
+- **`logo.png`** — 600x400, transparent PNG, carries the game's name. Double
+  outline, dark then white: a transparent logo can land on a light card or a
+  dark one, and it has to hold on both.
+- **`hero.png`** — 1920x1080, 16:9, **no text and no HUD**, which is what the
+  guidelines require of the presentation image. It is the only asset here
+  deliberately stripped of the interface.
+- **Six screenshots** — 1920x1080, 16:9 landscape, HUD on: core, market, shore,
+  storm, vault, greenhouse. Four to eight are required; six leaves room to drop
+  one you dislike without falling under the minimum.
+
+The landscape framing is not the portrait shot cropped. The camera is pulled
+back and the field of view narrowed to 52 degrees, because a 16:9 frame at the
+portrait FOV puts the horizon in the middle and the road disappears.
