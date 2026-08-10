@@ -82,7 +82,10 @@ function pastelStep(i, n) {
  * hard level, it is a broken one.
  */
 export const PRESS_CYCLE = 1.85;   // seconds for a full up-down-up
-export const PRESS_DOWN = 0.42;    // fraction of the cycle spent at the bottom
+export const PRESS_DOWN = 0.32;    // fraction of the cycle spent at the bottom
+// 0.42 left 0.78 s of the 1.85 s cycle blocked. Passing needs a slide, and a
+// slide is a commitment, so the open window has to be wide enough to choose
+// when to spend it rather than mashing.
 
 export function headY(phase, time) {
   const t = (((time / PRESS_CYCLE) + phase) % 1 + 1) % 1;
@@ -92,7 +95,12 @@ export function headY(phase, time) {
 }
 
 class CapperPool {
-  constructor(scene, materials, max = 8) {
+  // Sized well above the most presses that can ever be in range at once. At 8
+  // against a peak of 9, one press per chunk sometimes had NO head drawn while
+  // its collision stayed live: an obstacle you cannot see and cannot learn.
+  // The pool is cheap — a head is a handful of boxes — so it is oversized on
+  // purpose rather than tuned to the observed maximum.
+  constructor(scene, materials, max = 20) {
     this.scene = scene; this.materials = materials; this.max = max;
     this.meshes = []; this.proto = null;
   }
@@ -112,9 +120,12 @@ class CapperPool {
     }
   }
 
-  update(presses, time) {
+  update(presses, playerZ, time) {
+    // Nearest first, so that if the pool ever runs short again it is the far
+    // ones that go undrawn — never the one she is about to reach.
+    const sorted = presses.slice().sort((a, b) => Math.abs(a.z - playerZ) - Math.abs(b.z - playerZ));
     for (const [i, m] of this.meshes.entries()) {
-      const f = presses[i];
+      const f = sorted[i];
       m.visible = !!f;
       if (!f) continue;
       m.position.set(f.x, headY(f.phase, time), f.z);
@@ -423,7 +434,7 @@ export class Track {
       this.powers = this.powers.filter((p) => p.slot !== dead.index);
       this._spawn(tier);
     }
-    this.capperPool.update(this.nearFeatures(playerZ, 90).filter((f) => f.kind === 'press'), time);
+    this.capperPool.update(this.nearFeatures(playerZ, 90).filter((f) => f.kind === 'press'), playerZ, time);
     this.cellPool.update(this.cells, time);
     this.relayPool.update(this.relays, time);
     this.powerPool.update(this.powers, time);

@@ -79,8 +79,8 @@ const FEATURES = {
     [{ lane: 1, z: 14, phase: 0 }, { lane: 0, z: 32, phase: 0.5 }],
     [{ lane: 0, z: 12, phase: 0.25 }, { lane: 2, z: 30, phase: 0.75 }],
     [{ lane: 2, z: 16, phase: 0 }, { lane: 1, z: 34, phase: 0.5 }],
-    [{ lane: 1, z: 11, phase: 0.5 }, { lane: 2, z: 27, phase: 0 }, { lane: 0, z: 43, phase: 0.5 }],
-    [{ lane: 0, z: 15, phase: 0 }, { lane: 1, z: 31, phase: 0.33 }, { lane: 2, z: 46, phase: 0.66 }],
+    [{ lane: 1, z: 11, phase: 0.5 }, { lane: 2, z: 30, phase: 0 }],
+    [{ lane: 0, z: 15, phase: 0 }, { lane: 2, z: 34, phase: 0.5 }],
   ],
   // The Heights: whole lane panels are missing. Long enough that jumping them
   // is not on the table, so the answer is always "be in another lane".

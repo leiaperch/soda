@@ -414,9 +414,13 @@ export const ZONES = [
     subtitle: 'WHERE THE SODA IS MADE',
     mechanic: 'Capping hammers on a beat. Slide under, or wait for the lift.',
     built: true,
-    length: 2900,
+    length: 2300,
     track: 'audio/sugar-crash-core.mp3',
-    physics: { startSpeed: 20, maxSpeed: 46, speedRamp: 0.22 },
+    // Ralentie et raccourcie. La mecanique est du TIMING : a 46 m/s une tete
+    // visible a soixante metres ne laisse qu une seconde pour lire sa phase et
+    // engager une glissade, ce qui transforme un test de rythme en test de
+    // reflexes. Une zone de rythme doit laisser le temps de choisir.
+    physics: { startSpeed: 18, maxSpeed: 32, speedRamp: 0.14 },
     // A rust-brown foundry was off-brief twice over: wrong palette and a
     // borrowed idea. It is the factory the drink is made in.
     sky: [
