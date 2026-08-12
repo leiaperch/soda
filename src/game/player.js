@@ -167,6 +167,10 @@ export class Player {
     // Overridden per zone: low gravity on The Docks, crosswind on The Heights.
     this.physics = { gravity: GRAVITY, jump: JUMP_V, wind: 0 };
     this.hill = 0;
+    // Written by the game each frame on a zone that corners. See `bank` in
+    // game.js `_curve()`: it is the centrifugal push, in metres, and it is the
+    // one thing that moves her off the lane centre without her asking.
+    this.bank = 0;
 
     loadCourier(materials).then(async (rig) => {
       if (!rig) return;
@@ -336,7 +340,7 @@ export class Player {
     this.wind = this.physics.wind
       ? (Math.sin(time * 0.42) + Math.sin(time * 1.13) * 0.32) * this.physics.wind
       : 0;
-    const targetX = LANE_X[this.lane] + this.wind;
+    const targetX = LANE_X[this.lane] + this.wind + this.bank;
     const dx = targetX - this.x;
     this.x += dx * Math.min(1, LANE_SPEED * dt);
 
@@ -403,7 +407,11 @@ export class Player {
     // The lean is lerped on its own scalars, then every offset is added on top
     // when the rotation is written. Lerping the rotation channel itself while
     // also adding an offset to it makes the offset accumulate every frame.
-    const lean = THREE.MathUtils.clamp(dx * 0.5, -0.55, 0.55);
+    // A lane change leans her by its own dx, which falls back to zero as she
+    // arrives. A corner has to keep leaning for as long as it lasts, so the
+    // bank is added as a standing term — and INTO the turn, against the push,
+    // which is the direction a body actually goes.
+    const lean = THREE.MathUtils.clamp(dx * 0.5 - this.bank * 0.26, -0.55, 0.55);
     this.leanZ = THREE.MathUtils.lerp(this.leanZ || 0, -lean, 0.2);
     this.leanY = THREE.MathUtils.lerp(this.leanY || 0, lean * 0.6, 0.2);
     this.tilt.rotation.z = this.leanZ;

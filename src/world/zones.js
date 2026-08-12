@@ -516,6 +516,74 @@ export const ZONES = [
   },
 
   {
+    id: 'heartline',
+    name: 'THE HEARTLINE',
+    subtitle: 'GLITCH HEART, ALL PINK',
+    mechanic: 'The road actually turns, and it throws you wide. Pick your lane before the corner.',
+    built: true,
+    length: 2800,
+    track: 'audio/glitch-heart-2000.mp3',
+    // Fast, but not the finale. The corner is a margin tax rather than an
+    // obstacle, so the speed has to leave time to read one coming. At
+    // `curveRate: 2.2` the bend has a 460 m wavelength: a corner every ~11 s
+    // off the line and every ~6 s at 36. Often enough to be the zone, far
+    // enough apart that each one is still a decision.
+    physics: { startSpeed: 20, maxSpeed: 36, speedRamp: 0.2 },
+    // The Ring is pastel and The Sugar Flats is pink sand under mint. This is
+    // the saturated version of the same hue: a magenta dusk with the light
+    // kept low, because the whole zone is pink and pink at high luminance is
+    // just white with a tint.
+    sky: [
+      [0.00, '#2b0636'], [0.26, '#6e0a5e'], [0.46, '#c4157e'],
+      [0.64, '#ff3f97'], [0.82, '#ff8fc8'], [1.00, '#ffd0e6'],
+    ],
+    fog: { color: '#ff8fc8', near: 170, far: 340 },
+    sun: { color: '#fff0f6', intensity: 2.2 },
+    hemi: { sky: '#ffc2e2', ground: '#48114a', intensity: 0.46 },
+    backdrop: { sun: '#fff6fa', halo: '#ff3f97', arc: '#ffb3e0', planet: '#a8248c' },
+    colors: {
+      // The road is the one surface that has to BE pink, because it is a third
+      // of the screen and the zone is called what it is called.
+      //
+      // Pick it far lighter than it should look. The toon ramp lands the road
+      // on a low step and roughly halves it: a white road renders mid-grey, so
+      // the first two passes here (#3a0f38, then #7a2a63) both arrived as a
+      // black tarmac stripe down the middle of the one pink zone in the game.
+      // Isolation test if it ever looks wrong again: set this to #ffffff and
+      // capture — grey means the value arrives and the choice is too dark.
+      road: '#e06aa8',
+      kerb: '#ffe0f2',
+      deck: '#8e2a6e',
+      edge: '#ff4fa3',
+      lane: '#fff0fa',
+      accent: '#ffb3e0',
+      accentGlow: '#e0247e',
+    },
+    facades: ['#ff8fd0', '#c46bd6', '#ff6fa8', '#e8b0ff', '#ffc2e2', '#a8489e'],
+    props: {
+      road: 'street',
+      // Not `slab`: that barrier is built from `pal.road` at 2.4x, which is
+      // meant for the dark-road zones it came from. On a road this light it
+      // clips to white and the barrier disappears into the kerb.
+      obstacleKit: { barrier: 'fence', gate: 'gantry', block: 'signtower' },
+      // The arches ARE the corner. A bend drawn only in the road surface is
+      // read late, because the road is mostly below the horizon; a line of
+      // arches swinging across the screen is visible from the far end of the
+      // chunk, which is where the lane decision has to be made.
+      arches: 'round', archEvery: 16, archTint: ['#ff2e93', '#ff8fd0', '#e8b0ff'],
+      lampEvery: 10, streetEvery: 14, billboardChance: 0.6,
+      palmChance: 0.3, podChance: 0.4, stallChance: 0.2,
+      skylineChance: 0.85, backRowChance: 0.7, waterSides: false, waterRoad: false,
+      // The mechanic. `curve` is roughly double the strongest zone before it,
+      // `curveRate` shortens the wavelength from ~1000 m to ~460 m so a run is
+      // a sequence of corners rather than one long lean, and `drift` is the
+      // part that is not a lie told to the eye — see `_curve()` in game.js.
+      curve: 0.0024, curveRate: 2.2, drift: 0.85,
+      lotMin: 7, lotMax: 14, towerStacks: [2, 4], feature: null,
+    },
+  },
+
+  {
     id: 'core',
     name: 'THE CORE',
     subtitle: 'TERMINAL DESCENT',

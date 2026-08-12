@@ -653,18 +653,42 @@ export class Game {
    * from the player's own z turns that constant into a road that snakes, for
    * no new geometry: the same parabola, re-aimed every frame.
    *
-   * The bend is purely visual. Lanes and collisions live in flat space, so a
-   * turn cannot make an obstacle unfair — and the camera roll is what stops it
-   * reading as the world sliding, which is what a bend without a roll looks
-   * like. Two frequencies rather than one, so the road never repeats a rhythm
-   * you can learn.
+   * On every zone but one the bend is purely visual: lanes and collisions live
+   * in flat space, so a turn cannot make an obstacle unfair — and the camera
+   * roll is what stops it reading as the world sliding, which is what a bend
+   * without a roll looks like. Two frequencies rather than one, so the road
+   * never repeats a rhythm you can learn.
+   *
+   * `props.drift` is where that stops being decoration. The Heartline pushes
+   * her towards the OUTSIDE of whatever the shader is drawing, by the same
+   * `shape`, so the force and the picture can never disagree: a corner you can
+   * see a hundred metres out is a corner you can prepare for. It moves the
+   * lane target rather than her x, exactly like the crosswind, so it is
+   * something to steer against and not a stutter.
+   *
+   * The push is capped well under a lane. She has no analogue steering — only
+   * three lanes — so a drift big enough to put her inside a neighbouring
+   * obstacle's box would be a force with no counter, which is not difficulty.
+   * What it costs is margin: the lane you pick before the corner is the whole
+   * decision.
    */
   _curve(dt) {
     const amp = this.zone.props.curve;
-    if (!amp) { this.roll = THREE.MathUtils.lerp(this.roll || 0, 0, 0.06); return; }
+    if (!amp) {
+      this.roll = THREE.MathUtils.lerp(this.roll || 0, 0, 0.06);
+      this.player.bank = 0;
+      return;
+    }
     const z = this.player.z;
-    const shape = Math.sin(z * 0.0062) * 0.68 + Math.sin(z * 0.0143 + 1.7) * 0.32;
+    const rate = this.zone.props.curveRate || 1;
+    const shape = Math.sin(z * 0.0062 * rate) * 0.68 + Math.sin(z * 0.0143 * rate + 1.7) * 0.32;
     bendUniforms.uBendX.value = 0.00042 + shape * amp;
+    // Positive `shape` swings the road ahead towards +x, i.e. a right-hander,
+    // and the outside of a right-hander is to her left. Hence the minus.
+    this.player.bank = -shape * (this.zone.props.drift || 0);
+    // The other zones name their verb when its object comes into view. A
+    // corner has no object, so it is named the first time it actually pulls.
+    if (Math.abs(this.player.bank) > 0.45) this._teach('bank', 'THE BEND PUSHES YOU WIDE');
     // Roll follows the bend, damped: a camera that snapped to it would read as
     // the horizon twitching rather than as a corner being taken.
     this.roll = THREE.MathUtils.lerp(this.roll || 0, -shape * 0.16, Math.min(1, 2.4 * dt));
