@@ -54,7 +54,9 @@ const BARRIERS = {
   /** Wet rock cluster breaking the surface. */
   rock(b, pal, x, z, s) {
     const stone = new THREE.Color('#6b7f86');
-    b.dome('toon', x, 0, z, s.w * 0.52, s.h * 1.05, 7, 3, shade(stone, 1.0));
+    // Flush with the box, not proud of it. At 1.05 the tallest boulder stood
+    // 5 cm above the hitbox and a clean jump clipped visible rock.
+    b.dome('toon', x, 0, z, s.w * 0.52, s.h, 7, 3, shade(stone, 1.0));
     b.dome('toon', x - s.w * 0.3, 0, z + 0.2, s.w * 0.3, s.h * 0.75, 6, 3, shade(stone, 0.85));
     b.dome('toon', x + s.w * 0.32, 0, z - 0.15, s.w * 0.26, s.h * 0.62, 6, 3, shade(stone, 0.92));
     b.dome('toon', x, 0, z, s.w * 0.62, 0.1, 8, 2, shade(pal.lane, 0.8));
@@ -135,7 +137,9 @@ const BARRIERS = {
     const bark = new THREE.Color('#6b4a2f');
     const r = s.h * 0.5;
     // faceted barrel, built from stacked slabs so it lies across the lane
-    for (const [dy, w] of [[0.16, 1.0], [0.5, 0.92], [0.82, 0.66]]) {
+    // The top slab sat at 0.82, which put the crown of the trunk 11 cm above
+    // the hitbox: the barrier you can see was taller than the one you jump.
+    for (const [dy, w] of [[0.16, 1.0], [0.5, 0.92], [0.71, 0.66]]) {
       b.box('toon', x, dy * s.h - 0.08, z, s.w * 1.02, s.h * 0.36, s.d * (0.55 + w * 0.5),
         shade(bark, 0.9 + dy * 0.35));
     }
@@ -484,7 +488,9 @@ function hoard(b, pal, x, z, s) {
   // A leaning panel, not a stack of boxes. The face is four free points, so it
   // tilts back along z and its top corner is cut away — an outline you can name
   // at a glance. A box, however it is shaded, only ever reads as a box.
-  const w = s.w * 0.5, top = s.h * 1.05, lean = s.d * 0.55;
+  // `top` is the tall corner of the panel, so it is the thing that has to stay
+  // inside the box: at 1.05 it stood 5 cm above it.
+  const w = s.w * 0.5, top = s.h, lean = s.d * 0.55;
   const P = (dx, y, dz) => [x + dx, y, z + dz];
   const face = shade(pal.kerb, 1.0);
   const back = shade(pal.kerb, 0.7);
