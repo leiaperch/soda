@@ -56,9 +56,9 @@ const PAL = {
 
 /** Every form, with the contract it has to keep. */
 const FORMS = [
-  ...['fence', 'rock', 'crate', 'slab', 'log', 'hoard'].map((f) => ({ f, t: 'barrier' })),
-  ...['gantry', 'net', 'beam', 'vine', 'pipe', 'skywalk'].map((f) => ({ f, t: 'gate' })),
-  ...['pillar', 'signtower', 'wreck', 'container', 'tree', 'press', 'mast'].map((f) => ({ f, t: 'block' })),
+  ...['fence', 'rock', 'crate', 'slab', 'log', 'hoard', 'kerbstack', 'barrels', 'cabinet', 'ridge', 'cable', 'dish'].map((f) => ({ f, t: 'barrier' })),
+  ...['gantry', 'net', 'beam', 'vine', 'pipe', 'skywalk', 'scanner', 'signal', 'marquee', 'archway', 'strut', 'monitors'].map((f) => ({ f, t: 'gate' })),
+  ...['pillar', 'signtower', 'wreck', 'container', 'tree', 'press', 'mast', 'gumball', 'booth', 'crane', 'spire', 'pylon', 'transformer'].map((f) => ({ f, t: 'block' })),
   { f: 'hedge', t: 'hedge' }, { f: 'bumper', t: 'bumper' }, { f: 'drift', t: 'drift' },
   ...[0, 1, 2].map((alt) => ({ f: `panel(alt ${alt})`, t: 'panel', alt, spec: panelSpec(alt) })),
 ];

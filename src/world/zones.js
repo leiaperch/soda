@@ -140,7 +140,10 @@ export const ZONES = [
       powers: ['magnet', 'double'],
       // The one thing no other zone has: the road actually goes up and down.
       hill: 4.6,
-      obstacleKit: { barrier: 'rock', gate: 'net', block: 'wreck' },
+      // Its own landforms, not the Shore's. A sea boulder, a fishing net and a
+      // half-sunk hull standing in a desert was the loudest possible sign that
+      // this zone was the previous one repainted.
+      obstacleKit: { barrier: 'ridge', gate: 'archway', block: 'spire' },
       arches: 'none', archEvery: 0, archTint: ['#ffd06a', '#ff8a3a'],
       lampEvery: 20, streetEvery: 12, billboardChance: 0.1,
       palmChance: 0.7, podChance: 0.15, stallChance: 0,
@@ -314,7 +317,10 @@ export const ZONES = [
       // Twice the usual gap between checkpoints: the bumper chain has to be
       // what bridges them, otherwise the RELAY does it for you.
       relayEvery: 6,
-      obstacleKit: { barrier: 'fence', gate: 'gantry', block: 'pillar' },
+      // The Arcade had the Ring's three forms exactly, so the loudest zone in
+      // the game was furnished by the tutorial. Its blocks become bumpers, so
+      // `crane` is only ever seen where a bumper would be wrong.
+      obstacleKit: { barrier: 'cabinet', gate: 'marquee', block: 'crane' },
       arches: 'round', archEvery: 12, archTint: ['#ff2ee0', '#00e5ff', '#ffe14a'],
       lampEvery: 9, streetEvery: 9, billboardChance: 1,
       palmChance: 0, podChance: 0.2, stallChance: 0.3,
@@ -357,7 +363,11 @@ export const ZONES = [
       // deckHalf and edgeX are a pair: the drop has to be where it looks.
       road: 'skybridge',
       deckHalf: 3.9,
-      obstacleKit: { barrier: 'fence', gate: 'beam', block: 'pillar' },
+      // The zone is a bridge, so its obstacles are bridge. The crane beam it
+      // used to run is the object the code itself calls the ugliest in the
+      // game on this palette, and a white gate against a white sky needs
+      // diagonals to survive at all.
+      obstacleKit: { barrier: 'cable', gate: 'strut', block: 'pylon' },
       arches: 'none', archEvery: 0, archTint: ['#ff7ac6', '#ffffff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0.2, stallChance: 0,
@@ -397,7 +407,11 @@ export const ZONES = [
       // A sealed tube: walls and a ceiling. With no sky and no skyline the
       // only thing left to read is the track, which changes everything.
       road: 'tube',
-      obstacleKit: { barrier: 'slab', gate: 'pipe', block: 'container' },
+      // No obstacleKit, on purpose. In a flight zone every obstacle in every
+      // pattern is a `panel` — buildChunk rewrites them all to panelSpec — so
+      // a kit here is read by nothing at all. It used to name three borrowed
+      // forms and made this zone look like it had a family. Its family is the
+      // grid.
       arches: 'none', archEvery: 0, archTint: ['#00e5ff', '#8f6fff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
       palmChance: 0, podChance: 0, stallChance: 0,
@@ -562,10 +576,14 @@ export const ZONES = [
     facades: ['#ff8fd0', '#c46bd6', '#ff6fa8', '#e8b0ff', '#ffc2e2', '#a8489e'],
     props: {
       road: 'street',
-      // Not `slab`: that barrier is built from `pal.road` at 2.4x, which is
-      // meant for the dark-road zones it came from. On a road this light it
-      // clips to white and the barrier disappears into the kerb.
-      obstacleKit: { barrier: 'fence', gate: 'gantry', block: 'signtower' },
+      // Its own family, not a borrowed one. A zone whose obstacles come from
+      // other zones is a repaint however good its palette is, so the bend gets
+      // the furniture of a bend: kerb teeth on the apex, a timing arch light
+      // enough not to fight the swing of the road, and a gumball machine,
+      // which is the only sphere in the game and the most on-brief object in
+      // it. `slab` in particular is built from pal.road at 2.4x and clips to
+      // white on a road this light.
+      obstacleKit: { barrier: 'kerbstack', gate: 'scanner', block: 'gumball' },
       // The arches ARE the corner. A bend drawn only in the road surface is
       // read late, because the road is mostly below the horizon; a line of
       // arches swinging across the screen is visible from the far end of the
@@ -580,6 +598,146 @@ export const ZONES = [
       // part that is not a lie told to the eye — see `_curve()` in game.js.
       curve: 0.0024, curveRate: 2.2, drift: 0.85,
       lotMin: 7, lotMax: 14, towerStacks: [2, 4], feature: null,
+    },
+  },
+
+  {
+    id: 'split',
+    name: 'THE SPLIT',
+    subtitle: 'TWO ROADS, NEITHER OF THEM KIND',
+    mechanic: 'The road splits. You commit on one side of the wall, and live with it.',
+    built: true,
+    length: 3000,
+    track: 'audio/glitch-heart-dark.mp3',
+    physics: { startSpeed: 20, maxSpeed: 34, speedRamp: 0.2 },
+    // Dark, but pink-dark, not grey-dark. The lyrics went sombre and the
+    // palette follows them; the game does not. There is no light mechanic
+    // here, nothing is hidden, and every hazard is as readable as it is
+    // everywhere else. The night is the mood, not the difficulty.
+    sky: [
+      [0.00, '#100418'], [0.24, '#2e0a3e'], [0.46, '#5e1152'],
+      [0.66, '#9c1a5e'], [0.84, '#d4407e'], [1.00, '#f090b4'],
+    ],
+    fog: { color: '#7a1a54', near: 150, far: 300 },
+    sun: { color: '#ffdcea', intensity: 1.9 },
+    hemi: { sky: '#c46b9e', ground: '#1a0620', intensity: 0.44 },
+    backdrop: { sun: '#ffe6f0', halo: '#d4407e', arc: '#8e3a86', planet: '#3a0c3e' },
+    colors: {
+      // Lighter than it reads written down, for the reason THE HEARTLINE
+      // documents: the toon ramp roughly halves the road surface.
+      road: '#8e3a70',
+      kerb: '#e8b8d4',
+      deck: '#5e2050',
+      edge: '#ff4f8f',
+      lane: '#ffd8ea',
+      accent: '#ff2e7a',
+      accentGlow: '#b83a9e',
+    },
+    facades: ['#3a1038', '#5e1a4e', '#2a0c30', '#74246a', '#1e0824', '#48144a'],
+    props: {
+      road: 'street',
+      feature: 'fork',
+      // Its own family too: the furniture of a junction that stopped working.
+      // Road barrels chained across the lane, a signal bridge with its heads
+      // hung low and one lamp still lit, and the control cabin nobody came
+      // back to. Each branch then keeps the family and changes its colours,
+      // because two branches that swap obstacle sets read as two zones spliced
+      // together rather than as one road that divided.
+      obstacleKit: { barrier: 'barrels', gate: 'signal', block: 'booth' },
+      // The two tints are the branches' own colours, and forkGates() reads
+      // them straight out of this list: the gate over each branch is lit in
+      // the colour that branch's road then keeps.
+      arches: 'gantry', archEvery: 22, archTint: ['#ff2e7a', '#3ad0c8'],
+      lampEvery: 12, streetEvery: 12, billboardChance: 0.5,
+      palmChance: 0, podChance: 0.4, stallChance: 0.3,
+      skylineChance: 0.9, backRowChance: 0.75, waterSides: false, waterRoad: false,
+      curve: 0.0006,
+      lotMin: 6, lotMax: 12, towerStacks: [3, 5],
+      /**
+       * The fork.
+       *
+       * Neither branch is the good one, and that is the entire requirement. If
+       * one is simply better the wall stops being a decision and becomes a
+       * lane change you have to remember the answer to.
+       *
+       * RED is faster and more expensive: a higher ceiling, and charge burning
+       * nearly half again as quickly, so it pays in distance and costs in
+       * clock. TEAL is slower and cheap, which is the road you take when the
+       * bar is low and the next checkpoint is not close.
+       *
+       * They also look nothing alike, because half the variant pool is built
+       * from each. That half is the branch's, obstacles included.
+       */
+      fork: {
+        branches: [
+          {
+            label: 'RED LINE',
+            colors: { edge: '#ff4f8f', accent: '#ff2e7a', accentGlow: '#c8206a' },
+            play: { maxSpeed: 40, drain: 1.4 },
+          },
+          {
+            label: 'COLD LINE',
+            colors: { edge: '#3ad0c8', accent: '#2ea8a0', accentGlow: '#1e7e84' },
+            play: { maxSpeed: 30, drain: 0.8 },
+          },
+        ],
+      },
+    },
+  },
+
+  {
+    id: 'stack',
+    name: 'THE STACK',
+    subtitle: 'THREE ROADS, ONE OVER THE OTHER',
+    mechanic: 'Three floors. The ramp puts you up, the trench takes you down, and both run out.',
+    built: true,
+    length: 2600,
+    track: 'audio/static.mp3',
+    // Slower than its neighbours on purpose. The zone asks WHICH FLOOR before
+    // it asks anything else, and a floor you arrive on before you have read it
+    // is a coin flip. The Storm buys that time with low gravity; this buys it
+    // with speed, because the launch and the climb out of the trench are both
+    // tuned against full gravity and cannot be softened without breaking them.
+    physics: { startSpeed: 19, maxSpeed: 32, speedRamp: 0.16 },
+    // Dead broadcast: a signal that stopped and left the colour bars up. Cold
+    // blue-black, with the magenta and cyan of a mistracked tape, which is the
+    // Y2K reading of the word rather than the grey-noise one.
+    sky: [
+      [0.00, '#05060f'], [0.22, '#111a34'], [0.44, '#24356a'],
+      [0.62, '#4a4f9c'], [0.80, '#8f6fc0'], [1.00, '#d8b8e8'],
+    ],
+    fog: { color: '#24356a', near: 140, far: 290 },
+    sun: { color: '#dfe8ff', intensity: 1.7 },
+    hemi: { sky: '#8fa8e8', ground: '#0a0c1a', intensity: 0.46 },
+    backdrop: { sun: '#eef2ff', halo: '#7f8fe8', arc: '#c8a8f0', planet: '#1a2044' },
+    colors: {
+      // Three floors means three surfaces at once on screen, so the road is
+      // the mid tone and the deck and the trench read against it from above
+      // and below. Lighter than it looks written down: the toon ramp halves it.
+      road: '#5a6398',
+      kerb: '#d8e0f8',
+      deck: '#2e3560',
+      edge: '#5ff0e8',
+      lane: '#f0f4ff',
+      accent: '#ff4fd0',
+      accentGlow: '#5ff0e8',
+    },
+    facades: ['#1a2044', '#2a2f5e', '#141a36', '#38306a', '#0e1228', '#242a52'],
+    props: {
+      road: 'street',
+      feature: 'tiers',
+      // Its own family: dead broadcast hardware. A dish is the only concave
+      // barrier in the game, the monitors are the only gate built as a grid,
+      // and the transformer is a stack of fins — all three chosen to survive
+      // being looked at from six metres up, which is where this zone puts her
+      // for a third of the run.
+      obstacleKit: { barrier: 'dish', gate: 'monitors', block: 'transformer' },
+      arches: 'gantry', archEvery: 20, archTint: ['#5ff0e8', '#ff4fd0'],
+      lampEvery: 14, streetEvery: 10, billboardChance: 0.55,
+      palmChance: 0, podChance: 0.35, stallChance: 0,
+      skylineChance: 0.88, backRowChance: 0.7, waterSides: false, waterRoad: false,
+      curve: 0.0004,
+      lotMin: 7, lotMax: 14, towerStacks: [3, 5],
     },
   },
 

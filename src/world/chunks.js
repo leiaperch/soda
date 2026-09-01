@@ -162,6 +162,60 @@ const FEATURES = {
     [{ lane: 2, from: 13, to: 27 }],
     [{ lane: 1, from: 8, to: 20 }, { lane: 0, from: 36, to: 46 }],
   ],
+  /**
+   * THE STACK: an upper deck AND a trench in the same chunk.
+   *
+   * Everything this needs already existed and had simply never been put in one
+   * place. `deck` raises `player.floor` to DECK_Y and `dive` drops it to
+   * DIVE_Y; between them the road is floor zero. Three real surfaces, all of
+   * them already collided against, already drawn, already carried by the
+   * camera.
+   *
+   * The one piece of machinery is that these entries carry their OWN `kind`.
+   * Everywhere else a chunk's features are all the same kind and buildChunk
+   * stamps it on; here `{ kind, ...f }` lets each entry override it, which was
+   * true of that spread already and is the whole reason this is data and not
+   * code.
+   *
+   * THE PAD IS TWENTY METRES IN FRONT OF ITS OWN DECK, and that is the whole
+   * geometry of the row. A launch clears DECK_Y and takes about 0.8 s, which
+   * at this zone's speed is twenty-odd metres of ground; the first version put
+   * the pad at the near end of its deck, so she rose, passed straight over the
+   * ten metres of deck and came down on the road behind it. Measured, the
+   * upper floor held her for 93 frames out of 4900.
+   *
+   * That spacing then hands the zone its decision for free. The flight from
+   * the pad passes exactly over the trench: take the pad and you fly the gap,
+   * miss it and you are in the hole, climbing out. One row, three floors, and
+   * the choice is which one you spend the chunk on.
+   *
+   * The leading span is the tail of the PREVIOUS chunk's deck. Every row
+   * carries one, because chunks are recycled in any order and a deck that
+   * ended at a chunk boundary would drop her into nothing.
+   */
+  tiers: [
+    [{ kind: 'deck', from: 0, to: 10 }, { kind: 'dive', from: 18, to: 32, out: 28 },
+      { kind: 'deck', pad: 14, from: 34, to: 48 }],
+    [{ kind: 'deck', from: 0, to: 12 }, { kind: 'dive', from: 20, to: 34, out: 30 },
+      { kind: 'deck', pad: 15, from: 36, to: 48 }],
+    [{ kind: 'deck', from: 0, to: 8 }, { kind: 'dive', from: 16, to: 31, out: 27 },
+      { kind: 'deck', pad: 12, from: 32, to: 48 }],
+    [{ kind: 'deck', from: 0, to: 14 }, { kind: 'dive', from: 22, to: 36, out: 32 },
+      { kind: 'deck', pad: 17, from: 38, to: 48 }],
+  ],
+  // The fork. Most chunks have none, and that is the design rather than
+  // laziness: a junction every 48 m is a lane change with a wall in it, and
+  // the branch you chose needs road to be a branch on. The empty entries are
+  // the stretches where you live with the choice you made.
+  //
+  // The island starts far enough in that you see it from the chunk boundary,
+  // and the gates go up nine metres in front of the nose, which at this zone's
+  // speed is about a second and a half of reading time.
+  fork: [
+    [{ from: 20, to: 38 }],
+    [{ from: 16, to: 34 }],
+    [], [], [],
+  ],
 };
 
 /** True when an obstacle sits close enough to a feature to make it unfair. */
@@ -194,6 +248,10 @@ function conflicts(o, features) {
     if (f.kind === 'gap') return o.z > f.from - 9 && o.z < f.to + 6;
     if (f.kind === 'hole') return o.lane === f.lane && o.z > f.from - 7 && o.z < f.to + 3;
     if (f.kind === 'belt') return o.lane === f.lane && o.z > f.from - 3 && o.z < f.to + 3;
+    // A fork owns every lane for its whole length and a long way in front. The
+    // approach is where the choice is made, and an obstacle there turns a
+    // decision into a dodge that happens to also pick a branch.
+    if (f.kind === 'fork') return o.z > f.from - 22 && o.z < f.to + 8;
     return o.lane === f.lane && o.z > f.from - 5 && o.z < f.to + 5;
   });
 }
@@ -801,6 +859,38 @@ function buildScenery(b, rng, pal, props) {
  * mesh because they never disappear; CELLS and RELAYS are pooled separately
  * since they do.
  */
+/**
+ * The two gates over a fork's branches, and the seam down the road between
+ * them.
+ *
+ * The island is the thing that makes the choice binding, but a wall on its own
+ * only says "not here". These say WHERE, and they say it from far enough back
+ * to be a decision: a gate over each branch, lit in that branch's own colour,
+ * standing well in front of the nose. The colours are the promise the branch
+ * then has to keep, which is why both of them are drawn from `archTints`
+ * rather than from one accent.
+ */
+function forkGates(b, pal, f) {
+  const [left, right] = pal.archTints;
+  const zGate = -(f.from - 9);
+  for (const [lane, tint] of [[0, left], [2, right || left]]) {
+    const x = LANE_X[lane];
+    for (const side of [-1, 1]) {
+      b.cyl('chrome', x + side * 1.5, 0, zGate, 0.17, 0.14, 5.2, 6, shade(pal.chrome, 0.85));
+    }
+    b.box('toon', x, 5.2, zGate, 3.4, 0.7, 0.5, shade(pal.deck, 1.2));
+    b.box('emissive', x, 5.24, zGate + 0.28, 3.0, 0.5, 0.06, shade(tint, 0.8));
+    // An arrow on the deck under each gate, so the branch is readable even
+    // when the gate itself is above the top of the screen.
+    for (let i = 0; i < 3; i++) {
+      b.box('emissive', x, 0.03, zGate - 1.2 - i * 1.6, 2.0 - i * 0.4, 0.05, 0.5, shade(tint, 0.55));
+    }
+  }
+  // The seam: the lane line down the middle stops being a marking and becomes
+  // a join, running from the gates to the nose.
+  b.box('emissive', 0, 0.035, -(f.from - 4.5), 0.16, 0.05, 9, shade(pal.lane, 0.5));
+}
+
 export function buildChunk(rng, pattern, materials, zone) {
   const pal = resolvePalette(zone);
   const b = new Builder();
@@ -839,6 +929,18 @@ export function buildChunk(rng, pattern, materials, zone) {
   // the pad is both the only way through and the only way to the fuel.
   const extra = [];
   for (const f of features) {
+    if (f.kind === 'fork') {
+      // The island is emitted as ONE obstacle carrying its own length rather
+      // than as a row of blocks. A row would let her thread between two of
+      // them at speed, and a fork you can slip through the middle of is not a
+      // fork. `d` is the whole island, and the collision test reads d/2 either
+      // side of its centre, so a single record covers all twenty metres.
+      extra.push({
+        t: 'divider', lane: 1, z: (f.from + f.to) / 2,
+        spec: { w: OBSTACLE.block.w, h: OBSTACLE.block.h, d: f.to - f.from, base: 0 },
+      });
+      continue;
+    }
     if (f.kind !== 'spring') continue;
     for (let lane = 0; lane < 3; lane++) extra.push({ t: 'hedge', lane, z: f.z + 9 });
     for (let i = 0; i < 5; i++) {
@@ -862,6 +964,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     else if (f.kind === 'belt') conveyor(b, pal, LANE_X[f.lane], f.from, f.to, f.dir);
     else if (f.kind === 'rail') rail(b, pal, LANE_X[f.lane], f.from, f.to);
     else if (f.kind === 'press') capperFrame(b, pal, LANE_X[f.lane], -f.z);
+    else if (f.kind === 'fork') forkGates(b, pal, f);
     else if (f.kind === 'dive') trench(b, pal, f);
     else if (f.kind === 'deck') {
       upperDeck(b, pal, f);

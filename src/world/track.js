@@ -274,9 +274,31 @@ export class Track {
       // row — a slideshow of other levels rather than a place of its own. Each
       // chunk is instead recoloured onto one step of a pastel rainbow, so the
       // zone reads as a single arc you descend through.
-      const src = donors ? { ...donors[i % donors.length], ...pastelStep(i, VARIANTS) } : zone;
-      const pattern = pickPattern(this.rng, i < 4 ? 0 : 2, src.props.flight, src.props.storm);
-      const chunk = buildChunk(this.rng, pattern, this.materials, src);
+      // A forking zone splits its variants in half and builds each half from
+      // one branch's overrides. It is the medley trick with two donors instead
+      // of ten: the branch you take then decides which half of the pool the
+      // road ahead is drawn from, so the two sides of a fork are as unlike each
+      // other as two zones, for no extra draw calls and no rebuild mid-run.
+      const half = VARIANTS / 2;
+      const branchIndex = zone.props.fork ? (i < half ? 0 : 1) : null;
+      const branch = branchIndex === null ? null : zone.props.fork.branches[branchIndex];
+      const forked = branch
+        ? { ...zone, colors: { ...zone.colors, ...branch.colors }, props: { ...zone.props, ...branch.props } }
+        : zone;
+      // Easy variants come first so the opening chunks are gentle. Under a
+      // fork the count has to be per BRANCH, not over the whole pool: measured
+      // across all ten it handed every easy variant to branch 0, and one side
+      // of every fork was quietly the soft option.
+      const rank = branchIndex === null ? i : i % half;
+      const easy = branchIndex === null ? 4 : 2;
+      const chunk = buildChunk(
+        this.rng,
+        pickPattern(this.rng, rank < easy ? 0 : 2, forked.props.flight, forked.props.storm),
+        this.materials,
+        donors ? { ...donors[i % donors.length], ...pastelStep(i, VARIANTS) } : forked,
+      );
+      chunk.branch = branchIndex;
+      chunk.easy = rank < easy;
       chunk.group.visible = false;
       this.scene.add(chunk.group);
       this.variants.push(chunk);
@@ -311,14 +333,26 @@ export class Track {
     this.waves.length = 0;
     this.waveT = 0;
     this.chunkIndex = 0;
+    // Which branch of the last fork she is on. Null means she has not reached
+    // one yet; the road runs on branch 0 until she does.
+    this.branch = null;
     this.frontZ = CHUNK_LEN; // one chunk of runway behind the start line
     this.finishZ = this.zone && this.zone.length ? -this.zone.length : null;
     for (let i = 0; i < ACTIVE; i++) this._spawn(0);
   }
 
   _freeVariant(tier) {
-    const pool = this.variants.filter((v) => !v.inUse && (tier >= 1 || this.variants.indexOf(v) < 4));
-    const candidates = pool.length ? pool : this.variants.filter((v) => !v.inUse);
+    // On a forking zone the branch she committed to owns the road ahead, so
+    // only that half of the pool is eligible. Before the first fork there is
+    // no commitment yet and branch 0 is the main line.
+    const branch = this.zone && this.zone.props.fork ? (this.branch ?? 0) : null;
+    const onBranch = (v) => branch === null || v.branch === branch;
+    const pool = this.variants.filter((v) => !v.inUse && onBranch(v) && (tier >= 1 || v.easy));
+    // Falling back to the whole pool would cross branches, which is the one
+    // thing the mechanic cannot allow, so the branch filter survives the
+    // fallback even when the tier filter does not.
+    const relaxed = pool.length ? pool : this.variants.filter((v) => !v.inUse && onBranch(v));
+    const candidates = relaxed.length ? relaxed : this.variants.filter((v) => !v.inUse);
     return candidates[this.rng.int(0, candidates.length - 1)];
   }
 
@@ -368,6 +402,8 @@ export class Track {
             kind: 'press', lane: f.lane, x: LANE_X[f.lane],
             z: zStart - f.z, phase: f.phase, done: false,
           });
+        } else if (f.kind === 'fork') {
+          slot.features.push({ kind: 'fork', startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else if (f.kind === 'hole') {
           slot.features.push({ kind: 'hole', lane: f.lane, startZ: zStart - f.from, endZ: zStart - f.to, done: false });
         } else {

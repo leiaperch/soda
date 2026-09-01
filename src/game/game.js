@@ -108,6 +108,36 @@ export class Game {
       max: ph.maxSpeed ?? TUNE.maxSpeed,
       ramp: ph.speedRamp ?? TUNE.speedRamp,
     };
+    // Kept so a branch can raise the ceiling and the next branch can put it
+    // back. Without a copy of the zone's own figure, two forks in a row would
+    // compound their overrides.
+    this.basePace = { ...this.pace };
+    this.branchRules = {};
+  }
+
+  /**
+   * She has passed the nose of a fork on one side of it.
+   *
+   * The branch changes two things at two different speeds, and that split is
+   * deliberate. The RULES change now — the speed ceiling, the charge tax —
+   * because a choice you cannot feel until eight seconds later is not a choice
+   * you made. The LOOK changes as the road arrives: chunks are recycled from a
+   * pool built per branch, so the new palette and obstacle family reach her at
+   * the spawn frontier rather than popping in over ground she can already see.
+   *
+   * That lag is the honest cost of a fork in a runner whose chunks are baked
+   * ahead of time. Rebuilding the visible road at the junction was the other
+   * option and it pops, which is worse than arriving.
+   */
+  _commitBranch(index) {
+    const fork = this.zone.props.fork;
+    if (!fork) return;
+    const branch = fork.branches[index];
+    this.track.branch = index;
+    this.branchRules = branch.play || {};
+    this.pace.max = this.branchRules.maxSpeed ?? this.basePace.max;
+    this.hud.toast(branch.label, 'relay');
+    this.sfx.relay();
   }
 
   start(zone = this.zone || DEFAULT_ZONE) {
@@ -118,6 +148,10 @@ export class Game {
     // elevation. The Core simply did not descend.
     bendUniforms.uHill.value = this.hill;
     bendUniforms.uDrop.value = this.zone.props.drop || 0;
+    // Same reason: setZone returns early on a replay, so a run started after
+    // one that ended on the fast branch would inherit its ceiling and its tax.
+    this.branchRules = {};
+    if (this.basePace) this.pace = { ...this.basePace };
     this.track.reset();
     this.player.reset();
     this.state = 'running';
@@ -209,6 +243,32 @@ export class Game {
    * which inverts the reflex the other zones spend their whole length
    * training. Speed is barely touched: this is a ricochet, not a stop.
    */
+  /**
+   * She arrived at a fork still in the middle lane, and met the nose.
+   *
+   * This cannot be an ordinary hit. An ordinary hit cuts speed and lets her
+   * carry on, and carrying on here means travelling eighteen metres through a
+   * solid wall — the exact "the game is cheating" read the whole obstacle file
+   * is built to avoid. It cannot be a fall either: a fall recovers her to lane
+   * one, which is inside the island.
+   *
+   * So she glances off it. The nose is a wedge and a wedge deflects; she is
+   * thrown onto whichever side she was already leaning towards, pays for it in
+   * speed, and the branch she lands on is the branch she gets. Refusing to
+   * choose is itself a choice, and it is the expensive one.
+   */
+  _glance(o) {
+    const p = this.player;
+    const side = p.x >= o.x ? 1 : -1;
+    p.lane = side > 0 ? 2 : 0;
+    this.speed = Math.max(this.pace.start * 0.8, this.speed * TUNE.hitSpeedCut);
+    p.stunned = 0.4;
+    this.run.clean = false;
+    this.shake = 0.6;
+    this.hud.toast('YOU DID NOT CHOOSE', 'warn');
+    this.sfx.crash();
+  }
+
   _bounce(o) {
     const p = this.player;
     const away = p.lane === 0 ? 1 : p.lane === 2 ? -1 : (o.x <= p.x ? 1 : -1);
@@ -284,6 +344,7 @@ export class Game {
         if (p.y < oTop && pTop > base) {
           o.hit = true;
           if (o.type === 'bumper') this._bounce(o);
+          else if (o.type === 'divider') this._glance(o);
           else this._hit();
         }
       }
@@ -410,6 +471,7 @@ export class Game {
       else if (f.kind === 'rail') this._teach('rail', 'LAND ON THE RAIL');
       else if (f.kind === 'gap') this._teach('gap', 'JUMP THE GAP');
       else if (f.kind === 'hole') this._teach('hole', 'NO DECK — SWITCH LANE');
+      else if (f.kind === 'fork') this._teach('fork', 'THE ROAD SPLITS — PICK A SIDE');
       else if (f.kind === 'belt') this._teach('belt', 'RIDE THE MINT BELT');
       else if (f.kind === 'ring') {
         this._teach('ring', p.flying ? 'FLY THROUGH THE HOOP' : 'THREAD THE HOOP');
@@ -440,6 +502,18 @@ export class Game {
     if (edge && p.stunned <= 0 && Math.abs(p.x) > edge) this._fall('BLOWN OFF');
 
     for (const f of this.track.nearFeatures(p.z, 44)) {
+      if (f.kind === 'fork' && !f.done && p.z <= f.startZ && p.lane !== 1) {
+        // Committed. The island is already beside her, so the lane she is in
+        // IS the answer and there is nothing to confirm.
+        //
+        // The middle lane is not a third answer, it is the nose: the fork
+        // stays open for the frame it takes `_glance()` to throw her onto one
+        // side, and then this reads the lane it put her in. Mapping lane one
+        // to a branch here would have committed her to a road she never chose
+        // and then killed her on the wall in front of it.
+        f.done = true;
+        this._commitBranch(p.lane === 0 ? 0 : 1);
+      }
       if (f.kind === 'belt') {
         // Continuous while you stand on it, so the lane you pick is a
         // sustained decision rather than a one-off pickup. The wrong belt
@@ -781,7 +855,10 @@ export class Game {
       this.speed = Math.min(this.pace.max, this.speed + this.pace.ramp * dt);
       const speedRatio = (this.speed - this.pace.start) / (this.pace.max - this.pace.start);
       const beltTax = this.onBadBelt ? TUNE.beltDrainFactor : 1;
-      const zoneTax = this.zone.props.drain || 1;
+      // A fork's branch overrides the zone's own tax, which is how one side of
+      // a junction can be the fast expensive road and the other the slow cheap
+      // one without either of them being simply worse.
+      const zoneTax = this.branchRules.drain ?? this.zone.props.drain ?? 1;
       this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * dt;
 
       // Power-ups tick before movement so a magnet grabbed this frame already
