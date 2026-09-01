@@ -126,7 +126,12 @@ export const ZONES = [
     hemi: { sky: '#ffd9f0', ground: '#c88ab0', intensity: 0.52 },
     backdrop: { sun: '#fffbe8', halo: '#ff86d0', arc: '#d8b0ff', planet: '#8ff0d8' },
     colors: {
-      road: '#7a4a72',
+      // Pink sand, not tarmac. At #7a4a72 the toon ramp took the surface to
+      // near black and the zone became a dark road with pastel scenery beside
+      // it — which is also why its obstacles read as flat: nothing has any
+      // contrast to sit against. Same trap as THE HEARTLINE, same fix: pick it
+      // far lighter than it looks written down.
+      road: '#b06188',
       kerb: '#ffe4f2',
       deck: '#ffc0d8',
       edge: '#7ff0d4',

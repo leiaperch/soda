@@ -216,32 +216,81 @@ const BARRIERS = {
    */
   ridge(b, pal, x, z, s) {
     const sand = shade(pal.deck, 1.0);
-    const crest = s.h;
-    // the crest line, drawn as a fan of quads from a broken ridge to the road
-    const pts = [-0.5, -0.22, 0.04, 0.3, 0.5];
-    const hs = [0.42, 0.86, 1.0, 0.78, 0.36];
-    for (let i = 0; i < pts.length - 1; i++) {
-      const x0 = x + pts[i] * s.w, x1 = x + pts[i + 1] * s.w;
-      const y0 = crest * hs[i], y1 = crest * hs[i + 1];
-      // windward face, long and shallow
-      b.quad('toon', [x0, 0, z + s.d * 1.1], [x1, 0, z + s.d * 1.1], [x1, y1, z], [x0, y0, z],
-        shade(sand, 1.15 - i * 0.04));
-      // slip face, short and steep
-      b.quad('toon', [x0, y0, z], [x1, y1, z], [x1, 0, z - s.d * 0.5], [x0, 0, z - s.d * 0.5],
-        shade(sand, 0.82));
+    // A DUNE IS A SURFACE, NOT A PROFILE.
+    //
+    // The first pass was five quads sharing one crest line: correct in outline
+    // and dead in the middle, because a dune's whole character is the way the
+    // windward face curves away under itself. This samples a grid instead —
+    // nine across, four deep — so the face has interior shape, catches light
+    // unevenly, and the crest wanders instead of running straight across the
+    // lane.
+    const NX = 9, NZ = 4;
+    const front = z + s.d * 1.15, back = z - s.d * 0.55;
+    // crest height and its along-lane wander, both deterministic
+    const crestH = (i) => {
+      const u = i / (NX - 1) - 0.5;
+      return s.h * (1.0 - u * u * 2.6 - Math.sin(i * 1.9) * 0.045);
+    };
+    const crestZ = (i) => z + Math.sin(i * 2.3) * s.d * 0.16;
+    // windward profile: shallow at the toe, steepening to the crest
+    const prof = (t) => Math.pow(t, 1.7);
+    const px = (i) => x - s.w / 2 + (s.w / (NX - 1)) * i;
+    const pt = (i, j) => {
+      const t = j / NZ;
+      const h = Math.max(0, crestH(i));
+      return [px(i), h * prof(t), front + (crestZ(i) - front) * t];
+    };
+    for (let i = 0; i < NX - 1; i++) {
+      for (let j = 0; j < NZ; j++) {
+        // brightness rises up the face, so the crest reads as the lit edge
+        const tint = 0.86 + (j / NZ) * 0.42 + ((i % 3) - 1) * 0.03;
+        b.quad('toon', pt(i, j), pt(i + 1, j), pt(i + 1, j + 1), pt(i, j + 1), shade(sand, tint));
+      }
+      // slip face: short, steep, and slumped at the toe
+      const hA = Math.max(0, crestH(i)), hB = Math.max(0, crestH(i + 1));
+      const toe = 0.18;
+      b.quad('toon', [px(i), hA, crestZ(i)], [px(i + 1), hB, crestZ(i + 1)],
+        [px(i + 1), hB * toe, back + 0.3], [px(i), hA * toe, back + 0.3], shade(sand, 0.72));
+      b.quad('toon', [px(i), hA * toe, back + 0.3], [px(i + 1), hB * toe, back + 0.3],
+        [px(i + 1), 0, back], [px(i), 0, back], shade(sand, 0.62));
     }
-    for (const [dx, h] of [[-0.5, 0.42], [0.5, 0.36]]) {
-      b.tri('toon', [x + dx * s.w, 0, z + s.d * 1.1], [x + dx * s.w, crest * h, z],
-        [x + dx * s.w, 0, z - s.d * 0.5], shade(sand, 0.95));
+    // the two ends, closed so the ridge is a solid and not a sheet
+    for (const [i, side] of [[0, -1], [NX - 1, 1]]) {
+      const h = Math.max(0, crestH(i));
+      for (let j = 0; j < NZ; j++) {
+        b.tri('toon', pt(i, j), pt(i, j + 1), [px(i), 0, front], shade(sand, 0.8 + side * 0.06));
+      }
+      b.tri('toon', [px(i), h, crestZ(i)], [px(i), 0, back], [px(i), 0, front], shade(sand, 0.76));
     }
-    // ripples running down the windward face
-    for (let i = 0; i < 4; i++) {
-      b.box('toon', x, crest * 0.16 + i * 0.02, z + s.d * (0.3 + i * 0.2), s.w * (0.9 - i * 0.12), 0.04, 0.1,
-        shade(sand, 1.3));
+    // Ripples: real raised prisms running ACROSS the windward face, following
+    // its curve. Painted-on boxes floated; these are built from the same
+    // surface samples, so they sit in it.
+    for (const j of [1, 2, 3]) {
+      for (let i = 0; i < NX - 1; i++) {
+        const a = pt(i, j), c = pt(i + 1, j);
+        const lift = 0.055 + (j % 2) * 0.02;
+        b.quad('toon', a, c, [c[0], c[1] + lift, c[2] - 0.16], [a[0], a[1] + lift, a[2] - 0.16],
+          shade(sand, 1.38));
+        b.quad('toon', [a[0], a[1] + lift, a[2] - 0.16], [c[0], c[1] + lift, c[2] - 0.16],
+          [c[0], c[1], c[2] - 0.32], [a[0], a[1], a[2] - 0.32], shade(sand, 0.7));
+      }
     }
-    // sugar crust catching the light along the very top
-    b.box('emissive', x + s.w * 0.04, crest - 0.06, z, s.w * 0.5, 0.06, 0.12, shade(pal.lane, 0.6));
-    b.box('emissive', x - s.w * 0.3, crest * 0.8, z, s.w * 0.24, 0.05, 0.1, shade(pal.accentGlow, 0.5));
+    // Sugar crust along the crest: short lit segments that follow the wander,
+    // broken rather than one bar, because an unbroken line reads as a painted
+    // stripe and this is meant to be catching the light.
+    for (let i = 0; i < NX - 1; i += 2) {
+      const h = Math.max(0, crestH(i));
+      if (h < s.h * 0.4) continue;
+      b.quad('emissive', [px(i), h, crestZ(i)], [px(i + 1), Math.max(0, crestH(i + 1)), crestZ(i + 1)],
+        [px(i + 1), Math.max(0, crestH(i + 1)) - 0.05, crestZ(i + 1) + 0.12],
+        [px(i), h - 0.05, crestZ(i) + 0.12], shade(pal.lane, 0.62));
+    }
+    // Faceted grit, not pebbles. Domes read as bubbles at this scale; these are
+    // four-sided chips with a flat top, which is what broken crust looks like.
+    for (const [dx, dz, r, hh] of [[-0.86, 0.5, 0.2, 0.13], [0.78, 0.36, 0.15, 0.1],
+      [0.34, 0.72, 0.12, 0.08], [-0.44, 0.66, 0.1, 0.07]]) {
+      b.taper('toon', x + dx, 0, z + dz * s.d, r * 2, hh, r * 1.6, r * 0.7, shade(sand, 1.2));
+    }
   },
 
   /**
@@ -530,62 +579,82 @@ const GATES = {
    * erosion actually leaves and the opposite of a built beam.
    */
   archway(b, pal, x, z, s) {
-    // Sand from the palette, not a literal. A hardcoded pink is the fault this
-    // project has already shipped five times over, most recently as grey props
-    // in every pastel zone.
     const sand = shade(pal.deck, 1.0);
     const half = s.w / 2 + 0.45;
     const rise = s.h * 0.92;
-    const band = 0.34;
 
     // A TRUE ARCH, springing from the clearance line.
     //
-    // The first version of this was a mass: fat legs, a haunch, and a slab
-    // span, and it read as a block. A block is the one thing a gate must never
-    // read as, because the answer to a block is to change lane and the answer
-    // to a gate is to slide, and she was arriving at it standing up. An arch is
-    // legible as a HOLE — the thing you go through is the biggest thing in the
-    // silhouette — and this one is drawn as a thin band so the hole wins.
+    // The first version was a mass — fat legs, a haunch, a slab span — and it
+    // read as a block. A block is the one thing a gate must never read as,
+    // because the answer to a block is to change lane and the answer to a gate
+    // is to slide, and she was arriving at it standing up. An arch is legible
+    // as a HOLE: the thing you go through is the biggest thing in the outline.
     //
-    // The springing points sit exactly on `s.base`, so the lowest stone is the
-    // clearance itself and every part of the curve over the road is above it.
-    const P = (t, r) => [x + Math.cos(t) * half, s.base + Math.sin(t) * rise * r, 0];
-    const SEG = 9;
+    // The band is THINNEST AT THE CROWN and thickest where it springs, which
+    // is what erosion actually leaves and what tells the eye this was cut by
+    // wind rather than built. A constant-thickness band is a drawn arc; a
+    // varying one is a rock with an arch in it.
+    const SEG = 14;
+    const ang = (i) => (i / SEG) * Math.PI;
+    const rIn = (t) => [x + Math.cos(t) * half, s.base + Math.sin(t) * rise];
+    const band = (t) => 0.52 - Math.sin(t) * 0.26;              // fat at the feet
+    const zf = s.d * 0.75;
     for (let i = 0; i < SEG; i++) {
-      const t0 = (i / SEG) * Math.PI, t1 = ((i + 1) / SEG) * Math.PI;
-      const [x0, y0] = P(t0, 1), [x1, y1] = P(t1, 1);
-      const inner = shade(sand, 1.24 - Math.abs(i - SEG / 2) * 0.05);
-      // the soffit, which is the face she actually looks at on the approach
-      b.quad('toon', [x0, y0, z + s.d * 0.7], [x1, y1, z + s.d * 0.7],
-        [x1, y1, z - s.d * 0.7], [x0, y0, z - s.d * 0.7], inner);
-      // the extrados, one band thick
-      b.quad('toon', [x0, y0 + band, z - s.d * 0.7], [x1, y1 + band, z - s.d * 0.7],
-        [x1, y1 + band, z + s.d * 0.7], [x0, y0 + band, z + s.d * 0.7], shade(sand, 0.92));
-      for (const [dz, tint] of [[s.d * 0.7, 1.34], [-s.d * 0.7, 0.8]]) {
+      const t0 = ang(i), t1 = ang(i + 1);
+      const [x0, y0] = rIn(t0), [x1, y1] = rIn(t1);
+      const b0 = band(t0), b1 = band(t1);
+      // the soffit is the face she reads on the approach, so it is the lightest
+      const lit = 1.3 - Math.abs(i - SEG / 2) * 0.035;
+      b.quad('toon', [x0, y0, z + zf], [x1, y1, z + zf], [x1, y1, z - zf], [x0, y0, z - zf],
+        shade(sand, lit));
+      // extrados, stepped outward per segment so the top edge is ragged
+      const step = ((i * 7) % 3) * 0.05;
+      b.quad('toon', [x0, y0 + b0 + step, z - zf], [x1, y1 + b1 + step, z - zf],
+        [x1, y1 + b1 + step, z + zf], [x0, y0 + b0 + step, z + zf], shade(sand, 0.88));
+      // both cheeks, and a shallow flute cut into each so the face is not flat
+      for (const [dz, tint] of [[zf, 1.36], [-zf, 0.78]]) {
+        const mz = z + dz * 0.72;
         b.quad('toon', [x0, y0, z + dz], [x1, y1, z + dz],
-          [x1, y1 + band, z + dz], [x0, y0 + band, z + dz], shade(sand, tint));
+          [x1, y1 + b1 * 0.5, mz], [x0, y0 + b0 * 0.5, mz], shade(sand, tint));
+        b.quad('toon', [x0, y0 + b0 * 0.5, mz], [x1, y1 + b1 * 0.5, mz],
+          [x1, y1 + b1 + step, z + dz], [x0, y0 + b0 + step, z + dz], shade(sand, tint * 0.9));
       }
     }
-    // Slender legs, well outside the lane and tapering upward, so nothing
-    // heavy stands anywhere near the gap.
+    // Legs: four stacked strata, each narrower and slightly offset, with a
+    // scoured waist. Two tapers read as a moulded pier; strata read as rock.
     for (const side of [-1, 1]) {
       const lx = x + side * half;
-      b.taper('toon', lx, 0, z, 0.9, s.base * 0.62, s.d * 1.5, 0.2, shade(sand, 0.96));
-      b.taper('toon', lx, s.base * 0.62, z, 0.7, s.base * 0.4, s.d * 1.2, 0.14, shade(sand, 1.1));
-      // wind scour at the foot, which is what says eroded rather than built
-      b.dome('toon', lx, 0, z + s.d * 0.5, 0.5, 0.18, 7, 2, shade(sand, 0.84));
+      const strata = [[0.00, 1.15, 0.30], [0.26, 0.94, 0.16], [0.44, 1.02, 0.24], [0.68, 0.86, 0.32]];
+      for (const [t, w, h] of strata) {
+        const y = s.base * t;
+        b.taper('toon', lx + side * (t - 0.3) * 0.12, y, z, w, s.base * h, s.d * 1.5 * w * 0.9,
+          0.1 + t * 0.1, shade(sand, 0.9 + t * 0.34));
+        // the lip of each bed, catching light
+        b.box('toon', lx + side * (t - 0.3) * 0.12, y + s.base * h - 0.05, z,
+          w * 1.06, 0.06, s.d * 1.5 * w * 0.94, shade(sand, 1.42));
+      }
+      // wind scour at the foot and a drift of sand banked against it
+      b.taper('toon', lx, 0, z + s.d * 0.55, 1.35, 0.16, s.d * 0.9, 0.4, shade(sand, 0.82));
+      b.taper('toon', lx - side * 0.3, 0, z - s.d * 0.5, 0.9, 0.1, s.d * 0.6, 0.3, shade(sand, 0.76));
     }
-    // The clearance, lit hard along the whole springing line and both stones.
-    // This is the edge the zone is read from and it gets the brightest thing
-    // on the object.
-    b.box('emissive', x, s.base, z, s.w + 0.5, 0.1, s.d * 1.45, shade(pal.accentGlow, 1.15));
+    // The clearance, lit hard along the whole springing line. This is the edge
+    // the whole zone is read from, so it gets the brightest thing on the object.
+    b.box('emissive', x, s.base, z, s.w + 0.6, 0.11, s.d * 1.5, shade(pal.accentGlow, 1.2));
     for (const side of [-1, 1]) {
-      b.box('emissive', x + side * half * 0.86, s.base + rise * 0.32, z + s.d * 0.72,
-        0.16, 0.4, 0.05, shade(pal.accent, 0.7));
+      b.box('emissive', x + side * half * 0.9, s.base + 0.06, z + s.d * 0.78,
+        0.2, 0.5, 0.05, shade(pal.accent, 0.75));
     }
-    // sugar crust along the crown, the only thing above the arch
-    b.box('emissive', x, s.base + rise + band - 0.06, z, s.w * 0.5, 0.07, s.d * 0.5,
-      shade(pal.lane, 0.55));
+    // crust catching the sun along the crown, broken into three
+    for (const dx of [-0.5, 0.05, 0.52]) {
+      b.box('emissive', x + dx, s.base + rise + band(Math.PI / 2) - 0.05, z,
+        s.w * 0.22, 0.06, s.d * 0.5, shade(pal.lane, 0.6));
+    }
+    // rubble that came out of the opening, angular and half-buried
+    for (const [dx, dz, w2, h2] of [[-1.1, 0.6, 0.42, 0.2], [1.0, 0.44, 0.3, 0.14],
+      [0.5, 0.8, 0.24, 0.1]]) {
+      b.taper('toon', x + dx, 0, z + dz * s.d, w2, h2, w2 * 0.8, w2 * 0.35, shade(sand, 1.1));
+    }
   },
 
   /**
@@ -968,29 +1037,75 @@ const BLOCKS = {
    */
   spire(b, pal, x, z, s) {
     const sand = shade(pal.deck, 1.0);
-    const bands = [
-      [0.00, 0.86, 1.10], [0.16, 0.68, 0.96], [0.34, 0.52, 1.06],
-      [0.52, 0.44, 0.92], [0.66, 0.58, 1.14], [0.80, 0.5, 1.0],
+    // A HOODOO IS A STACK OF BEDS THAT DO NOT LINE UP.
+    //
+    // Six tapers on one axis gave a smooth waisted cone: the right outline and
+    // no surface. Rock erodes bed by bed, so each one here is its own width,
+    // its own height and its own small offset in x and z, with a hard lip
+    // where it overhangs the softer bed under it. The wander is what makes it
+    // look weathered rather than turned on a lathe, and it is authored, not
+    // random — the same spire every run.
+    const beds = [
+      // t,    width, tint, dx,    dz
+      [0.00, 0.94, 1.00, 0.00, 0.00],
+      [0.11, 0.72, 0.88, 0.04, -0.03],
+      [0.21, 0.80, 1.14, -0.03, 0.04],
+      [0.32, 0.58, 0.82, 0.05, 0.02],
+      [0.44, 0.50, 1.06, 0.02, -0.05],
+      [0.55, 0.62, 0.92, -0.05, 0.01],
+      [0.66, 0.46, 1.18, 0.03, 0.04],
+      [0.74, 0.54, 0.86, -0.02, -0.02],
     ];
-    for (let i = 0; i < bands.length - 1; i++) {
-      const [t0, w0, tint] = bands[i];
-      const [t1, w1] = bands[i + 1];
-      const y = s.h * t0;
-      const h = s.h * (t1 - t0);
-      b.taper('toon', x, y, z, s.w * w0, h, s.d * w0 * 0.92, (w0 - w1) * s.w * 0.5, shade(sand, tint));
+    for (let i = 0; i < beds.length; i++) {
+      const [t, w, tint, dx, dz] = beds[i];
+      const t1 = i + 1 < beds.length ? beds[i + 1][0] : 0.80;
+      const w1 = i + 1 < beds.length ? beds[i + 1][1] : 0.5;
+      const bx = x + dx * s.w, bz = z + dz * s.d;
+      const y = s.h * t, h = s.h * (t1 - t);
+      b.taper('toon', bx, y, bz, s.w * w, h * 0.82, s.d * w * 0.9, (w - w1) * s.w * 0.5,
+        shade(sand, tint));
+      // the overhanging lip: a hard bed of rock sitting on a soft one, which is
+      // the single detail that says hoodoo rather than column
+      const lipW = s.w * Math.max(w, w1) * 1.08;
+      b.taper('toon', bx, y + h * 0.82, bz, lipW, h * 0.18, s.d * Math.max(w, w1) * 1.0,
+        -(lipW - s.w * w1) * 0.5, shade(sand, tint * 1.3));
+      // undercut shadow under each lip, so the strata separate at any distance
+      b.box('toon', bx, y + h * 0.78, bz, s.w * w * 0.99, h * 0.06, s.d * w * 0.94,
+        shade(sand, tint * 0.6));
     }
-    // the capstone, wider than the neck under it: the whole read of a hoodoo
-    const capY = s.h * 0.8;
-    b.taper('toon', x, capY, z, s.w * 0.78, s.h * 0.13, s.d * 0.72, -0.12, shade(sand, 1.25));
-    b.dome('toon', x, capY + s.h * 0.13, z, s.w * 0.44, s.h * 0.1, 9, 3, shade(sand, 1.4));
-    // strata catching the light, and a crust line at the waist
-    for (const [t, w] of [[0.2, 0.66], [0.44, 0.5], [0.62, 0.56]]) {
-      b.box('emissive', x, s.h * t, z, s.w * w * 1.02, 0.06, s.d * w * 0.94, shade(pal.accentGlow, 0.42));
+    // The capstone: wider than the neck, tipped, with a corner gone.
+    const capY = s.h * 0.80;
+    b.taper('toon', x + 0.04, capY, z, s.w * 0.82, s.h * 0.09, s.d * 0.74, -0.14, shade(sand, 1.3));
+    b.box('toon', x + 0.04, capY + s.h * 0.09, z, s.w * 0.9, s.h * 0.05, s.d * 0.82, shade(sand, 1.46));
+    b.taper('toon', x + 0.02, capY + s.h * 0.14, z, s.w * 0.8, s.h * 0.06, s.d * 0.72, 0.22,
+      shade(sand, 1.22));
+    // the broken corner, and the block that came off it lying at the foot
+    b.tri('toon', [x - s.w * 0.45, capY + s.h * 0.14, z - s.d * 0.4],
+      [x - s.w * 0.1, capY + s.h * 0.14, z - s.d * 0.4],
+      [x - s.w * 0.45, capY + s.h * 0.02, z - s.d * 0.4], shade(sand, 0.7));
+    // vertical fluting down the tallest beds: rain cuts channels, and channels
+    // are what stop a taper from reading as a moulded object
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const r = s.w * 0.26;
+      b.box('toon', x + Math.cos(a) * r, s.h * 0.1, z + Math.sin(a) * r * 0.9,
+        0.09, s.h * 0.6, 0.09, shade(sand, 0.74));
     }
-    b.box('emissive', x, capY - 0.06, z, s.w * 0.62, 0.07, s.d * 0.6, shade(pal.lane, 0.5));
-    // rubble that came off it
-    for (const [dx, dz, r] of [[-0.8, 0.4, 0.26], [0.72, -0.5, 0.2], [0.5, 0.7, 0.16]]) {
-      b.dome('toon', x + dx, 0, z + dz, r, r * 0.7, 6, 2, shade(sand, 0.88));
+    // strata catching the light, on the lips rather than painted across the face
+    for (const [t, w] of [[0.21, 0.8], [0.44, 0.5], [0.66, 0.46]]) {
+      b.box('emissive', x, s.h * t + s.h * 0.09, z, s.w * w * 1.09, 0.05, s.d * w * 1.0,
+        shade(pal.accentGlow, 0.38));
+    }
+    b.box('emissive', x + 0.04, capY + s.h * 0.135, z, s.w * 0.5, 0.05, s.d * 0.5,
+      shade(pal.lane, 0.55));
+    // Talus: angular blocks, biggest nearest the base, half-buried in a drift.
+    b.taper('toon', x, 0, z, s.w * 1.5, 0.14, s.d * 1.7, 0.5, shade(sand, 0.86));
+    for (const [dx, dz, w2, h2, rot] of [[-0.92, 0.42, 0.52, 0.34, 0.3], [0.86, -0.3, 0.44, 0.26, -0.2],
+      [0.5, 0.78, 0.34, 0.2, 0.5], [-0.6, -0.62, 0.3, 0.16, -0.4], [1.0, 0.6, 0.22, 0.12, 0.1]]) {
+      b.at(x + dx, 0, z + dz * s.d, rot, 1, 1, 1);
+      b.taper('toon', 0, 0, 0, w2, h2, w2 * 0.8, w2 * 0.3, shade(sand, 1.06));
+      b.box('toon', 0, h2, 0, w2 * 0.7, h2 * 0.22, w2 * 0.56, shade(sand, 1.24));
+      b.pop();
     }
   },
 
