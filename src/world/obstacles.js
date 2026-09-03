@@ -716,7 +716,9 @@ const BARRIERS = {
   },
 
   log(b, pal, x, z, s) {
-    const bark = new THREE.Color('#6b4a2f');
+    // Same reason as the wreck: a literal brown cannot know how bright its
+    // zone is, and this one lies on a lit road.
+    const bark = shade(pal.deck, 0.7);
     // A TRUNK IS A ROUND BAR WITH END GRAIN, AND BARK IS RIDGES.
     //
     // Boxes and domes, never a `cyl()` inside an `at()`: the matrix stack only
@@ -857,7 +859,14 @@ const GATES = {
         b.cyl('toon', px, (s.base + s.h) * (0.15 + i * 0.18), z, 0.23, 0.23, 0.07, 9,
           shade(rope, 1.25));
       }
-      b.taper('toon', px, 0, z, 0.7, 0.12, 0.7, 0.16, shade(pal.deck, 1.05));
+      // On the open sea a base plate is a gold cone floating on the water. The
+      // post is simply driven into it instead, with a wash collar round it.
+      if (s.sea) {
+        b.cyl('toon', px, 0.02, z, 0.34, 0.28, 0.1, 10, shade(pal.lane, 0.8));
+        b.dome('toon', px, 0.0, z, 0.44, 0.06, 10, 2, shade(pal.lane, 0.62));
+      } else {
+        b.taper('toon', px, 0, z, 0.7, 0.12, 0.7, 0.16, shade(pal.deck, 1.05));
+      }
     }
     // headrope and footrope, both with a visible lay
     for (const [ry, r2] of [[s.base + s.h - 0.2, 0.13], [s.base, 0.1]]) {
@@ -1397,7 +1406,7 @@ const GATES = {
 
   /** Curtain of hanging vines. */
   vine(b, pal, x, z, s) {
-    const bark = new THREE.Color('#6b4a2f');
+    const bark = shade(pal.deck, 0.7);
     // A CURTAIN OF VINES IS LEAVES, AND LEAVES ARE THE WHOLE SILHOUETTE.
     //
     // Nine boxes with a dome on the end is a bead curtain. Each strand here is
@@ -1656,55 +1665,102 @@ const BLOCKS = {
 
   /** Half-sunk hull, listing. */
   wreck(b, pal, x, z, s) {
-    const hull = new THREE.Color('#7a5a4a');
-    b.at(x, 0, z, 0.22, 1, 1, 1);
-    // A HULL IS PLANKED, AND IT IS THE FRAMES INSIDE THAT SAY IT IS BROKEN.
+    // Hull from the PALETTE, not a literal. #8a6a52 is a perfectly good brown
+    // and the toon ramp took it to near black against a bright sea, which is
+    // the fault that once put grey slabs in every pastel zone in the game: a
+    // hardcoded colour cannot know how bright the zone it landed in is.
+    const hull = shade(pal.deck, 0.92);
+    // IT HAS TO LIST, AND IT HAS TO HAVE A MAST.
     //
-    // One taper and a box gave a wedge with a lid. A boat reads from a keel, a
-    // run of strakes that narrow towards the bow, and — once it is wrecked —
-    // the ribs showing through where the planking has gone. It stands 1.8 m
-    // clear of its box and that is fine: a block is 3.6 m against a 1.8 m
-    // apex, so its top is somewhere she can never be.
-    const L = s.d * 1.5, W = s.w * 1.05, H = s.h * 0.72;
-    b.box('toon', 0, 0, 0, 0.16, 0.3, L * 1.06, shade(hull, 0.7));
-    // strakes: five bands each side, tapering to the bow
+    // The previous pass built a correct little boat and it did not read: on
+    // The Shore everything is horizontal — the sea, the swell, the horizon —
+    // and a low hull lying flat among all that is one more horizontal line.
+    // Two changes fix it and neither is detail. It ROLLS, so its deck line
+    // cuts across every other line in the frame; and it carries a mast with a
+    // spar, because a vertical against a flat horizon is visible from as far
+    // away as the fog allows.
+    //
+    // The roll is baked into the points rather than asked of the matrix stack,
+    // which only turns around Y.
+    const ROLL = 0.42;
+    const ca = Math.cos(ROLL), sa = Math.sin(ROLL);
+    const YAW = 0.22;
+    const cy2 = Math.cos(YAW), sy2 = Math.sin(YAW);
+    // local (across, up, along) -> world, rolled then yawed
+    const P = (u, v, w) => {
+      const ru = u * ca - v * sa, rv = u * sa + v * ca;
+      return [x + ru * cy2 - w * sy2, rv, z + ru * sy2 + w * cy2];
+    };
+    const L = s.d * 1.9, W = s.w * 1.0, H = s.h * 0.5;
+    // keel
+    b.quad('toon', P(-0.08, 0, -L / 2), P(0.08, 0, -L / 2), P(0.08, 0.34, L / 2), P(-0.08, 0.34, L / 2),
+      shade(hull, 0.62));
+    // strakes: five bands a side, narrowing to the bow
     for (let i = 0; i < 5; i++) {
       const t0 = i / 5, t1 = (i + 1) / 5;
       for (const side of [-1, 1]) {
-        b.quad('toon', [side * W * 0.5 * (0.5 + t0 * 0.5), H * t0, -L / 2],
-          [side * W * 0.5 * (0.5 + t1 * 0.5), H * t1, -L / 2],
-          [side * W * 0.16 * (0.5 + t1 * 0.5), H * t1 * 0.9, L / 2],
-          [side * W * 0.16 * (0.5 + t0 * 0.5), H * t0 * 0.9, L / 2],
-          shade(hull, 0.86 + i * 0.12 + (side < 0 ? 0.12 : 0)));
-        // the lap between strakes, which is what makes planking read
-        b.box('toon', side * W * 0.5 * (0.5 + t1 * 0.5) * 0.9, H * t1, 0, 0.05, 0.05, L * 0.9,
-          shade(hull, 1.3));
+        const w0 = side * W * 0.5 * (0.45 + t0 * 0.55), w1 = side * W * 0.5 * (0.45 + t1 * 0.55);
+        const b0 = side * W * 0.14 * (0.45 + t0 * 0.55), b1 = side * W * 0.14 * (0.45 + t1 * 0.55);
+        b.quad('toon', P(w0, H * t0, -L / 2), P(w1, H * t1, -L / 2),
+          P(b1, H * t1 * 0.9 + 0.3, L / 2), P(b0, H * t0 * 0.9 + 0.3, L / 2),
+          shade(hull, 0.9 + i * 0.13 + (side < 0 ? 0.16 : 0)));
+        b.quad('toon', P(w1 * 0.97, H * t1, -L / 2), P(w1, H * t1, -L / 2),
+          P(b1, H * t1 * 0.9 + 0.3, L / 2), P(b1 * 0.97, H * t1 * 0.9 + 0.3, L / 2),
+          shade(hull, 1.45));
       }
     }
-    // frames showing where a strake has gone, on the side she passes
+    // frames showing where planking has gone, on the high side
     for (let i = -2; i <= 2; i++) {
-      b.box('toon', 0, H * 0.55, i * L * 0.18, W * 0.86, 0.07, 0.07, shade(hull, 1.4));
-      b.box('toon', -W * 0.42, H * 0.3, i * L * 0.18, 0.06, H * 0.5, 0.07, shade(hull, 1.15));
+      b.quad('toon', P(-W * 0.5, H * 0.5, i * L * 0.16), P(-W * 0.5, H * 0.5, i * L * 0.16 + 0.09),
+        P(-W * 0.1, H * 0.95, i * L * 0.16 + 0.09), P(-W * 0.1, H * 0.95, i * L * 0.16),
+        shade(hull, 1.5));
     }
-    // transom, deckhouse and the mast stump
-    b.box('toon', 0, 0, -L * 0.5, W * 0.5, H * 0.9, 0.1, shade(hull, 1.2));
-    b.box('toon', 0, H, 0, W * 0.5, s.h * 0.3, s.d * 0.8, shade(hull, 1.25));
-    b.box('toon', 0, H + s.h * 0.3, 0, W * 0.58, 0.08, s.d * 0.88, shade(hull, 1.5));
-    for (const sz of [-1, 1]) {
-      b.box('glass', 0, H + s.h * 0.14, sz * s.d * 0.4, W * 0.4, s.h * 0.12, 0.05,
-        shade(pal.edge, 1.0));
+    // deck, transom and a wheelhouse tipped with the roll
+    b.quad('toon', P(-W * 0.44, H * 0.98, -L * 0.4), P(W * 0.44, H * 0.98, -L * 0.4),
+      P(W * 0.14, H * 0.9, L * 0.42), P(-W * 0.14, H * 0.9, L * 0.42), shade(hull, 1.3));
+    b.quad('toon', P(-W * 0.44, 0, -L / 2), P(W * 0.44, 0, -L / 2),
+      P(W * 0.44, H, -L / 2), P(-W * 0.44, H, -L / 2), shade(hull, 1.1));
+    for (const [du, dv] of [[-0.3, 0], [0.3, 0], [-0.3, 0.5], [0.3, 0.5]]) {
+      b.quad('toon', P(W * du, H * (0.98 + dv * 0.5), -L * 0.1), P(W * (du + 0.25), H * (0.98 + dv * 0.5), -L * 0.1),
+        P(W * (du + 0.25), H * (0.98 + dv * 0.5), L * 0.16), P(W * du, H * (0.98 + dv * 0.5), L * 0.16),
+        shade(hull, 1.35));
     }
-    b.cyl('chrome', 0.2, s.h, 0, 0.14, 0.09, s.h * 0.5, 8, shade(pal.chrome, 0.8));
-    b.box('chrome', 0.2, s.h + s.h * 0.4, 0, 0.5, 0.05, 0.05, shade(pal.chrome, 1.0));
-    // rope over the side, and the lit nameboard
-    for (let i = 0; i < 4; i++) {
-      b.box('toon', W * 0.44, H * (0.6 - i * 0.12), L * (0.2 - i * 0.1), 0.06, 0.06, 0.2,
-        shade(pal.lane, 0.7));
+    b.quad('glass', P(-W * 0.28, H * 1.3, L * 0.16), P(W * 0.28, H * 1.3, L * 0.16),
+      P(W * 0.28, H * 1.6, L * 0.16), P(-W * 0.28, H * 1.6, L * 0.16), shade(pal.edge, 1.1));
+    // THE MAST. A raked spar with a crosstree, stays, and a lamp at the head:
+    // the vertical is the whole reason the thing is visible at distance.
+    const MH = s.h * 2.6;
+    for (const d of [-0.06, 0.06]) {
+      b.quad('toon', P(W * 0.06 + d, H * 1.0, -L * 0.06), P(W * 0.06 + d + 0.1, H * 1.0, -L * 0.06),
+        P(W * 0.06 + d + 0.08, MH, -L * 0.2), P(W * 0.06 + d, MH, -L * 0.2), shade(hull, 1.2));
     }
-    b.box('emissive', 0, H * 0.5, L * 0.5, W * 0.5, 0.14, 0.06, shade(pal.accentGlow, 1.2));
-    b.pop();
-    // the wet ring the swell keeps painting round it
-    b.dome('toon', x, 0, z, s.w * 0.82, 0.11, 10, 2, shade(pal.lane, 0.75));
+    b.quad('toon', P(-W * 0.5, MH * 0.72, -L * 0.14), P(-W * 0.5, MH * 0.72, -L * 0.14 + 0.1),
+      P(W * 0.6, MH * 0.72, -L * 0.14 + 0.1), P(W * 0.6, MH * 0.72, -L * 0.14), shade(hull, 1.4));
+    for (const side of [-1, 1]) {
+      b.quad('chrome', P(W * 0.08, MH * 0.96, -L * 0.19), P(W * 0.08 + 0.05, MH * 0.96, -L * 0.19),
+        P(side * W * 0.5 + 0.05, H * 0.9, L * (side > 0 ? 0.36 : -0.4)),
+        P(side * W * 0.5, H * 0.9, L * (side > 0 ? 0.36 : -0.4)), shade(pal.chrome, 0.75));
+    }
+    const head = P(W * 0.08, MH, -L * 0.2);
+    b.dome('emissive', head[0], head[1], head[2], 0.26, 0.3, 8, 3, shade(pal.accentGlow, 1.4));
+    // a torn sail still on the spar, and the lit nameboard on the transom
+    b.quad('toon', P(W * 0.08, MH * 0.7, -L * 0.14), P(W * 0.52, MH * 0.68, -L * 0.16),
+      P(W * 0.4, MH * 0.34, -L * 0.1), P(W * 0.1, MH * 0.4, -L * 0.08), shade(pal.kerb, 1.1));
+    b.quad('emissive', P(-W * 0.3, H * 0.5, -L * 0.51), P(W * 0.3, H * 0.5, -L * 0.51),
+      P(W * 0.3, H * 0.72, -L * 0.51), P(-W * 0.3, H * 0.72, -L * 0.51), shade(pal.accentGlow, 1.25));
+    // Foam where it sits in the water, and a slick behind it. On land it gets
+    // a wet apron instead, because a hull in a street is aground.
+    if (s.sea) {
+      for (let i = 0; i < 9; i++) {
+        const a2 = i * 0.7;
+        b.dome('toon', x + Math.cos(a2) * s.w * (0.5 + (i % 3) * 0.14), 0.02,
+          z + Math.sin(a2) * s.d * (0.7 + (i % 3) * 0.2), 0.32 - (i % 3) * 0.06, 0.1, 7, 2,
+          shade(pal.lane, 0.95));
+      }
+      b.dome('emissive', x, 0.03, z, s.w * 0.9, 0.05, 12, 2, shade(pal.lane, 0.34));
+    } else {
+      b.dome('toon', x, 0, z, s.w * 0.82, 0.11, 10, 2, shade(pal.lane, 0.75));
+    }
   },
 
   /** Shipping container stood on end. */
@@ -2232,7 +2288,7 @@ const BLOCKS = {
 
   /** Overgrown trunk with a canopy that hides the top. */
   tree(b, pal, x, z, s) {
-    const bark = new THREE.Color('#5e4128');
+    const bark = shade(pal.deck, 0.62);
     // A TREE IS A TRUNK THAT DIVIDES, AND FOLIAGE THAT CLUMPS.
     //
     // A cylinder with three domes on it is a lollipop. What reads as a tree is
@@ -2865,7 +2921,15 @@ const DEFAULTS = { barrier: 'fence', gate: 'gantry', block: 'pillar', hedge: 'he
  * @param {object} kit - `{ barrier, gate, block }` form names from the zone.
  */
 export function buildObstacle(b, pal, o, x, kit = DEFAULTS) {
-  const spec = o.spec || OBSTACLE[o.t];
+  // A copy, with the one piece of world state a form legitimately needs.
+  //
+  // Forms are pure functions of their gabarit, which is what keeps them
+  // reusable across zones — but a few of them stand on the ground, and on The
+  // Shore there is no ground. `sea` is passed rather than the whole props
+  // object precisely so it cannot grow into a back door: a form may know it is
+  // in water and nothing else. The spec itself is a shared constant and must
+  // never be written to.
+  const spec = { ...(o.spec || OBSTACLE[o.t]), sea: !!o.sea };
   const z = -o.z;
   // An obstacle on The Storm's upper deck is the same obstacle, moved up. The
   // whole form is translated rather than its `base` being raised, because the

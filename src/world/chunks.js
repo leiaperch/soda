@@ -1091,7 +1091,8 @@ export function buildChunk(rng, pattern, materials, zone) {
     return f === null ? (o.deck ? DECK_Y : 0) : FLOOR_Y[f];
   };
   for (const o of [...kept, ...extra]) {
-    buildObstacle(b, pal, { ...o, lift: liftOf(o) }, LANE_X[o.lane], zone.props.obstacleKit);
+    buildObstacle(b, pal, { ...o, lift: liftOf(o), sea: zone.props.road === 'sea' },
+      LANE_X[o.lane], zone.props.obstacleKit);
   }
   if (zone.props.floors) {
     // One sign per band, at the FIRST obstacle in it: signing the middle of a
