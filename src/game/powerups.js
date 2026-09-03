@@ -1,16 +1,21 @@
 import * as THREE from 'three';
 
 /**
- * Power-ups.
+ * The drinks.
  *
- * Three, deliberately. A runner's pickups only work if the player can tell
- * which one they grabbed from its colour alone, at speed, without reading
- * anything — so three strongly separated colours and three effects you feel
- * within half a second.
+ * SIX IN THE GAME, NEVER MORE THAN THREE IN A ZONE, and that distinction is
+ * the whole design. A runner's pickups only work if the player can tell which
+ * one she grabbed from its colour alone, at speed, without reading anything,
+ * and six cans on one road is six colours to learn while dodging. So the
+ * roster is six and `props.powers` decides which three a zone may spawn:
+ * variety across the game, legibility inside a run.
  *
  * Each one leans on a system the game already has rather than inventing a
- * parallel one: MAGNET moves CELLS, FIZZ intercepts the crash, DOUBLE scales
- * the charge a CELL is worth.
+ * parallel one, and no two lean on the same one:
+ *   MAGNET moves CELLS · DOUBLE scales what a CELL pays · FIZZ intercepts the
+ *   crash · SYRUP is the clock · STATIC is the trick chain · CREAM is the bar.
+ *
+ * A drink that is only "more of a good thing" would not earn a sixth colour.
  */
 export const POWERUPS = {
   magnet: {
@@ -33,6 +38,40 @@ export const POWERUPS = {
     duration: 11,
     colour: new THREE.Color('#ffd84a'),
     multiplier: 2,
+  },
+  /**
+   * The clock, not the speed. Everything slows, including her, so it buys
+   * READING TIME rather than distance: the one drink that helps on a stretch
+   * you cannot parse instead of one you cannot survive. Short, because slow
+   * motion outstays its welcome faster than any other effect in a runner.
+   */
+  syrup: {
+    label: 'SYRUP',
+    duration: 5,
+    colour: new THREE.Color('#ff6a1a'),
+    speed: 0.7,
+  },
+  /**
+   * The chain cannot break. Crashing still costs charge, speed and the clean
+   * run — it simply does not take the chain with it, which is the one loss in
+   * this game that a player actually mourns. It is worth nothing unless you
+   * are already carrying something, so it rewards the player who was pushing.
+   */
+  static: {
+    label: 'STATIC',
+    duration: 9,
+    colour: new THREE.Color('#9dff2e'),
+  },
+  /**
+   * The bar refills while it lasts. Deliberately weak per second: it is a
+   * rolling RELAY, not a free one, so it changes whether you can afford the
+   * long way round rather than removing the clock.
+   */
+  cream: {
+    label: 'CREAM',
+    duration: 7,
+    colour: new THREE.Color('#cfe4ff'),
+    regen: 9,
   },
 };
 
@@ -74,6 +113,23 @@ export class PowerState {
       else this.active.set(key, next);
     }
     return expired;
+  }
+
+  /**
+   * What the run speed is scaled by. FIZZ and SYRUP pull opposite ways and are
+   * multiplied rather than picked between, so holding both is a wash — which
+   * is the honest answer to "what happens if I drink them together".
+   */
+  speedFactor() {
+    let f = 1;
+    if (this.has('fizz')) f *= POWERUPS.fizz.speed;
+    if (this.has('syrup')) f *= POWERUPS.syrup.speed;
+    return f;
+  }
+
+  /** Charge per second CREAM is putting back. */
+  regen() {
+    return this.has('cream') ? POWERUPS.cream.regen : 0;
   }
 
   /** Multiplier a CELL is worth right now. */

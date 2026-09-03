@@ -144,23 +144,71 @@ const BARRIERS = {
    */
   dish(b, pal, x, z, s) {
     const shell = shade(pal.kerb, 0.92);
-    const r = s.w * 0.44;
-    // the bowl: an outer rim and an inner face set below it
-    b.cyl('toon', x, s.h * 0.3, z, r, r * 0.86, s.h * 0.4, 12, shell);
-    b.cyl('toon', x, s.h * 0.24, z, r * 0.84, r * 0.3, s.h * 0.3, 12, shade(pal.kerb, 0.6));
-    b.cyl('chrome', x, s.h * 0.7 - 0.08, z, r * 1.04, r * 1.04, 0.1, 12, shade(pal.chrome, 1.0));
-    // the feed horn on its tripod, leaning where it bent
-    b.box('chrome', x + s.w * 0.06, s.h * 0.4, z, 0.09, s.h * 0.42, 0.09, shade(pal.chrome, 0.85));
-    b.box('toon', x + s.w * 0.06, s.h * 0.82, z, 0.26, s.h * 0.18, 0.26, shade(pal.deck, 1.2));
-    b.box('emissive', x + s.w * 0.06, s.h * 0.86, z + 0.14, 0.16, 0.1, 0.05, shade(pal.accent, 1.0));
-    // the broken mount and its footing, tipped over behind
-    b.box('toon', x - s.w * 0.4, 0, z - s.d * 0.4, s.w * 0.3, s.h * 0.34, s.d * 0.9, shade(pal.deck, 1.0));
-    b.box('chrome', x - s.w * 0.4, s.h * 0.34, z - s.d * 0.4, s.w * 0.22, 0.1, s.d * 0.7, shade(pal.chrome, 0.8));
-    // torn coax, and a lit strip on the rim so it reads from the deck above
-    for (const [dx, len] of [[0.42, 0.4], [0.5, 0.26]]) {
-      b.box('chrome', x + s.w * dx, s.h * 0.16, z + s.d * 0.4, len, 0.06, 0.06, shade(pal.chrome, 0.7));
+    const r = s.w * 0.46;
+    // A DISH IS A BOWL, AND A BOWL IS RINGS.
+    //
+    // Two cylinders and a cone gave the outline of a dish and the surface of a
+    // bucket. This is built as five concentric rings stepping down into a
+    // throat, so the face actually dishes: each ring catches the light at a
+    // different angle and the shadow pools in the middle, which is the only
+    // reason a concave object reads as concave at all.
+    const RINGS = 5, SEG = 16;
+    const ringR = (i) => r * (1 - i / RINGS * 0.86);
+    const ringY = (i) => s.h * (0.72 - Math.pow(i / RINGS, 1.7) * 0.52);
+    for (let i = 0; i < RINGS; i++) {
+      const r0 = ringR(i), r1 = ringR(i + 1);
+      const y0 = ringY(i), y1 = ringY(i + 1);
+      for (let k = 0; k < SEG; k++) {
+        const a0 = (k / SEG) * Math.PI * 2, a1 = ((k + 1) / SEG) * Math.PI * 2;
+        // the dished face, lit brighter towards the rim
+        b.quad('toon',
+          [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0 * 0.8],
+          [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0 * 0.8],
+          [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1 * 0.8],
+          [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1 * 0.8],
+          shade(shell, 1.28 - i * 0.13 + (k % 2) * 0.03));
+        // panel seams: a real dish is petals bolted together
+        if (i === 0 && k % 2 === 0) {
+          b.box('chrome', x + Math.cos(a0) * r0 * 0.94, y0 - 0.03, z + Math.sin(a0) * r0 * 0.75,
+            0.05, 0.05, 0.05, shade(pal.chrome, 1.0));
+        }
+      }
     }
-    b.cyl('emissive', x, s.h * 0.7 - 0.02, z, r * 1.02, r * 1.02, 0.05, 12, shade(pal.accentGlow, 0.85));
+    // rim, and the back ribs that stop it being a sticker seen from behind
+    b.cyl('chrome', x, s.h * 0.72 - 0.06, z, r * 1.03, r * 1.03, 0.12, SEG, shade(pal.chrome, 1.0));
+    b.cyl('emissive', x, s.h * 0.72, z, r * 1.01, r * 1.01, 0.05, SEG, shade(pal.accentGlow, 0.9));
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + 0.4;
+      b.box('chrome', x + Math.cos(a) * r * 0.5, s.h * 0.24, z + Math.sin(a) * r * 0.4,
+        r * 0.9, 0.07, 0.07, shade(pal.chrome, 0.62));
+    }
+    // the feed on its tripod, bent where it came down
+    // The feed sits low enough that its beacon lands ON the box: at 0.36 the
+    // whole assembly stood 8 cm proud of the hitbox.
+    const fy = s.h * 0.18;
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI * 2 + 0.6;
+      b.quad('chrome',
+        [x + Math.cos(a) * r * 0.66, s.h * 0.34, z + Math.sin(a) * r * 0.52],
+        [x + Math.cos(a) * r * 0.66 + 0.05, s.h * 0.34, z + Math.sin(a) * r * 0.52],
+        [x + s.w * 0.07 + 0.05, fy + s.h * 0.42, z], [x + s.w * 0.07, fy + s.h * 0.42, z],
+        shade(pal.chrome, 0.78 + k * 0.08));
+    }
+    b.cyl('toon', x + s.w * 0.07, fy + s.h * 0.42, z, 0.16, 0.13, s.h * 0.2, 8, shade(pal.deck, 1.2));
+    b.dome('emissive', x + s.w * 0.07, s.h - 0.1, z, 0.11, 0.1, 7, 2, shade(pal.accent, 1.2));
+    // the mount it tore out of, and the bolts still in the road
+    b.taper('toon', x - s.w * 0.44, 0, z - s.d * 0.2, s.w * 0.36, s.h * 0.4, s.d * 1.1, 0.12,
+      shade(pal.deck, 1.0));
+    b.box('chrome', x - s.w * 0.44, s.h * 0.4, z - s.d * 0.2, s.w * 0.3, 0.09, s.d * 0.9,
+      shade(pal.chrome, 0.95));
+    for (const dx of [-0.58, -0.3]) {
+      b.cyl('chrome', x + s.w * dx, 0.02, z + s.d * 0.45, 0.07, 0.06, 0.16, 6, shade(pal.chrome, 0.8));
+    }
+    // torn coax, and the warning strip that carries from another floor
+    for (const [dx, dz, len] of [[0.44, 0.42, 0.5], [0.52, 0.2, 0.32], [0.34, 0.6, 0.26]]) {
+      b.box('chrome', x + s.w * dx, s.h * 0.1, z + s.d * dz, len, 0.06, 0.06, shade(pal.chrome, 0.7));
+    }
+    b.box('emissive', x, 0.03, z + s.d * 0.62, s.w * 0.95, 0.05, 0.14, shade(pal.accent, 0.6));
   },
 
   /**
@@ -500,38 +548,79 @@ const GATES = {
    * The bottom row of screens is the clearance, and it stops on `s.base`.
    */
   monitors(b, pal, x, z, s) {
+    // A WALL OF SCREENS IS READ FROM ITS BEZELS.
+    //
+    // The first pass was ten flat boxes with a lit rectangle stuck on each,
+    // which at any distance is a grid of dashes. A CRT is deep, its glass is
+    // proud of its case and its case tapers away behind it, so every screen
+    // here is four parts: a tapered shell, a bezel, a bulged face and its own
+    // shadow gap. That depth is what makes the wall read as objects rather
+    // than as a texture, and it is also what catches the light unevenly enough
+    // to look like it is flickering when it is not.
     for (const side of [-1, 1]) {
-      b.box('chrome', x + side * (s.w / 2 + 0.2), 0, z, 0.2, s.base + s.h, 0.28, shade(pal.chrome, 0.8));
+      const px = x + side * (s.w / 2 + 0.24);
+      b.box('chrome', px, 0, z, 0.22, s.base + s.h, 0.3, shade(pal.chrome, 0.78));
+      b.box('chrome', px, 0, z, 0.56, 0.12, 0.6, shade(pal.chrome, 0.95));
+      // cable trays climbing the posts
+      for (let i = 0; i < 5; i++) {
+        b.box('chrome', px, 0.4 + i * (s.base + s.h) * 0.19, z + 0.2, 0.3, 0.06, 0.1,
+          shade(pal.chrome, 0.6));
+      }
     }
-    b.box('toon', x, s.base + s.h - 0.3, z, s.w + 0.8, 0.3, 0.42, shade(pal.deck, 1.15));
-    // the frame the screens hang in, and the loom feeding them
-    b.box('chrome', x, s.base, z - 0.16, s.w + 0.2, s.h * 0.92, 0.1, shade(pal.chrome, 0.7));
-    for (let i = 0; i < 4; i++) {
-      b.box('chrome', x - s.w * 0.36 + i * s.w * 0.24, s.base + s.h * 0.9, z - 0.2, 0.06, s.h * 0.1, 0.06,
-        shade(pal.chrome, 0.6));
+    // the truss the rack hangs off
+    b.box('toon', x, s.base + s.h - 0.34, z, s.w + 0.9, 0.34, 0.5, shade(pal.deck, 1.15));
+    b.box('chrome', x, s.base + s.h, z, s.w + 0.7, 0.1, 0.56, shade(pal.chrome, 0.95));
+    for (let i = -2; i <= 2; i++) {
+      b.box('chrome', x + i * s.w * 0.22, s.base + s.h * 0.86, z, 0.07, s.h * 0.16, 0.07,
+        shade(pal.chrome, 0.7));
     }
-    // Two rows of five. The lower row sits exactly on the clearance line: the
-    // whole point of this zone is knowing which floor you are on, and a gate
-    // that lies about where its bottom edge is would poison that.
-    const sw = s.w * 0.17, sh = s.h * 0.38;
+    // The screens. Two rows of five, and the bottom row's glass sits exactly
+    // on the clearance line: this zone is about knowing which floor you are on
+    // and a gate that lies about its own bottom edge would poison that.
+    const sw = s.w * 0.17, sh = s.h * 0.38, dep = s.d * 0.7;
     for (let row = 0; row < 2; row++) {
       for (let i = 0; i < 5; i++) {
         const mx = x - s.w * 0.38 + i * s.w * 0.19;
-        const my = s.base + row * (sh + 0.1);
-        b.box('toon', mx, my, z, sw, sh, s.d * 0.6, shade(pal.deck, 1.3));
-        // snow on most of them, one dead, one holding a colour bar
-        const dead = (row * 5 + i) === 3;
-        const bar = (row * 5 + i) === 7;
-        b.box('emissive', mx, my + sh * 0.14, z + s.d * 0.32, sw * 0.78, sh * 0.6, 0.05,
-          shade(dead ? pal.deck : bar ? pal.accent : pal.lane, dead ? 0.4 : bar ? 0.9 : 0.66));
+        const my = s.base + row * (sh + 0.12);
+        const n = row * 5 + i;
+        // case: tapers away from the viewer, which is the CRT profile
+        b.taper('toon', mx, my, z - dep * 0.1, sw * 0.94, sh, dep * 0.9, sw * 0.34,
+          shade(pal.deck, 1.06 + (n % 3) * 0.08));
+        // bezel, proud of the case on all four sides
+        b.box('toon', mx, my + sh * 0.06, z + dep * 0.34, sw, sh * 0.86, 0.1,
+          shade(pal.deck, 1.42));
+        b.box('toon', mx, my + sh * 0.06, z + dep * 0.3, sw * 1.06, sh * 0.9, 0.06,
+          shade(pal.deck, 0.72));
+        const dead = n === 3, bar = n === 7;
+        // the glass, bulged: a middle panel proud of two chamfers
+        const gw = sw * 0.74, gh = sh * 0.6, gy = my + sh * 0.16;
+        const tint = dead ? pal.deck : bar ? pal.accent : pal.lane;
+        const lit = dead ? 0.32 : bar ? 0.95 : 0.7;
+        b.box('emissive', mx, gy, z + dep * 0.44, gw, gh, 0.04, shade(tint, lit));
+        for (const sx of [-1, 1]) {
+          b.quad('emissive',
+            [mx + sx * gw * 0.5, gy, z + dep * 0.44], [mx + sx * gw * 0.62, gy, z + dep * 0.38],
+            [mx + sx * gw * 0.62, gy + gh, z + dep * 0.38], [mx + sx * gw * 0.5, gy + gh, z + dep * 0.44],
+            shade(tint, lit * 0.7));
+        }
+        b.quad('emissive', [mx - gw * 0.5, gy + gh, z + dep * 0.44], [mx + gw * 0.5, gy + gh, z + dep * 0.44],
+          [mx + gw * 0.5, gy + gh * 1.12, z + dep * 0.38], [mx - gw * 0.5, gy + gh * 1.12, z + dep * 0.38],
+          shade(tint, lit * 0.55));
         if (!dead) {
-          // scanline, offset per screen so the wall never pulses as one thing
-          b.box('emissive', mx, my + sh * (0.2 + ((i * 3 + row) % 4) * 0.12), z + s.d * 0.34,
-            sw * 0.8, 0.05, 0.04, shade(pal.accentGlow, 1.0));
+          // one bright scanline per screen, at its own height
+          b.box('emissive', mx, gy + gh * (0.15 + ((i * 3 + row) % 4) * 0.2), z + dep * 0.47,
+            gw * 0.96, 0.05, 0.03, shade(pal.accentGlow, 1.15));
+        }
+        // a knob and a vent slot, the details that say hardware
+        b.cyl('chrome', mx + sw * 0.3, my + sh * 0.1, z + dep * 0.42, 0.04, 0.04, 0.05, 6,
+          shade(pal.chrome, 0.9));
+        for (let v = 0; v < 3; v++) {
+          b.box('toon', mx, my + sh * 0.86 + v * 0.05, z - dep * 0.1, sw * 0.5, 0.02, dep * 0.5,
+            shade(pal.deck, 0.7));
         }
       }
     }
-    b.box('emissive', x, s.base, z, s.w * 0.96, 0.08, s.d * 0.7, shade(pal.accentGlow, 1.1));
+    b.box('emissive', x, s.base, z, s.w * 0.96, 0.08, s.d * 0.75, shade(pal.accentGlow, 1.15));
   },
 
   /**
@@ -948,43 +1037,80 @@ const BLOCKS = {
    */
   transformer(b, pal, x, z, s) {
     const tank = pal.facades[3];
-    b.taper('toon', x, 0, z, s.w * 0.98, 0.28, s.d * 1.3, 0.08, shade(pal.deck, 1.15));
-    const body = s.h * 0.5;
-    b.box('toon', x, 0.28, z, s.w * 0.62, body, s.d * 1.0, shade(tank, 1.1));
-    // cooling fins down both flanks, the horizontal rhythm
-    for (let i = 0; i < 7; i++) {
-      const fy = 0.36 + i * body * 0.125;
-      for (const side of [-1, 1]) {
-        b.box('toon', x + side * s.w * 0.36, fy, z, s.w * 0.12, body * 0.08, s.d * 0.86,
-          shade(tank, 0.8 + (i % 2) * 0.25));
+    // A TRANSFORMER IS FINS, AND FINS ARE GAPS.
+    //
+    // Seven thin boxes stuck on the flanks of a bigger box read as stripes.
+    // Real radiator banks stand OFF the tank on headers, with daylight between
+    // every fin, and that gap is the whole silhouette: from another floor the
+    // thing is a comb, and a comb is nameable where a striped box is not.
+    b.taper('toon', x, 0, z, s.w * 1.0, 0.3, s.d * 1.35, 0.08, shade(pal.deck, 1.15));
+    b.box('chrome', x, 0.3, z, s.w * 0.94, 0.1, s.d * 1.25, shade(pal.chrome, 0.7));
+    const body = s.h * 0.46, y0 = 0.4;
+    b.box('toon', x, y0, z, s.w * 0.5, body, s.d * 0.9, shade(tank, 1.12));
+    // corrugation on the tank itself, so it is not a plain slab behind the fins
+    for (let i = -2; i <= 2; i++) {
+      b.box('toon', x + i * s.w * 0.09, y0 + 0.05, z + s.d * 0.45, 0.05, body * 0.9, 0.06,
+        shade(tank, 1.34));
+    }
+    // radiator banks: headers top and bottom, free-standing fins between them
+    for (const side of [-1, 1]) {
+      const hx = x + side * s.w * 0.34;
+      b.box('chrome', hx, y0 + 0.06, z, 0.16, 0.12, s.d * 0.86, shade(pal.chrome, 0.85));
+      b.box('chrome', hx, y0 + body - 0.16, z, 0.16, 0.12, s.d * 0.86, shade(pal.chrome, 0.85));
+      for (let i = 0; i < 6; i++) {
+        const fz = z - s.d * 0.36 + i * s.d * 0.145;
+        b.box('toon', hx, y0 + 0.16, fz, 0.3, body - 0.32, 0.07, shade(tank, 0.82 + (i % 2) * 0.3));
+        b.box('chrome', hx + side * 0.15, y0 + 0.16, fz, 0.04, body - 0.32, 0.075,
+          shade(pal.chrome, 0.6));
       }
     }
-    // the lid, and three insulators standing on it
-    b.box('chrome', x, 0.28 + body, z, s.w * 0.68, 0.1, s.d * 1.06, shade(pal.chrome, 0.95));
+    // the lid, its gasket bolts, and the conservator drum lying across the back
+    b.box('chrome', x, y0 + body, z, s.w * 0.58, 0.1, s.d * 0.96, shade(pal.chrome, 0.95));
+    for (let i = -2; i <= 2; i++) {
+      b.cyl('chrome', x + i * s.w * 0.11, y0 + body + 0.1, z + s.d * 0.4, 0.04, 0.04, 0.06, 6,
+        shade(pal.chrome, 1.1));
+    }
+    b.cyl('toon', x - s.w * 0.3, y0 + body + 0.28, z, 0.2, 0.2, s.w * 0.6, 8, shade(tank, 0.9));
+    // Bushings: stacked petticoats, wide at the bottom, and that stepped
+    // profile is what says high voltage rather than "three little towers".
     for (let i = 0; i < 3; i++) {
-      const ix = x + (i - 1) * s.w * 0.22;
-      const ih = s.h * 0.26;
-      for (let k = 0; k < 4; k++) {
-        b.cyl('glass', ix, 0.38 + body + k * ih * 0.25, z, 0.16 - k * 0.015, 0.14 - k * 0.015, ih * 0.22, 8,
-          shade(pal.edge, 1.1 - k * 0.06));
+      const ix = x + (i - 1) * s.w * 0.19;
+      const ih = s.h * 0.3;
+      const base = y0 + body + 0.1;
+      b.cyl('chrome', ix, base, z, 0.13, 0.11, 0.1, 8, shade(pal.chrome, 1.0));
+      for (let k = 0; k < 6; k++) {
+        const t = k / 6;
+        b.cyl('glass', ix, base + 0.1 + t * ih * 0.86, z, 0.17 - t * 0.05, 0.11 - t * 0.03,
+          ih * 0.09, 8, shade(pal.edge, 1.15 - t * 0.1));
+        b.cyl('glass', ix, base + 0.1 + t * ih * 0.86 + ih * 0.09, z, 0.1 - t * 0.02,
+          0.1 - t * 0.02, ih * 0.06, 8, shade(pal.edge, 0.9));
       }
-      b.cyl('chrome', ix, 0.38 + body + ih, z, 0.07, 0.06, 0.2, 6, shade(pal.chrome, 1.0));
-      b.dome('emissive', ix, 0.38 + body + ih + 0.2, z, 0.1, 0.1, 6, 2, shade(pal.accent, 1.15));
+      b.cyl('chrome', ix, base + 0.1 + ih, z, 0.06, 0.05, 0.16, 6, shade(pal.chrome, 1.05));
+      b.dome('emissive', ix, base + 0.28 + ih, z, 0.09, 0.09, 6, 2, shade(pal.accent, 1.2));
+      // the line it used to carry, snapped and hanging
+      if (i !== 1) {
+        b.box('chrome', ix, base + 0.2 + ih, z + (i - 1) * 0.3, 0.05, 0.05, s.d * 0.5,
+          shade(pal.chrome, 0.7));
+      }
     }
-    // the cage, bent open on the side she passes
+    // cage: uprights, a rail, and the panel bent open where something got in
     for (const side of [-1, 1]) {
       for (let i = 0; i < 5; i++) {
-        b.box('chrome', x + side * s.w * 0.5, 0.28, z - s.d * 0.5 + i * s.d * 0.25, 0.05, s.h * 0.62, 0.05,
-          shade(pal.chrome, 0.65));
+        b.box('chrome', x + side * s.w * 0.52, 0.3, z - s.d * 0.5 + i * s.d * 0.25, 0.05,
+          s.h * 0.58, 0.05, shade(pal.chrome, 0.6));
       }
     }
-    b.box('chrome', x, 0.28 + s.h * 0.62, z, s.w * 1.02, 0.06, s.d * 1.04, shade(pal.chrome, 0.7));
-    b.quad('chrome', [x + s.w * 0.5, 0.28, z + s.d * 0.5], [x + s.w * 0.86, 0.28, z + s.d * 0.9],
-      [x + s.w * 0.86, 0.28 + s.h * 0.5, z + s.d * 0.9], [x + s.w * 0.5, 0.28 + s.h * 0.6, z + s.d * 0.5],
+    b.box('chrome', x, 0.3 + s.h * 0.58, z, s.w * 1.06, 0.05, s.d * 1.06, shade(pal.chrome, 0.66));
+    b.quad('chrome', [x + s.w * 0.52, 0.3, z + s.d * 0.5], [x + s.w * 0.9, 0.3, z + s.d * 0.95],
+      [x + s.w * 0.9, 0.3 + s.h * 0.46, z + s.d * 0.95], [x + s.w * 0.52, 0.3 + s.h * 0.56, z + s.d * 0.5],
       shade(pal.chrome, 0.5));
-    // the hazard plate, and the arc it is still throwing
-    b.box('emissive', x, 0.28 + body * 0.4, z + s.d * 0.52, s.w * 0.3, 0.26, 0.05, shade(pal.accentGlow, 0.9));
-    b.box('emissive', x - s.w * 0.22, 0.38 + body + s.h * 0.2, z, 0.05, 0.3, 0.05, shade(pal.lane, 1.3));
+    // hazard plate and the arc it is still throwing between two bushings
+    b.box('emissive', x, y0 + body * 0.4, z + s.d * 0.5, s.w * 0.26, 0.24, 0.05,
+      shade(pal.accentGlow, 0.95));
+    for (const [dx, dy] of [[-0.1, 0.06], [0.04, 0.14], [-0.02, 0.22]]) {
+      b.box('emissive', x + s.w * dx, y0 + body + s.h * (0.34 + dy), z, 0.04, 0.12, 0.04,
+        shade(pal.lane, 1.35));
+    }
   },
 
   /**

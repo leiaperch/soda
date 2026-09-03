@@ -232,7 +232,15 @@ export class Game {
     this.player.stunned = TUNE.hitStun;
     this.run.clean = false;
     this.shake = 0.55;
-    // The chain dies unbanked. That is the whole tension of carrying a big one.
+    // The chain dies unbanked. That is the whole tension of carrying a big one,
+    // and STATIC is the one thing that suspends it: the crash still costs
+    // charge, speed and the clean run, it just does not take the chain too.
+    if (this.power.has('static')) {
+      this.hud.toast('STATIC — CHAIN HELD', 'relay');
+      this.hud.showTrick(this.tricks, null);
+      this.sfx.relay();
+      return;
+    }
     const lost = this.tricks.drop();
     this.hud.toast(lost > 200 ? `CHAIN LOST ${lost}` : 'CRASH', 'warn');
     this.hud.showTrick(this.tricks, null);
@@ -878,6 +886,9 @@ export class Game {
       // one without either of them being simply worse.
       const zoneTax = this.branchRules.drain ?? this.zone.props.drain ?? 1;
       this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * dt;
+      // CREAM: a rolling checkpoint rather than a free one.
+      const regen = this.power.regen();
+      if (regen) this.charge = Math.min(TUNE.maxCharge, this.charge + regen * dt);
 
       // Power-ups tick before movement so a magnet grabbed this frame already
       // pulls, and an expiring FIZZ stops shielding on the frame it ends.
@@ -899,7 +910,13 @@ export class Game {
       }
       this.player.shielded = this.power.has('fizz');
 
-      this.player.update(dt, this.speed, this.time);
+      // SYRUP scales the rate the WORLD arrives at, and nothing else. The run
+      // speed itself is untouched, which means the drain keeps running at the
+      // full rate while she covers less ground: the drink buys reading time and
+      // pays for it in clock. That trade is the reason it is worth a colour.
+      const flow = this.speed * this.power.speedFactor() / (this.power.has('fizz')
+        ? POWERUPS.fizz.speed : 1);
+      this.player.update(dt, flow, this.time);
 
       // Gravity does the rest of the work on a slope: you bleed speed on the
       // way up and get it back on the way down. Nothing else needed to make a

@@ -202,6 +202,7 @@ export const ZONES = [
     name: 'THE GREENHOUSE',
     subtitle: 'THE BIODOME WENT FERAL',
     mechanic: 'Hedges block every lane. Only a bloom pad clears them.',
+    introduces: 'syrup',
     built: true,
     length: 2100,
     track: 'audio/glitter-and-grit.mp3',
@@ -229,6 +230,7 @@ export const ZONES = [
     facades: ['#8fbf78', '#d8e0b0', '#6fa860', '#c8d89a', '#a8cc84', '#e8e8c8'],
     props: {
       road: 'street',
+      powers: ['fizz', 'double', 'syrup'],
       obstacleKit: { barrier: 'log', gate: 'vine', block: 'tree' },
       // A glass vault over the track and beds spilling onto the kerb: the
       // silhouette has to change, not just the colour.
@@ -275,6 +277,7 @@ export const ZONES = [
     props: {
       // A catwalk in vacuum with holes in it. No kerb, no deck, no ground.
       road: 'catwalk',
+      powers: ['magnet', 'fizz', 'syrup'],
       obstacleKit: { barrier: 'crate', gate: 'beam', block: 'container' },
       arches: 'gantry', archEvery: 26, archTint: ['#7fd0ff', '#ffb02e'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0.2,
@@ -290,6 +293,7 @@ export const ZONES = [
     name: 'THE ARCADE',
     subtitle: 'YOU ARE THE BALL',
     mechanic: 'Chain the bumpers. Nothing else keeps the bar alive here.',
+    introduces: 'static',
     built: true,
     length: 2200,
     track: 'audio/electronicore-finale.mp3',
@@ -325,6 +329,7 @@ export const ZONES = [
       // The Arcade had the Ring's three forms exactly, so the loudest zone in
       // the game was furnished by the tutorial. Its blocks become bumpers, so
       // `crane` is only ever seen where a bumper would be wrong.
+      powers: ['double', 'fizz', 'static'],
       obstacleKit: { barrier: 'cabinet', gate: 'marquee', block: 'crane' },
       arches: 'round', archEvery: 12, archTint: ['#ff2ee0', '#00e5ff', '#ffe14a'],
       lampEvery: 9, streetEvery: 9, billboardChance: 1,
@@ -339,6 +344,7 @@ export const ZONES = [
     name: 'THE HEIGHTS',
     subtitle: 'ABOVE THE WEATHER',
     mechanic: 'The deck is missing. Be in a lane that still exists.',
+    introduces: 'cream',
     built: true,
     // Shorter and slower. It was the longest zone in the game bar the finale,
     // run on the narrowest road, with the drop on both sides.
@@ -372,6 +378,7 @@ export const ZONES = [
       // used to run is the object the code itself calls the ugliest in the
       // game on this palette, and a white gate against a white sky needs
       // diagonals to survive at all.
+      powers: ['magnet', 'syrup', 'cream'],
       obstacleKit: { barrier: 'cable', gate: 'strut', block: 'pylon' },
       arches: 'none', archEvery: 0, archTint: ['#ff7ac6', '#ffffff'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0,
@@ -412,6 +419,7 @@ export const ZONES = [
       // A sealed tube: walls and a ceiling. With no sky and no skyline the
       // only thing left to read is the track, which changes everything.
       road: 'tube',
+      powers: ['double', 'magnet', 'static'],
       // No obstacleKit, on purpose. In a flight zone every obstacle in every
       // pattern is a `panel` — buildChunk rewrites them all to panelSpec — so
       // a kit here is read by nothing at all. It used to name three borrowed
@@ -473,6 +481,7 @@ export const ZONES = [
       relayEvery: 4,
       
       drain: 1.3,
+      powers: ['fizz', 'syrup', 'cream'],
       obstacleKit: { barrier: 'crate', gate: 'pipe', block: 'press' },
       arches: 'none', archEvery: 0, archTint: ['#ff2e93', '#6ff0d4'],
       lampEvery: 0, streetEvery: 0, billboardChance: 0.25,
@@ -522,6 +531,7 @@ export const ZONES = [
     props: {
       road: 'street',
       storm: true,
+      powers: ['magnet', 'static', 'cream'],
       obstacleKit: { barrier: 'hoard', gate: 'skywalk', block: 'mast' },
       // Sparse on purpose. At one gantry every 12 m the mint emissive stacked
       // into a solid wall of light the moment she was airborne and looking
@@ -588,6 +598,7 @@ export const ZONES = [
       // which is the only sphere in the game and the most on-brief object in
       // it. `slab` in particular is built from pal.road at 2.4x and clips to
       // white on a road this light.
+      powers: ['double', 'fizz', 'syrup'],
       obstacleKit: { barrier: 'kerbstack', gate: 'scanner', block: 'gumball' },
       // The arches ARE the corner. A bend drawn only in the road surface is
       // read late, because the road is mostly below the horizon; a line of
@@ -648,6 +659,7 @@ export const ZONES = [
       // back to. Each branch then keeps the family and changes its colours,
       // because two branches that swap obstacle sets read as two zones spliced
       // together rather than as one road that divided.
+      powers: ['magnet', 'cream', 'static'],
       obstacleKit: { barrier: 'barrels', gate: 'signal', block: 'booth' },
       // The two tints are the branches' own colours, and forkGates() reads
       // them straight out of this list: the gate over each branch is lit in
@@ -702,7 +714,12 @@ export const ZONES = [
     // same trade THE VAULT makes for its altitudes. It buys the zone a second
     // free axis, and it is the only reason the vertical is hers rather than
     // something the terrain hands her at a ramp.
-    physics: { startSpeed: 19, maxSpeed: 33, speedRamp: 0.16 },
+    //
+    // Fast, and it can afford to be. 19 to 33 was set when the answer to a row
+    // might have been a lane change and the reading distance mattered; the
+    // answer is now one gesture off a sign lit 24 m out, which is the same
+    // decision at any speed. Slow was not tension, it was just slow.
+    physics: { startSpeed: 24, maxSpeed: 44, speedRamp: 0.26 },
     floors: true,
     // NOT THE STORM'S VIOLET. The first pass was a dark violet city lit with
     // magenta and cyan, which is The Storm's palette with the accents swapped,
@@ -741,6 +758,7 @@ export const ZONES = [
       // barrier in the game, the monitors the only gate built as a grid, and
       // the transformer a stack of fins. All three were chosen to survive being
       // seen from another floor, which here is most of the time.
+      powers: ['syrup', 'cream', 'static'],
       obstacleKit: { barrier: 'dish', gate: 'monitors', block: 'transformer' },
       // No arches: they would land inside the road above.
       arches: 'none', archEvery: 0, archTint: ['#9dff2e', '#f0ffd0'],
@@ -801,6 +819,7 @@ facades: ['#16203a', '#1d2b48', '#101a30', '#243352', '#0e1728', '#1a2440'],
     props: {
       road: 'street',
       walls: true,
+      powers: ['magnet', 'double', 'fizz'],
       obstacleKit: { barrier: 'slab', gate: 'pipe', block: 'press' },
       arches: 'gantry', archEvery: 14, archTint: ['#ff5a1a', '#ff2e5a', '#ffd98a'],
       lampEvery: 8, streetEvery: 7, billboardChance: 0.9,
