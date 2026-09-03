@@ -15,6 +15,17 @@ export const LANE_X = [-2.6, 0, 2.6];
 // just a lower patch of sky: you could not drop, roll, and take off again,
 // which is the one thing a flight zone should let you do.
 export const ALT_Y = [0, 2.2, 4.0];
+/**
+ * THE STACK: three real roads, one over the other.
+ *
+ * Not the flight grid. `ALT_Y` is three heights of open air with nothing under
+ * them, reached by tilting; these are three SURFACES, each with a deck, kerbs,
+ * markings and its own obstacles, and she is standing on whichever one she
+ * chose. The spacing is the deck and the trench the engine already had, so a
+ * floor change is a real six-metre move and all three are on screen at once.
+ */
+export const FLOOR_Y = [-5.2, 0, 6.4];
+
 export const ROAD_HALF = 5.6;
 export const CHUNK_LEN = 48;
 

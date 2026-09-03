@@ -96,6 +96,9 @@ export class Game {
     // Flight replaces the whole vertical model: no gravity, no ground, and up
     // and down become a second axis of lanes.
     this.player.flying = !!zone.props.flight;
+    // THE STACK does the same trade, but keeps a floor under her: three roads
+    // instead of three altitudes.
+    this.player.floors = !!zone.props.floors;
 
     // Elevation. The shader displaces the world; this keeps the courier and
     // the camera on the same curve.
@@ -709,7 +712,11 @@ export class Game {
     // Falling off the upper deck, decided once against every span rather than
     // once per span. Running out of deck is the entire risk of being up there,
     // so it also pays: you kept it for as long as you kept it.
-    if (p.floor !== 0) {
+    // Not on THE STACK: there the floor is hers, not a span she is standing on
+    // the end of, and this ran every frame and put her back on the middle road
+    // while the player code put her straight back up. The visible symptom was
+    // a camera that stayed on the road below her.
+    if (p.floor !== 0 && !this.zone.props.floors) {
       const held = this.track.nearFeatures(p.z, 70)
         .some((f) => (f.kind === 'deck' || f.kind === 'dive') && p.z <= f.startZ && p.z >= f.endZ);
       if (!held) {
@@ -805,12 +812,19 @@ export class Game {
     // below road level and inside the wall behind her — the shot was solid
     // geometry. Keeping most of the drop means it looks down INTO the trench,
     // which is the angle that sells the descent anyway.
-    const lift = p.floor < 0 ? -p.floor * 0.78 : 0;
+    // The trench lift is The Core's, and it must not apply to THE STACK. There
+    // the lowest road is a road, not a hole to peer into: keeping most of the
+    // drop parked the camera eight metres over her head and the floor change
+    // read as the world moving rather than as her moving.
+    const lift = (p.floor < 0 && !this.zone.props.floors) ? -p.floor * 0.78 : 0;
     const ground = hillAt(p.z + 7.8, this.hill) + p.floor + lift;
     const air = p.y - p.floor;
     const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + air * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
-    cam.position.y += (targetY - cam.position.y) * Math.min(1, 5 * dt);
+    // Faster on a zone where the floor itself moves. At 5 the camera took the
+    // best part of a second to arrive, so the road she had just left was still
+    // filling the frame while she was already somewhere else.
+    cam.position.y += (targetY - cam.position.y) * Math.min(1, (this.zone.props.floors ? 11 : 5) * dt);
     cam.position.z = p.z + 7.8;
 
     if (this.shake > 0) {

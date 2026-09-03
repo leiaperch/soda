@@ -694,34 +694,34 @@ export const ZONES = [
     id: 'stack',
     name: 'THE STACK',
     subtitle: 'THREE ROADS, ONE OVER THE OTHER',
-    mechanic: 'Three floors. The ramp puts you up, the trench takes you down, and both run out.',
+    mechanic: 'Three roads stacked. Up and down move you a whole floor, whenever you want.',
     built: true,
     length: 2600,
     track: 'audio/static.mp3',
-    // Slower than its neighbours on purpose. The zone asks WHICH FLOOR before
-    // it asks anything else, and a floor you arrive on before you have read it
-    // is a coin flip. The Storm buys that time with low gravity; this buys it
-    // with speed, because the launch and the climb out of the trench are both
-    // tuned against full gravity and cannot be softened without breaking them.
-    physics: { startSpeed: 19, maxSpeed: 32, speedRamp: 0.16 },
+    // Up and down are the floor, so there is no jump and no slide here, the
+    // same trade THE VAULT makes for its altitudes. It buys the zone a second
+    // free axis, and it is the only reason the vertical is hers rather than
+    // something the terrain hands her at a ramp.
+    physics: { startSpeed: 19, maxSpeed: 33, speedRamp: 0.16 },
+    floors: true,
     // Dead broadcast: a signal that stopped and left the colour bars up. Cold
-    // blue-black, with the magenta and cyan of a mistracked tape, which is the
+    // blue-black with the magenta and cyan of a mistracked tape, which is the
     // Y2K reading of the word rather than the grey-noise one.
     sky: [
       [0.00, '#05060f'], [0.22, '#111a34'], [0.44, '#24356a'],
       [0.62, '#4a4f9c'], [0.80, '#8f6fc0'], [1.00, '#d8b8e8'],
     ],
-    fog: { color: '#24356a', near: 140, far: 290 },
-    sun: { color: '#dfe8ff', intensity: 1.7 },
-    hemi: { sky: '#8fa8e8', ground: '#0a0c1a', intensity: 0.46 },
+    fog: { color: '#24356a', near: 150, far: 320 },
+    sun: { color: '#dfe8ff', intensity: 1.8 },
+    hemi: { sky: '#8fa8e8', ground: '#0a0c1a', intensity: 0.5 },
     backdrop: { sun: '#eef2ff', halo: '#7f8fe8', arc: '#c8a8f0', planet: '#1a2044' },
     colors: {
-      // Three floors means three surfaces at once on screen, so the road is
-      // the mid tone and the deck and the trench read against it from above
-      // and below. Lighter than it looks written down: the toon ramp halves it.
-      road: '#5a6398',
+      // Three surfaces are on screen at once, so the road has to be a clear mid
+      // tone: the floor above reads as a soffit against it and the floor below
+      // as a cutting. Light, because the toon ramp halves it.
+      road: '#6b74a8',
       kerb: '#d8e0f8',
-      deck: '#2e3560',
+      deck: '#3a4272',
       edge: '#5ff0e8',
       lane: '#f0f4ff',
       accent: '#ff4fd0',
@@ -730,19 +730,18 @@ export const ZONES = [
     facades: ['#1a2044', '#2a2f5e', '#141a36', '#38306a', '#0e1228', '#242a52'],
     props: {
       road: 'street',
-      feature: 'tiers',
+      floors: true,
       // Its own family: dead broadcast hardware. A dish is the only concave
-      // barrier in the game, the monitors are the only gate built as a grid,
-      // and the transformer is a stack of fins — all three chosen to survive
-      // being looked at from six metres up, which is where this zone puts her
-      // for a third of the run.
+      // barrier in the game, the monitors the only gate built as a grid, and
+      // the transformer a stack of fins. All three were chosen to survive being
+      // seen from another floor, which here is most of the time.
       obstacleKit: { barrier: 'dish', gate: 'monitors', block: 'transformer' },
-      arches: 'gantry', archEvery: 20, archTint: ['#5ff0e8', '#ff4fd0'],
-      lampEvery: 14, streetEvery: 10, billboardChance: 0.55,
+      // No arches: they would land inside the road above.
+      arches: 'none', archEvery: 0, archTint: ['#5ff0e8', '#ff4fd0'],
+      lampEvery: 0, streetEvery: 12, billboardChance: 0.5,
       palmChance: 0, podChance: 0.35, stallChance: 0,
-      skylineChance: 0.88, backRowChance: 0.7, waterSides: false, waterRoad: false,
-      curve: 0.0004,
-      lotMin: 7, lotMax: 14, towerStacks: [3, 5],
+      skylineChance: 0.9, backRowChance: 0.75, waterSides: false, waterRoad: false,
+      lotMin: 8, lotMax: 16, towerStacks: [3, 5], feature: null,
     },
   },
 

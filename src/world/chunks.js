@@ -5,7 +5,7 @@ import {
   marketStall, skyArch, gantry, hoverPod, swell, rail, cargoStack, cloudBank,
   springPad, launchRamp, capperFrame, glassVault, plantBed, bigFern, vaultBay, ringGate, conveyor,
 } from './props.js';
-import { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE } from './layout.js';
+import { LANE_X, ALT_Y, FLOOR_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE } from './layout.js';
 import { buildObstacle } from './obstacles.js';
 
 export { LANE_X, ALT_Y, ROAD_HALF, CHUNK_LEN, RAIL_H, DECK_Y, DIVE_Y, OBSTACLE };
@@ -161,47 +161,6 @@ const FEATURES = {
     [{ lane: 0, from: 10, to: 22 }],
     [{ lane: 2, from: 13, to: 27 }],
     [{ lane: 1, from: 8, to: 20 }, { lane: 0, from: 36, to: 46 }],
-  ],
-  /**
-   * THE STACK: an upper deck AND a trench in the same chunk.
-   *
-   * Everything this needs already existed and had simply never been put in one
-   * place. `deck` raises `player.floor` to DECK_Y and `dive` drops it to
-   * DIVE_Y; between them the road is floor zero. Three real surfaces, all of
-   * them already collided against, already drawn, already carried by the
-   * camera.
-   *
-   * The one piece of machinery is that these entries carry their OWN `kind`.
-   * Everywhere else a chunk's features are all the same kind and buildChunk
-   * stamps it on; here `{ kind, ...f }` lets each entry override it, which was
-   * true of that spread already and is the whole reason this is data and not
-   * code.
-   *
-   * THE PAD IS TWENTY METRES IN FRONT OF ITS OWN DECK, and that is the whole
-   * geometry of the row. A launch clears DECK_Y and takes about 0.8 s, which
-   * at this zone's speed is twenty-odd metres of ground; the first version put
-   * the pad at the near end of its deck, so she rose, passed straight over the
-   * ten metres of deck and came down on the road behind it. Measured, the
-   * upper floor held her for 93 frames out of 4900.
-   *
-   * That spacing then hands the zone its decision for free. The flight from
-   * the pad passes exactly over the trench: take the pad and you fly the gap,
-   * miss it and you are in the hole, climbing out. One row, three floors, and
-   * the choice is which one you spend the chunk on.
-   *
-   * The leading span is the tail of the PREVIOUS chunk's deck. Every row
-   * carries one, because chunks are recycled in any order and a deck that
-   * ended at a chunk boundary would drop her into nothing.
-   */
-  tiers: [
-    [{ kind: 'deck', from: 0, to: 10 }, { kind: 'dive', from: 18, to: 32, out: 28 },
-      { kind: 'deck', pad: 14, from: 34, to: 48 }],
-    [{ kind: 'deck', from: 0, to: 12 }, { kind: 'dive', from: 20, to: 34, out: 30 },
-      { kind: 'deck', pad: 15, from: 36, to: 48 }],
-    [{ kind: 'deck', from: 0, to: 8 }, { kind: 'dive', from: 16, to: 31, out: 27 },
-      { kind: 'deck', pad: 12, from: 32, to: 48 }],
-    [{ kind: 'deck', from: 0, to: 14 }, { kind: 'dive', from: 22, to: 36, out: 32 },
-      { kind: 'deck', pad: 17, from: 38, to: 48 }],
   ],
   // The fork. Most chunks have none, and that is the design rather than
   // laziness: a junction every 48 m is a lane change with a wall in it, and
@@ -891,6 +850,112 @@ function forkGates(b, pal, f) {
   b.box('emissive', 0, 0.035, -(f.from - 4.5), 0.16, 0.05, 9, shade(pal.lane, 0.5));
 }
 
+/**
+ * THE STACK: three roads, and the structure that carries them.
+ *
+ * The roads themselves are the ordinary road builder run three times inside a
+ * translation, so every zone road style would work here and the markings, kerbs
+ * and lit edges are the same grammar she already reads. What this adds is the
+ * part that makes three roads a PLACE rather than three floating ribbons: the
+ * soffit under each raised deck, the columns carrying them, and a lit lip on
+ * every edge so the floor she is not on is still legible from the one she is.
+ *
+ * The lowest road gets walls rather than columns. It is a cutting, not a
+ * viaduct, and a road five metres down with nothing beside it reads as a
+ * mistake in the geometry.
+ */
+function stackFrame(b, pal, props) {
+  const L = CHUNK_LEN;
+  const mid = -L / 2;
+  const half = ROAD_HALF;
+  const [lo, , hi] = FLOOR_Y;
+
+  // the cutting the bottom road runs in
+  for (const side of [-1, 1]) {
+    b.box('toon', side * (half + 0.9), lo, mid, 1.8, -lo + 0.4, L, shade(pal.deck, 0.9));
+    b.box('emissive', side * half, lo + 0.5, mid, 0.16, 0.1, L, shade(pal.accentGlow, 0.5));
+  }
+
+  // the soffit and edge beams of the two roads that are carried
+  for (const y of [0, hi]) {
+    b.box('toon', 0, y - 0.75, mid, half * 2 + 1.2, 0.55, L, shade(pal.deck, 0.78));
+    for (const side of [-1, 1]) {
+      b.box('toon', side * (half + 0.5), y - 0.8, mid, 0.7, 0.9, L, shade(pal.deck, 1.05));
+      b.box('emissive', side * (half + 0.5), y - 0.86, mid, 0.76, 0.1, L, shade(pal.edge, 0.55));
+      // ribs across the underside, which is what stops a soffit reading as a
+      // flat lid when she is on the road below looking up at it
+      for (let z = 2; z < L; z += 3.2) {
+        b.box('toon', 0, y - 1.02, -z, half * 2, 0.18, 0.5, shade(pal.deck, 0.62));
+      }
+    }
+  }
+
+  // columns, off to the sides so nothing stands in a lane
+  for (let z = 4; z < L; z += 12) {
+    for (const side of [-1, 1]) {
+      const cx = side * (half + 1.1);
+      b.taper('toon', cx, lo, -z, 1.5, hi - lo, 1.5, 0.4, shade(pal.deck, 1.15));
+      b.box('chrome', cx, 0 - 1.1, -z, 1.7, 0.24, 1.7, shade(pal.chrome, 0.85));
+      b.box('chrome', cx, hi - 1.1, -z, 1.7, 0.24, 1.7, shade(pal.chrome, 0.85));
+      b.box('emissive', cx, lo + 0.6, -z, 1.55, 0.12, 1.55, shade(pal.accent, 0.4));
+    }
+  }
+}
+
+/**
+ * THE STACK's one piece of signage: LEAVE THIS FLOOR, and which way.
+ *
+ * Three roads on screen do not by themselves tell you anything. The soffit of
+ * the road above is most of what you can see of it, the road below is behind
+ * its own parapet, and at thirty metres a second neither of them announces
+ * that the one you are standing on is about to be full of obstacles. Without
+ * this the zone was a guess, and a guess dressed as a choice is worse than no
+ * choice at all.
+ *
+ * So the blocked floor is signed, fifteen metres in front of the first
+ * obstacle in the band — about half a second of reading at this zone's speed,
+ * doubled by the fact that the sign is lit and the road is not. It says the
+ * direction, not the danger: a chevron stack pointing up or down, repeated on
+ * the deck so it survives being read from another floor.
+ */
+function floorSign(b, pal, fy, z, dir) {
+  const half = ROAD_HALF;
+  const y = fy;
+  const tint = dir > 0 ? pal.edge : pal.accent;
+  // portal frame, high enough that it can never be mistaken for a gate
+  for (const side of [-1, 1]) {
+    b.box('chrome', side * (half - 0.3), y, -z, 0.24, 4.4, 0.3, shade(pal.chrome, 0.75));
+    b.box('chrome', side * (half - 0.3), y, -z, 0.6, 0.14, 0.7, shade(pal.chrome, 0.95));
+  }
+  b.box('toon', 0, y + 4.4, -z, (half - 0.3) * 2, 0.5, 0.4, shade(pal.deck, 1.2));
+  b.box('emissive', 0, y + 4.44, -z + 0.24, (half - 0.6) * 2, 0.34, 0.05, shade(tint, 0.5));
+
+  // The chevrons. Three of them, stacked in the direction of travel, each one
+  // built from two quads so it is an arrowhead and not a bar.
+  for (let i = 0; i < 3; i++) {
+    const cy = y + 3.1 + i * dir * 0.44 + (dir > 0 ? 0 : 0.9);
+    const w = 1.5 - i * 0.18;
+    const tipY = cy + dir * 0.46;
+    for (const side of [-1, 1]) {
+      b.quad('emissive', [0, tipY, -z + 0.3], [side * w, cy, -z + 0.3],
+        [side * w, cy - dir * 0.22, -z + 0.3], [0, tipY - dir * 0.22, -z + 0.3],
+        shade(tint, 1.25 - i * 0.22));
+    }
+  }
+  // and the same arrow painted on the road, for the floors that can only see
+  // this one edge-on
+  for (let i = 0; i < 4; i++) {
+    const az = z - 2.4 - i * 2.6;
+    for (const side of [-1, 1]) {
+      b.quad('emissive', [0, y + 0.04, -az], [side * 1.7, y + 0.04, -az + 1.5],
+        [side * 1.7, y + 0.04, -az + 2.1], [0, y + 0.04, -az + 0.6],
+        shade(tint, 0.62 - i * 0.1));
+    }
+  }
+  // a lit bar across the deck exactly where the trouble starts
+  b.box('emissive', 0, y + 0.05, -(z - 14), half * 2 - 1.0, 0.06, 0.4, shade(tint, 0.4));
+}
+
 export function buildChunk(rng, pattern, materials, zone) {
   const pal = resolvePalette(zone);
   const b = new Builder();
@@ -949,14 +1014,54 @@ export function buildChunk(rng, pattern, materials, zone) {
     }
   }
 
-  buildRoad(b, pal, zone.props, features, rng);
+  if (zone.props.floors) {
+    // One road per floor, built by the same generator inside a translation.
+    for (const fy of FLOOR_Y) {
+      b.at(0, fy, 0, 0);
+      buildRoad(b, pal, zone.props, [], rng);
+      b.pop();
+    }
+    stackFrame(b, pal, zone.props);
+  } else {
+    buildRoad(b, pal, zone.props, features, rng);
+  }
   buildScenery(b, rng, pal, zone.props);
   // `lift` has to be resolved HERE as well as on the collision record below.
   // Setting it only on the record drew every deck obstacle down on the road
   // while it went on colliding at deck height: invisible, and lethal from a
   // place with nothing in it.
+  // On THE STACK an obstacle belongs to a floor, and the floors are spread by
+  // z BAND rather than per obstacle: a whole row sharing a floor is what makes
+  // that floor blocked, and a floor that is blocked is the only reason to
+  // leave it. One obstacle per floor at random would just be sparse.
+  // A WHOLE Z BAND SHARES A FLOOR, and that is the point rather than a
+  // simplification. Spread by lane, every floor held one obstacle and none of
+  // them was ever blocked, so there was never a reason to leave the one you
+  // were on: three roads and a single road play identically. Banded, one road
+  // at a time is the dangerous one, and the zone becomes "get off this floor".
+  const floorOf = (o) => (zone.props.floors ? Math.floor(o.z / 16) % 3 : null);
+  const liftOf = (o) => {
+    const f = floorOf(o);
+    return f === null ? (o.deck ? DECK_Y : 0) : FLOOR_Y[f];
+  };
   for (const o of [...kept, ...extra]) {
-    buildObstacle(b, pal, { ...o, lift: o.deck ? DECK_Y : 0 }, LANE_X[o.lane], zone.props.obstacleKit);
+    buildObstacle(b, pal, { ...o, lift: liftOf(o) }, LANE_X[o.lane], zone.props.obstacleKit);
+  }
+  if (zone.props.floors) {
+    // One sign per band, at the FIRST obstacle in it: signing the middle of a
+    // band would put the arrow next to the thing it is warning about.
+    const bands = new Map();
+    for (const o of kept) {
+      const key = Math.floor(o.z / 16);
+      const cur = bands.get(key);
+      if (!cur || o.z < cur.z) bands.set(key, { z: o.z, floor: floorOf(o) });
+    }
+    for (const { z: bz, floor } of bands.values()) {
+      // Always towards the middle road when she is on an outer one, because
+      // the middle is the only floor with a way out in both directions.
+      const dir = floor === 2 ? -1 : floor === 0 ? 1 : (Math.floor(bz / 16) % 2 ? 1 : -1);
+      floorSign(b, pal, FLOOR_Y[floor], bz - 15, dir);
+    }
   }
   for (const f of features) {
     if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);
@@ -988,7 +1093,7 @@ export function buildChunk(rng, pattern, materials, zone) {
     // lift on top of the spec rather than baked into `base`, because the forms
     // read `base` for their own shape (a gate's clearance) and adding the deck
     // height to it would move the gap, not the gate.
-    lift: o.deck ? DECK_Y : 0,
+    lift: liftOf(o),
   }));
   return { group, obstacles, cells, features };
 }

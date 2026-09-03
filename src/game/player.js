@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Builder, disposeGroup } from '../core/builder.js';
 import { PALETTE } from '../render/materials.js';
-import { LANE_X, ALT_Y } from '../world/layout.js';
+import { LANE_X, ALT_Y, FLOOR_Y } from '../world/layout.js';
 import { hillAt } from '../render/materials.js';
 import { loadCourier } from './courier.js';
 import { Animator, loadClips } from './animator.js';
@@ -189,8 +189,12 @@ export class Player {
   reset() {
     this.lane = 1;
     this.alt = 0;
+    // THE STACK: which of the three stacked roads she is on. Middle by default,
+    // so the zone opens with a floor above and a floor below her.
+    this.level = 1;
     this.x = LANE_X[1];
-    this.y = this.flying ? ALT_Y[0] : 0;
+    this.floor = this.floors ? FLOOR_Y[1] : 0;
+    this.y = this.flying ? ALT_Y[0] : this.floor;
     this.z = 0;
     this.vy = 0;
     /** Height of the surface under her. Raised by an upper deck. */
@@ -218,6 +222,14 @@ export class Player {
       // gestures, second axis.
       if (kind === 'jump' && this.alt < ALT_Y.length - 1) this.alt++;
       else if (kind === 'slide' && this.alt > 0) this.alt--;
+    } else if (this.floors) {
+      // Same trade on THE STACK, and for the same reason: there are only four
+      // gestures and the zone needs a second axis more than it needs a jump.
+      // Up and down move her a whole road, exactly the way left and right move
+      // her a lane, which is what makes the vertical free rather than
+      // something the terrain grants her.
+      if (kind === 'jump' && this.level < FLOOR_Y.length - 1) this.level++;
+      else if (kind === 'slide' && this.level > 0) this.level--;
     } else if (kind === 'jump' && (!this.airborne || this.grinding)) {
       // Hopping off a rail is a jump, not a fall.
       this.grinding = null;
@@ -344,7 +356,17 @@ export class Player {
     const dx = targetX - this.x;
     this.x += dx * Math.min(1, LANE_SPEED * dt);
 
-    if (this.flying) {
+    if (this.floors) {
+      // She rides the road she chose. The move between them is a settle rather
+      // than a jump: a floor change is a decision, and an arc would put her in
+      // the air where the collision test cannot tell which road she is on.
+      this.floor = FLOOR_Y[this.level];
+      this.y += (this.floor - this.y) * Math.min(1, ALT_SPEED * dt);
+      this.vy = 0;
+      this.airborne = false;
+      this.sliding = 0;
+      this.grinding = null;
+    } else if (this.flying) {
       // No gravity, no ground: she settles onto the chosen altitude and stays.
       this.y += (ALT_Y[this.alt] - this.y) * Math.min(1, ALT_SPEED * dt);
       this.vy = 0;
