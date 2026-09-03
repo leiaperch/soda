@@ -84,7 +84,11 @@ const BARRIERS = {
 
   /** Wet rock cluster breaking the surface. */
   rock(b, pal, x, z, s) {
-    const stone = new THREE.Color('#6b7f86');
+    // Stone made from the GROUND IT BROKE OUT OF, darkened. A literal grey
+    // blue was right on The Shore and wrong everywhere the medley sends it,
+    // and rock that shares a hue with the surface around it is also simply
+    // truer: this is the seabed, not something delivered to it.
+    const stone = shade(pal.road, 0.72);
     // ROCK IS BEDDED, AND BEDDING IS WHAT MAKES STONE LOOK LIKE STONE.
     //
     // Three smooth domes read as boulders made of clay. Sea rock is laid down
@@ -655,7 +659,12 @@ const BARRIERS = {
    * speed: three circles and a bar, nameable in one frame.
    */
   barrels(b, pal, x, z, s) {
-    const drum = new THREE.Color('#e8622a');
+    // Hazard orange came from a literal, which meant the one object in the
+    // zone that could not take its colour from the zone. The warning read does
+    // not live in the plastic anyway — it lives in the reflective sleeves and
+    // the striped plank, both of which are below — so the drum takes the
+    // zone's accent and stays road furniture.
+    const drum = shade(pal.accent, 0.9);
     const r = s.w * 0.155;
     // A ROAD BARREL IS RIBBED, AND IT IS THE RIBS THAT NAME IT.
     //
@@ -844,7 +853,9 @@ const GATES = {
 
   /** Fishing net slung between two posts, floats along the bottom edge. */
   net(b, pal, x, z, s) {
-    const rope = new THREE.Color('#c9a86a');
+    // Hemp from the palette's warm channel, so the rope belongs to the same
+    // family as the deck and the sand rather than to a fixed tan.
+    const rope = shade(pal.deck, 0.85);
     // A NET IS A MESH, AND A MESH IS DIAMONDS, NOT A GRID.
     //
     // Seven verticals crossed by four horizontals is a window frame. Netting
@@ -2487,7 +2498,11 @@ function divider(b, pal, x, z, s) {
 // ---------- hedge: spans everything, only a bloom pad clears it ------------
 
 function hedge(b, pal, x, z, s) {
-  const dark = new THREE.Color('#2f5a34');
+  // The woody dark is the zone's own foliage colour taken right down, which is
+  // what the underside of a hedge actually is. As a literal it was a fixed
+  // green sitting inside whatever green the zone had chosen, and the two never
+  // quite agreed.
+  const dark = shade(pal.edge, 0.42);
   // A HEDGE IS A MASS OF FOLIAGE ON A THICKET OF STEMS.
   //
   // A box with five domes on top is a sofa. What reads as hedge is a body
