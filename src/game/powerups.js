@@ -40,22 +40,31 @@ export const POWERUPS = {
     multiplier: 2,
   },
   /**
-   * The clock, not the speed. Everything slows, including her, so it buys
-   * READING TIME rather than distance: the one drink that helps on a stretch
-   * you cannot parse instead of one you cannot survive. Short, because slow
-   * motion outstays its welcome faster than any other effect in a runner.
+   * SLOW MOTION, and nothing cleverer than that.
+   *
+   * The first version scaled how fast the world arrived but left the drain at
+   * full rate, on the theory that reading time should cost clock. In the hand
+   * that is not a trade, it is a punishment you cannot see: the screen goes
+   * slow and the bar keeps falling at the old speed, and the player concludes
+   * the can was bad. The drain is scaled by the same figure now, so SYRUP is
+   * exactly what it looks like — everything slows, you get your bearings, and
+   * the only cost is the distance you did not cover.
    */
   syrup: {
     label: 'SYRUP',
     duration: 5,
     colour: new THREE.Color('#ff6a1a'),
-    speed: 0.7,
+    speed: 0.62,
   },
   /**
-   * The chain cannot break. Crashing still costs charge, speed and the clean
-   * run — it simply does not take the chain with it, which is the one loss in
-   * this game that a player actually mourns. It is worth nothing unless you
-   * are already carrying something, so it rewards the player who was pushing.
+   * THE CHAIN NEVER CLOSES while it runs.
+   *
+   * It used to mean "the chain survives a crash", which is a rule you only
+   * ever learn by crashing at exactly the wrong moment — invisible, and
+   * indistinguishable from having been lucky. Holding the window open is the
+   * same idea said out loud: the chain counter simply stays up and keeps
+   * climbing, so the drink is legible in the one place the player is already
+   * looking when she is chaining.
    */
   static: {
     label: 'STATIC',

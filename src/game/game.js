@@ -232,15 +232,7 @@ export class Game {
     this.player.stunned = TUNE.hitStun;
     this.run.clean = false;
     this.shake = 0.55;
-    // The chain dies unbanked. That is the whole tension of carrying a big one,
-    // and STATIC is the one thing that suspends it: the crash still costs
-    // charge, speed and the clean run, it just does not take the chain too.
-    if (this.power.has('static')) {
-      this.hud.toast('STATIC — CHAIN HELD', 'relay');
-      this.hud.showTrick(this.tricks, null);
-      this.sfx.relay();
-      return;
-    }
+    // The chain dies unbanked. That is the whole tension of carrying a big one.
     const lost = this.tricks.drop();
     this.hud.toast(lost > 200 ? `CHAIN LOST ${lost}` : 'CRASH', 'warn');
     this.hud.showTrick(this.tricks, null);
@@ -885,7 +877,7 @@ export class Game {
       // a junction can be the fast expensive road and the other the slow cheap
       // one without either of them being simply worse.
       const zoneTax = this.branchRules.drain ?? this.zone.props.drain ?? 1;
-      this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * dt;
+      this.charge -= TUNE.drainBase * (1 + speedRatio * TUNE.drainSpeedFactor) * beltTax * zoneTax * (this.slow ?? 1) * dt;
       // CREAM: a rolling checkpoint rather than a free one.
       const regen = this.power.regen();
       if (regen) this.charge = Math.min(TUNE.maxCharge, this.charge + regen * dt);
@@ -910,13 +902,23 @@ export class Game {
       }
       this.player.shielded = this.power.has('fizz');
 
-      // SYRUP scales the rate the WORLD arrives at, and nothing else. The run
-      // speed itself is untouched, which means the drain keeps running at the
-      // full rate while she covers less ground: the drink buys reading time and
-      // pays for it in clock. That trade is the reason it is worth a colour.
-      const flow = this.speed * this.power.speedFactor() / (this.power.has('fizz')
-        ? POWERUPS.fizz.speed : 1);
-      this.player.update(dt, flow, this.time);
+      // SYRUP slows the world, and the drain is slowed by the same figure just
+      // below. One number, applied to everything the player can perceive, so
+      // the effect is exactly what it looks like.
+      this.slow = this.power.has('syrup') ? POWERUPS.syrup.speed : 1;
+      this.player.update(dt, this.speed * this.slow, this.time);
+      // STATIC keeps the trick window open, so the chain climbs instead of
+      // banking. Nothing else: one rule, visible in the counter she is already
+      // watching.
+      if (this.power.has('static') && this.tricks.active) {
+        this.tricks.timer = Math.max(this.tricks.timer, 0.6);
+      }
+      // The ring under her takes the colour of whatever is up.
+      const running = [...this.power.active.keys()];
+      const key = running[running.length - 1];
+      this.player.aura = key
+        ? { colour: POWERUPS[key].colour, left: this.power.remaining(key) }
+        : null;
 
       // Gravity does the rest of the work on a slope: you bleed speed on the
       // way up and get it back on the way down. Nothing else needed to make a

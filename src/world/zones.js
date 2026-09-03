@@ -758,7 +758,7 @@ export const ZONES = [
       // barrier in the game, the monitors the only gate built as a grid, and
       // the transformer a stack of fins. All three were chosen to survive being
       // seen from another floor, which here is most of the time.
-      powers: ['syrup', 'cream', 'static'],
+      powers: ['syrup', 'cream', 'magnet'],
       obstacleKit: { barrier: 'dish', gate: 'monitors', block: 'transformer' },
       // No arches: they would land inside the road above.
       arches: 'none', archEvery: 0, archTint: ['#9dff2e', '#f0ffd0'],

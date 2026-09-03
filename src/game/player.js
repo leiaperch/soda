@@ -162,6 +162,32 @@ export class Player {
     this.root.add(this.shell);
     this.shielded = false;
 
+    /**
+     * THE DRINK RING.
+     *
+     * A chip in the corner of the screen is not an effect. Every drink but
+     * FIZZ was invisible in the world — the bar moved, or a number did — so
+     * there was nothing to connect the can she picked up to the thing that
+     * changed. This is a flat ring on the road under her, in the drink's own
+     * colour, unlit so it does not bloom into a white disc, and it is the
+     * cheapest thing in the game that says SOMETHING IS RUNNING.
+     *
+     * Under her rather than around her on purpose: the camera is behind her
+     * and slightly above, so the road at her feet is the one surface always
+     * in frame and never behind her own body.
+     */
+    const ringGeo = new THREE.RingGeometry(0.95, 1.5, 28);
+    ringGeo.rotateX(-Math.PI / 2);
+    ringGeo.setAttribute('color', new THREE.Float32BufferAttribute(
+      new Array(ringGeo.attributes.position.count * 3).fill(1), 3));
+    this.ring = new THREE.Mesh(ringGeo, materials.beam);
+    this.ring.position.y = 0.05;
+    this.ring.frustumCulled = false;
+    this.ring.visible = false;
+    this.root.add(this.ring);
+    /** Written by the game: `{ colour, pulse }` for the drink that is up. */
+    this.aura = null;
+
     this.animator = new Animator();
     this.animated = false;
     // Overridden per zone: low gravity on The Docks, crosswind on The Heights.
@@ -415,6 +441,22 @@ export class Player {
     // or she walks straight through it. Collision stays in flat space, where
     // she and every obstacle share the offset anyway.
     this.root.position.set(this.x, this.y + hillAt(this.z, this.hill), this.z);
+
+    // The ring takes the colour of whatever is running, and beats faster as it
+    // runs out, which is the same language the HUD chip uses.
+    this.ring.visible = !!this.aura;
+    if (this.aura) {
+      const c = this.aura.colour;
+      const beat = 0.9 + Math.sin(time * (5 + (1 - this.aura.left) * 9)) * 0.16;
+      const col = this.ring.geometry.getAttribute('color');
+      for (let i = 0; i < col.count; i++) {
+        col.setXYZ(i, c.r * beat * 0.85, c.g * beat * 0.85, c.b * beat * 0.85);
+      }
+      col.needsUpdate = true;
+      const s2 = 1 + Math.sin(time * 4) * 0.06;
+      this.ring.scale.set(s2, 1, s2);
+      this.ring.rotation.y = time * 0.6;
+    }
 
     this.shell.visible = this.shielded;
     if (this.shielded) {
