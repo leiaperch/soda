@@ -819,7 +819,11 @@ export class Game {
     const lift = (p.floor < 0 && !this.zone.props.floors) ? -p.floor * 0.78 : 0;
     const ground = hillAt(p.z + 7.8, this.hill) + p.floor + lift;
     const air = p.y - p.floor;
-    const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : 4.0 + air * 0.32);
+    // Lower on THE STACK, and that is a clearance figure rather than a taste
+    // one: from the bottom road there is a ceiling four metres over her, and a
+    // camera at the usual 4.0 sat inside its ribs.
+    const eye = this.zone.props.floors ? 3.0 : 4.0;
+    const targetY = ground + (p.flying ? 2.4 + p.y * 0.85 : eye + air * 0.32);
     cam.position.x += (targetX - cam.position.x) * Math.min(1, 7 * dt);
     // Faster on a zone where the floor itself moves. At 5 the camera took the
     // best part of a second to arrive, so the road she had just left was still

@@ -24,7 +24,15 @@ export const ALT_Y = [0, 2.2, 4.0];
  * chose. The spacing is the deck and the trench the engine already had, so a
  * floor change is a real six-metre move and all three are on screen at once.
  */
-export const FLOOR_Y = [-5.2, 0, 6.4];
+/*
+ * Wider apart than the deck and the trench they started as. At 5.2 m the
+ * bottom road had 4 m of headroom and the chase camera sits 4 m above her, so
+ * it was threaded exactly through the ribs under the middle road: the shot
+ * from the lowest floor was the inside of a ceiling. Seven and a half metres
+ * leaves the camera three and a half metres of clear air, and the extra
+ * separation is what lets you see through an opening to the floor beyond.
+ */
+export const FLOOR_Y = [-7.5, 0, 7.5];
 
 export const ROAD_HALF = 5.6;
 export const CHUNK_LEN = 48;

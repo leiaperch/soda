@@ -870,28 +870,59 @@ function stackFrame(b, pal, props) {
   const half = ROAD_HALF;
   const [lo, , hi] = FLOOR_Y;
 
-  // the cutting the bottom road runs in
+  // The bottom road is a DECK, not a cutting.
+  //
+  // It was walled to the height of the road above, and from down there the
+  // whole frame was two black walls and a black ceiling: no sky, no sight of
+  // the other floors, and the zone's brightest idea — three roads at once —
+  // invisible from a third of it. It gets a parapet instead, and the space
+  // between the floors is left open at the sides, which is also what makes the
+  // columns read as columns.
   for (const side of [-1, 1]) {
-    b.box('toon', side * (half + 0.9), lo, mid, 1.8, -lo + 0.4, L, shade(pal.deck, 0.9));
-    b.box('emissive', side * half, lo + 0.5, mid, 0.16, 0.1, L, shade(pal.accentGlow, 0.5));
+    b.box('toon', side * (half + 0.35), lo - 0.8, mid, 0.9, 1.9, L, shade(pal.deck, 1.05));
+    b.box('emissive', side * (half + 0.35), lo + 1.1, mid, 0.96, 0.12, L, shade(pal.accentGlow, 0.8));
+    // the soffit of its own deck, so it reads as carried rather than as a floor
+    b.box('toon', 0, lo - 0.9, mid, half * 2 + 1.0, 0.5, L, shade(pal.deck, 0.7));
   }
 
-  // the soffit and edge beams of the two roads that are carried
+  // THE OPENINGS.
+  //
+  // A solid soffit is honest and unplayable: from the bottom road you see a
+  // ceiling, from the top you see your own deck, and the floor you are being
+  // told to move to is a rumour. Each carried road is therefore built as a run
+  // of segments with a hole every twelve metres, and every hole gets a lit rim
+  // so it reads as an opening rather than as missing geometry.
+  //
+  // The holes are in the SHOULDERS, never over a lane. A hole in the running
+  // surface is a hazard, and this zone already has its hazard.
+  const HOLE = 4.6, PITCH = 12;
   for (const y of [0, hi]) {
-    b.box('toon', 0, y - 0.75, mid, half * 2 + 1.2, 0.55, L, shade(pal.deck, 0.78));
+    for (let z = 0; z < L; z += PITCH) {
+      const solid = PITCH - HOLE;
+      const segMid = -(z + solid / 2);
+      b.box('toon', 0, y - 0.75, segMid, half * 2 + 1.2, 0.55, solid, shade(pal.deck, 0.78));
+      for (let r = 1.4; r < solid; r += 3.2) {
+        b.box('toon', 0, y - 1.02, -(z + r), half * 2, 0.18, 0.5, shade(pal.deck, 0.62));
+      }
+      // the rim of the hole, lit on the underside so it reads from below too
+      const holeMid = -(z + solid + HOLE / 2);
+      for (const side of [-1, 1]) {
+        b.box('toon', side * (half - 1.0), y - 0.75, holeMid, 2.4, 0.55, HOLE, shade(pal.deck, 0.86));
+        b.box('emissive', side * (half - 2.2), y - 0.5, holeMid, 0.14, 0.12, HOLE, shade(pal.edge, 0.8));
+      }
+      for (const zz of [z + solid, z + solid + HOLE]) {
+        b.box('emissive', 0, y - 0.5, -zz, half * 2 - 4.4, 0.12, 0.2, shade(pal.edge, 0.7));
+      }
+    }
+    // edge beams stay continuous: the road above must still read as a road
     for (const side of [-1, 1]) {
       b.box('toon', side * (half + 0.5), y - 0.8, mid, 0.7, 0.9, L, shade(pal.deck, 1.05));
       b.box('emissive', side * (half + 0.5), y - 0.86, mid, 0.76, 0.1, L, shade(pal.edge, 0.55));
-      // ribs across the underside, which is what stops a soffit reading as a
-      // flat lid when she is on the road below looking up at it
-      for (let z = 2; z < L; z += 3.2) {
-        b.box('toon', 0, y - 1.02, -z, half * 2, 0.18, 0.5, shade(pal.deck, 0.62));
-      }
     }
   }
 
   // columns, off to the sides so nothing stands in a lane
-  for (let z = 4; z < L; z += 12) {
+  for (let z = 6; z < L; z += 12) {
     for (const side of [-1, 1]) {
       const cx = side * (half + 1.1);
       b.taper('toon', cx, lo, -z, 1.5, hi - lo, 1.5, 0.4, shade(pal.deck, 1.15));
@@ -969,9 +1000,38 @@ export function buildChunk(rng, pattern, materials, zone) {
     : (kind && FEATURES[kind] ? FEATURES[kind][rng.int(0, FEATURES[kind].length - 1)] : []).map((f) => ({ kind, ...f }));
   // The Arcade turns every block into a bumper, so the authored phrases carry
   // straight over and the zone reads as the same track played by other rules.
-  const kept = flight
-    ? pattern.obstacles.map((o) => ({ ...o, spec: panelSpec(o.alt) }))
-    : pattern.obstacles
+  // `lift` has to be resolved HERE as well as on the collision record below.
+  // Setting it only on the record drew every deck obstacle down on the road
+  // while it went on colliding at deck height: invisible, and lethal from a
+  // place with nothing in it.
+  // On THE STACK an obstacle belongs to a floor, and the floors are spread by
+  // z BAND rather than per obstacle: a whole row sharing a floor is what makes
+  // that floor blocked, and a floor that is blocked is the only reason to
+  // leave it. One obstacle per floor at random would just be sparse.
+  // THE WALL IS THE WHOLE ZONE.
+  //
+  // Two versions of this were not a mechanic. Spread by lane, every floor held
+  // one obstacle and none was ever blocked. Banded by z, a band still left
+  // lanes open on its own floor, so a lane change answered it and the vertical
+  // stayed optional — three roads playing exactly like one.
+  //
+  // A floors chunk therefore drops the pattern's placement entirely and emits
+  // ONE ROW ACROSS ALL THREE LANES on one floor. There is no lane answer. The
+  // only answer is the other floor, which is the sentence the zone exists to
+  // say. One per chunk, so at this speed it asks about every 1.6 s.
+  const floorRow = zone.props.floors
+    ? { z: 26, floor: rng.int(0, 2), kinds: ['barrier', 'block', 'gate'] }
+    : null;
+  const floorOf = (o) => (zone.props.floors ? floorRow.floor : null);
+  const kept = zone.props.floors
+    ? [0, 1, 2].map((lane) => ({
+      // Rotated per lane so the wall is three different objects rather than
+      // the same one three times, which at speed reads as a texture.
+      t: floorRow.kinds[(lane + floorRow.floor) % 3], lane, z: floorRow.z,
+    }))
+    : flight
+      ? pattern.obstacles.map((o) => ({ ...o, spec: panelSpec(o.alt) }))
+      : pattern.obstacles
       .filter((o) => !conflicts(o, features))
       .map((o) => (zone.props.bumpers && o.t === 'block' ? { ...o, t: 'bumper' } : o));
 
@@ -1026,20 +1086,6 @@ export function buildChunk(rng, pattern, materials, zone) {
     buildRoad(b, pal, zone.props, features, rng);
   }
   buildScenery(b, rng, pal, zone.props);
-  // `lift` has to be resolved HERE as well as on the collision record below.
-  // Setting it only on the record drew every deck obstacle down on the road
-  // while it went on colliding at deck height: invisible, and lethal from a
-  // place with nothing in it.
-  // On THE STACK an obstacle belongs to a floor, and the floors are spread by
-  // z BAND rather than per obstacle: a whole row sharing a floor is what makes
-  // that floor blocked, and a floor that is blocked is the only reason to
-  // leave it. One obstacle per floor at random would just be sparse.
-  // A WHOLE Z BAND SHARES A FLOOR, and that is the point rather than a
-  // simplification. Spread by lane, every floor held one obstacle and none of
-  // them was ever blocked, so there was never a reason to leave the one you
-  // were on: three roads and a single road play identically. Banded, one road
-  // at a time is the dangerous one, and the zone becomes "get off this floor".
-  const floorOf = (o) => (zone.props.floors ? Math.floor(o.z / 16) % 3 : null);
   const liftOf = (o) => {
     const f = floorOf(o);
     return f === null ? (o.deck ? DECK_Y : 0) : FLOOR_Y[f];
@@ -1050,18 +1096,16 @@ export function buildChunk(rng, pattern, materials, zone) {
   if (zone.props.floors) {
     // One sign per band, at the FIRST obstacle in it: signing the middle of a
     // band would put the arrow next to the thing it is warning about.
-    const bands = new Map();
-    for (const o of kept) {
-      const key = Math.floor(o.z / 16);
-      const cur = bands.get(key);
-      if (!cur || o.z < cur.z) bands.set(key, { z: o.z, floor: floorOf(o) });
-    }
-    for (const { z: bz, floor } of bands.values()) {
-      // Always towards the middle road when she is on an outer one, because
-      // the middle is the only floor with a way out in both directions.
-      const dir = floor === 2 ? -1 : floor === 0 ? 1 : (Math.floor(bz / 16) % 2 ? 1 : -1);
-      floorSign(b, pal, FLOOR_Y[floor], bz - 15, dir);
-    }
+    // Twenty-four metres of warning, not fifteen. The answer is now a floor
+    // change and nothing else, and a floor change is a 7.5 m move that settles
+    // over about 0.6 s; at 33 the old distance left her arriving as she
+    // committed. This is a second and a half, doubled by the fact that the
+    // sign is the only lit thing on that stretch.
+    const floor = floorRow.floor;
+    // Always towards the middle road from an outer one, because the middle is
+    // the only floor with a way out in both directions.
+    const dir = floor === 2 ? -1 : floor === 0 ? 1 : (floorRow.z % 2 ? 1 : -1);
+    floorSign(b, pal, FLOOR_Y[floor], floorRow.z - 24, dir);
   }
   for (const f of features) {
     if (f.kind === 'spring') springPad(b, pal, LANE_X[f.lane], -f.z);

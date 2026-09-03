@@ -704,30 +704,36 @@ export const ZONES = [
     // something the terrain hands her at a ramp.
     physics: { startSpeed: 19, maxSpeed: 33, speedRamp: 0.16 },
     floors: true,
-    // Dead broadcast: a signal that stopped and left the colour bars up. Cold
-    // blue-black with the magenta and cyan of a mistracked tape, which is the
-    // Y2K reading of the word rather than the grey-noise one.
+    // NOT THE STORM'S VIOLET. The first pass was a dark violet city lit with
+    // magenta and cyan, which is The Storm's palette with the accents swapped,
+    // and at speed two dark violet zones are one zone. This is the other
+    // reading of the word static: dead phosphor. Near-black, acid green, and
+    // the courier's pink is the only warm thing on screen, which is the first
+    // time in the game she is the brightest object rather than part of the
+    // colour scheme.
     sky: [
-      [0.00, '#05060f'], [0.22, '#111a34'], [0.44, '#24356a'],
-      [0.62, '#4a4f9c'], [0.80, '#8f6fc0'], [1.00, '#d8b8e8'],
+      [0.00, '#04070a'], [0.22, '#0a1410'], [0.46, '#16301a'],
+      [0.64, '#2f5c1e'], [0.82, '#77b02c'], [1.00, '#d2e8a0'],
     ],
-    fog: { color: '#24356a', near: 150, far: 320 },
-    sun: { color: '#dfe8ff', intensity: 1.8 },
-    hemi: { sky: '#8fa8e8', ground: '#0a0c1a', intensity: 0.5 },
-    backdrop: { sun: '#eef2ff', halo: '#7f8fe8', arc: '#c8a8f0', planet: '#1a2044' },
+    fog: { color: '#1c3a1c', near: 150, far: 320 },
+    sun: { color: '#eaffd0', intensity: 1.8 },
+    hemi: { sky: '#9ed86a', ground: '#060a06', intensity: 0.5 },
+    backdrop: { sun: '#f2ffd8', halo: '#8fdc3a', arc: '#5a8f30', planet: '#0e1a0e' },
     colors: {
       // Three surfaces are on screen at once, so the road has to be a clear mid
       // tone: the floor above reads as a soffit against it and the floor below
       // as a cutting. Light, because the toon ramp halves it.
-      road: '#6b74a8',
-      kerb: '#d8e0f8',
-      deck: '#3a4272',
-      edge: '#5ff0e8',
-      lane: '#f0f4ff',
-      accent: '#ff4fd0',
-      accentGlow: '#5ff0e8',
+      road: '#6f8a52',
+      kerb: '#cfe0a8',
+      deck: '#2c3a24',
+      // The two sign colours, and the only two hues the zone has. Green is up
+      // and pale is down; nothing else on the road is allowed to be either.
+      edge: '#9dff2e',
+      lane: '#e8ffc8',
+      accent: '#f0ffd0',
+      accentGlow: '#7fd41e',
     },
-    facades: ['#1a2044', '#2a2f5e', '#141a36', '#38306a', '#0e1228', '#242a52'],
+    facades: ['#0e1a0e', '#16240f', '#0a120a', '#1e3014', '#060c06', '#122008'],
     props: {
       road: 'street',
       floors: true,
@@ -737,7 +743,7 @@ export const ZONES = [
       // seen from another floor, which here is most of the time.
       obstacleKit: { barrier: 'dish', gate: 'monitors', block: 'transformer' },
       // No arches: they would land inside the road above.
-      arches: 'none', archEvery: 0, archTint: ['#5ff0e8', '#ff4fd0'],
+      arches: 'none', archEvery: 0, archTint: ['#9dff2e', '#f0ffd0'],
       lampEvery: 0, streetEvery: 12, billboardChance: 0.5,
       palmChance: 0, podChance: 0.35, stallChance: 0,
       skylineChance: 0.9, backRowChance: 0.75, waterSides: false, waterRoad: false,
