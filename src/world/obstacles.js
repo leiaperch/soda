@@ -225,30 +225,70 @@ const BARRIERS = {
   cabinet(b, pal, x, z, s) {
     const body = pal.facades[1];
     b.at(x, 0, z, -0.09, 1, 1, 1);
-    b.box('toon', 0, 0, 0, s.w * 0.86, s.h * 0.5, s.d * 1.5, shade(body, 1.1));
-    // the canted control panel, which is the profile that says arcade
-    b.quad('toon', [-s.w * 0.43, s.h * 0.5, -s.d * 0.75], [s.w * 0.43, s.h * 0.5, -s.d * 0.75],
-      [s.w * 0.43, s.h * 0.86, s.d * 0.1], [-s.w * 0.43, s.h * 0.86, s.d * 0.1], shade(body, 1.4));
+    // AN ARCADE CABINET IS A PROFILE, NOT A BOX.
+    //
+    // The first pass was a box with a slanted lid stuck on it. A cabinet is
+    // read from its SIDE: a tall back, a kicked-out base, the shelf of the
+    // control panel and the overhang above the screen, all in one silhouette.
+    // Face down in the lane, that profile is what she is looking at, so it is
+    // built as a genuine section swept across the width rather than as a stack.
+    const W = s.w * 0.86;
+    const sect = [
+      [-0.75, 0.00], [-0.75, 0.34], [-0.34, 0.44],   // base and its kick
+      [-0.10, 0.86], [0.34, 0.98], [0.52, 0.72],     // panel shelf, then the brow
+      [0.78, 0.60], [0.78, 0.12], [0.30, 0.00],
+    ];
+    for (let i = 0; i < sect.length; i++) {
+      const [z0, y0] = sect[i];
+      const [z1, y1] = sect[(i + 1) % sect.length];
+      const t = 0.72 + Math.abs(y0 + y1) * 0.42;
+      b.quad('toon', [-W / 2, y0 * s.h, z0 * s.d * 1.5], [W / 2, y0 * s.h, z0 * s.d * 1.5],
+        [W / 2, y1 * s.h, z1 * s.d * 1.5], [-W / 2, y1 * s.h, z1 * s.d * 1.5], shade(body, t));
+      // the side panels, which is where the art would be
+      for (const side of [-1, 1]) {
+        b.tri('toon', [side * W / 2, 0, 0], [side * W / 2, y0 * s.h, z0 * s.d * 1.5],
+          [side * W / 2, y1 * s.h, z1 * s.d * 1.5], shade(body, side < 0 ? 1.28 : 0.66));
+      }
+    }
+    // T-moulding along both edges of the profile: the chrome trim is most of
+    // what says arcade rather than furniture.
+    for (let i = 0; i < sect.length; i++) {
+      const [z0, y0] = sect[i];
+      const [z1, y1] = sect[(i + 1) % sect.length];
+      for (const side of [-1, 1]) {
+        b.quad('chrome', [side * (W / 2 + 0.04), y0 * s.h, z0 * s.d * 1.5],
+          [side * (W / 2 + 0.04), y1 * s.h, z1 * s.d * 1.5],
+          [side * (W / 2 - 0.02), y1 * s.h, z1 * s.d * 1.5],
+          [side * (W / 2 - 0.02), y0 * s.h, z0 * s.d * 1.5], shade(pal.chrome, 0.9));
+      }
+    }
+    // The control panel: two clusters of buttons and a stick each, because a
+    // cabinet with one set of controls is a cabinet nobody argued over.
     for (const side of [-1, 1]) {
-      b.tri('toon', [side * s.w * 0.43, s.h * 0.5, -s.d * 0.75], [side * s.w * 0.43, s.h * 0.5, s.d * 0.1],
-        [side * s.w * 0.43, s.h * 0.86, s.d * 0.1], shade(body, 0.85));
+      const cx = side * W * 0.22;
+      for (let i = 0; i < 3; i++) {
+        for (let r2 = 0; r2 < 2; r2++) {
+          b.cyl('emissive', cx + (i - 1) * 0.17, s.h * 0.93 - r2 * 0.02, s.d * (0.2 + r2 * 0.24),
+            0.075, 0.075, 0.05, 8, shade(i % 2 ? pal.accent : pal.accentGlow, 1.15));
+        }
+      }
+      // Shaft and ball sized so the ball's crown lands ON the hitbox: at 0.92
+      // plus its own length the stick stood 9.6 cm clear of it.
+      b.cyl('chrome', cx - 0.34, s.h * 0.78, s.d * 0.3, 0.09, 0.05, s.h * 0.13, 8, shade(pal.chrome, 0.9));
+      b.dome('emissive', cx - 0.34, s.h - 0.09, s.d * 0.3, 0.1, 0.09, 7, 2, shade(pal.accent, 1.25));
+      b.cyl('chrome', cx - 0.34, s.h * 0.76, s.d * 0.3, 0.14, 0.13, 0.04, 10, shade(pal.chrome, 1.1));
     }
-    // buttons and a stick, the detail that carries even at speed
-    for (let i = 0; i < 4; i++) {
-      b.cyl('emissive', -s.w * 0.28 + i * s.w * 0.17, s.h * 0.78, -s.d * 0.1, 0.09, 0.09, 0.06, 7,
-        shade(i % 2 ? pal.accent : pal.accentGlow, 1.1));
-    }
-    b.cyl('chrome', s.w * 0.34, s.h * 0.8, -s.d * 0.1, 0.05, 0.04, 0.16, 6, shade(pal.chrome, 0.9));
-    // Ball top at s.h exactly. At 0.96 it cleared the hitbox by 2.8 cm, which
-    // is the "visible thing you jump straight through" fault, at knob scale.
-    b.dome('emissive', s.w * 0.34, s.h - 0.09, -s.d * 0.1, 0.1, 0.09, 6, 2, shade(pal.accent, 1.2));
-    // the dead screen, and the coin door hanging open
-    b.box('glass', 0, s.h * 0.2, s.d * 0.76, s.w * 0.6, s.h * 0.3, 0.06, shade(pal.deck, 0.7));
-    b.box('chrome', 0, s.h * 0.06, s.d * 0.72, s.w * 0.34, 0.16, 0.16, shade(pal.chrome, 0.95));
-    b.box('emissive', 0, s.h * 0.5 - 0.06, s.d * 0.78, s.w * 0.66, 0.08, 0.05, shade(pal.edge, 0.8));
-    // spilled tokens at its foot
-    for (const [dx, dz] of [[-0.7, 0.42], [0.66, -0.3], [0.34, 0.6]]) {
-      b.cyl('emissive', dx, 0.02, dz, 0.11, 0.11, 0.04, 7, shade(pal.accentGlow, 0.75));
+    // the screen behind its bezel, dead, and the coin door hanging open
+    b.box('toon', 0, s.h * 0.3, s.d * 1.1, W * 0.9, s.h * 0.4, 0.1, shade(body, 1.35));
+    b.box('glass', 0, s.h * 0.32, s.d * 1.14, W * 0.66, s.h * 0.32, 0.05, shade(pal.deck, 0.75));
+    b.box('emissive', 0, s.h * 0.34, s.d * 1.15, W * 0.6, 0.05, 0.04, shade(pal.edge, 0.9));
+    b.box('chrome', 0, s.h * 0.08, s.d * 1.06, W * 0.34, 0.18, 0.16, shade(pal.chrome, 0.95));
+    b.box('chrome', -W * 0.1, s.h * 0.06, s.d * 1.2, 0.3, 0.24, 0.05, shade(pal.chrome, 1.15));
+    // the marquee strip along the top edge, still lit
+    b.box('emissive', 0, s.h - 0.06, -s.d * 0.1, W * 0.86, 0.06, s.d * 0.5, shade(pal.lane, 0.85));
+    // tokens spilled where it went over
+    for (const [dx, dz] of [[-0.7, 0.42], [0.66, -0.3], [0.34, 0.6], [-0.2, 0.8]]) {
+      b.cyl('emissive', dx, 0.02, dz, 0.11, 0.11, 0.04, 8, shade(pal.accentGlow, 0.8));
     }
     b.pop();
   },
@@ -355,33 +395,57 @@ const BARRIERS = {
    */
   cable(b, pal, x, z, s) {
     const steel = shade(pal.chrome, 0.72);
-    // the anchor it tore out of, sitting proud of the deck
-    b.taper('toon', x - s.w * 0.36, 0, z, s.w * 0.34, s.h * 0.62, s.d * 1.2, 0.1, shade(pal.deck, 1.2));
-    b.box('chrome', x - s.w * 0.36, s.h * 0.62, z, s.w * 0.3, 0.1, s.d * 1.1, shade(pal.chrome, 1.0));
-    // Three loops of cable, each a ring of short boxes. Built from boxes and
-    // not from a cyl inside an at(): the matrix stack only turns around Y, so
-    // a cylinder asked to lie flat stands up instead.
+    // A CABLE IS A BUNDLE, AND A BUNDLE IS STRANDS.
+    //
+    // Rings of little boxes gave a coil made of bricks. A structural cable is
+    // strands laid up in a helix, so each loop here is drawn as three ribbons
+    // spiralling around its own section: the lay catches light in bands and
+    // the outline stops being a clean circle, which is the whole difference
+    // between a rope and a hoop.
     for (let loop = 0; loop < 3; loop++) {
       const cx = x + (loop - 0.6) * s.w * 0.3;
       const r = s.h * (0.40 - loop * 0.05);
-      // Each loop RESTS on the road: centring them all at one height put the
-      // largest a quarter of a metre under it, drawing geometry nobody sees
-      // and costing the coil its contact with the ground.
       const y = r + 0.03;
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 9) * Math.PI * 2;
-        b.box('chrome', cx + Math.cos(a) * r * 0.9, y + Math.sin(a) * r, z + (loop - 1) * 0.12,
-          0.22, 0.13, 0.13, shade(steel, 0.85 + (i % 3) * 0.1));
+      const zc = z + (loop - 1) * 0.14;
+      const SEG = 14;
+      for (let i = 0; i < SEG; i++) {
+        const a0 = (i / SEG) * Math.PI * 2, a1 = ((i + 1) / SEG) * Math.PI * 2;
+        for (let strand = 0; strand < 3; strand++) {
+          const ph = strand * 2.09;
+          const o0 = 0.055 * Math.cos(a0 * 4 + ph), p0 = 0.055 * Math.sin(a0 * 4 + ph);
+          const o1 = 0.055 * Math.cos(a1 * 4 + ph), p1 = 0.055 * Math.sin(a1 * 4 + ph);
+          const R0 = r + o0, R1 = r + o1;
+          b.quad('chrome',
+            [cx + Math.cos(a0) * R0, y + Math.sin(a0) * R0, zc + p0 - 0.05],
+            [cx + Math.cos(a1) * R1, y + Math.sin(a1) * R1, zc + p1 - 0.05],
+            [cx + Math.cos(a1) * R1, y + Math.sin(a1) * R1, zc + p1 + 0.05],
+            [cx + Math.cos(a0) * R0, y + Math.sin(a0) * R0, zc + p0 + 0.05],
+            shade(steel, 0.7 + Math.abs(Math.sin(a0 * 4 + ph)) * 0.55));
+        }
       }
     }
-    // the frayed end, splayed where it parted
-    for (const [dx, dy] of [[0.42, 0.1], [0.5, 0.24], [0.46, -0.04]]) {
-      b.box('chrome', x + s.w * dx, s.h * (0.3 + dy), z + 0.2, s.w * 0.22, 0.06, 0.06, shade(steel, 1.1));
+    // The anchor it tore out of: a socket, a splayed collar, and its bolts.
+    const ax = x - s.w * 0.4;
+    b.taper('toon', ax, 0, z, s.w * 0.38, s.h * 0.34, s.d * 1.3, 0.1, shade(pal.deck, 1.1));
+    b.box('chrome', ax, s.h * 0.34, z, s.w * 0.32, 0.1, s.d * 1.1, shade(pal.chrome, 0.95));
+    b.taper('chrome', ax + 0.1, s.h * 0.44, z, 0.5, s.h * 0.26, 0.5, -0.2, shade(pal.chrome, 0.85));
+    b.cyl('chrome', ax + 0.1, s.h * 0.7, z, 0.3, 0.26, 0.12, 10, shade(pal.chrome, 1.05));
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      b.cyl('chrome', ax + Math.cos(a) * s.w * 0.17, 0.02, z + Math.sin(a) * s.d * 0.5,
+        0.06, 0.05, 0.14, 6, shade(pal.chrome, 0.9));
     }
-    // a hazard lamp clipped to the anchor, the one warm thing on a white zone
-    b.box('emissive', x - s.w * 0.36, s.h * 0.72 - 0.14, z + s.d * 0.5, s.w * 0.2, 0.14, 0.06,
-      shade(pal.accentGlow, 1.2));
-    b.box('emissive', x, 0.03, z + s.d * 0.6, s.w * 0.9, 0.05, 0.12, shade(pal.accent, 0.55));
+    // the frayed end, strands springing apart where it parted
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const len = 0.28 + (i % 3) * 0.14;
+      b.box('chrome', x + s.w * 0.46 + len * 0.4, s.h * 0.3 + Math.sin(a) * 0.16,
+        z + 0.2 + Math.cos(a) * 0.14, len, 0.05, 0.05, shade(steel, 1.0 + (i % 2) * 0.2));
+    }
+    b.cyl('chrome', x + s.w * 0.42, s.h * 0.3, z + 0.2, 0.14, 0.12, 0.16, 8, shade(pal.chrome, 1.1));
+    // a hazard lamp on the anchor, and the scuff the cable left dragging
+    b.box('emissive', ax, s.h * 0.4, z + s.d * 0.55, s.w * 0.18, 0.13, 0.06, shade(pal.accentGlow, 1.25));
+    b.box('emissive', x, 0.03, z + s.d * 0.62, s.w * 0.9, 0.05, 0.13, shade(pal.accent, 0.55));
   },
 
   /**
@@ -394,27 +458,57 @@ const BARRIERS = {
    * corner rather than as something dropped on it.
    */
   kerbstack(b, pal, x, z, s) {
-    const teeth = 4;
+    // A KERB IS A CAST BLOCK, AND THE SAWTOOTH IS ITS TOP EDGE.
+    //
+    // Four wedges gave the right outline and a surface made of two triangles.
+    // Real racetrack kerbing is heavy cast sections with a rounded nose, a
+    // ribbed face and a joint you can see between every block, and here that
+    // joint is what makes the sawtooth read as objects rather than as a zigzag
+    // painted on the road.
+    const teeth = 5;
     const tw = s.w / teeth;
     for (let i = 0; i < teeth; i++) {
       const tx = x - s.w / 2 + tw * (i + 0.5);
       const tall = i % 2 === 0;
-      const h = s.h * (tall ? 0.62 : 0.4);
-      // Each tooth is a wedge, not a block: high edge towards her, sloping
-      // away, which is the shape that says "ride over this and it will hurt".
-      b.quad('toon', [tx - tw * 0.46, 0, z + s.d * 0.5], [tx + tw * 0.46, 0, z + s.d * 0.5],
-        [tx + tw * 0.46, h, z - s.d * 0.2], [tx - tw * 0.46, h, z - s.d * 0.2],
-        shade(i % 2 ? pal.kerb : pal.accent, 1.0));
-      b.box('toon', tx, 0, z - s.d * 0.35, tw * 0.92, h, s.d * 0.3,
-        shade(i % 2 ? pal.kerb : pal.accent, 0.8));
-      b.box('emissive', tx, h - 0.06, z - s.d * 0.2, tw * 0.8, 0.06, 0.1,
-        shade(i % 2 ? pal.accentGlow : pal.lane, 0.7));
+      const h = s.h * (tall ? 0.58 : 0.36);
+      const col = shade(tall ? pal.accent : pal.kerb, 1.0);
+      const dark = shade(tall ? pal.accent : pal.kerb, 0.66);
+      const z0 = z + s.d * 0.55, z1 = z - s.d * 0.35;
+      const w2 = tw * 0.44;
+      // the ramped face, in two steps so it is a curve and not a plane
+      b.quad('toon', [tx - w2, 0, z0], [tx + w2, 0, z0],
+        [tx + w2, h * 0.6, z + s.d * 0.14], [tx - w2, h * 0.6, z + s.d * 0.14], shade(col, 1.08));
+      b.quad('toon', [tx - w2, h * 0.6, z + s.d * 0.14], [tx + w2, h * 0.6, z + s.d * 0.14],
+        [tx + w2, h, z - s.d * 0.05], [tx - w2, h, z - s.d * 0.05], shade(col, 1.3));
+      // the flat top and the square back
+      b.quad('toon', [tx - w2, h, z - s.d * 0.05], [tx + w2, h, z - s.d * 0.05],
+        [tx + w2, h, z1], [tx - w2, h, z1], shade(col, 1.45));
+      b.quad('toon', [tx - w2, h, z1], [tx + w2, h, z1], [tx + w2, 0, z1], [tx - w2, 0, z1], dark);
+      // the cheeks, and the visible joint between this block and the next
+      for (const side of [-1, 1]) {
+        b.quad('toon', [tx + side * w2, 0, z0], [tx + side * w2, h * 0.6, z + s.d * 0.14],
+          [tx + side * w2, h, z1], [tx + side * w2, 0, z1], shade(col, side < 0 ? 0.9 : 0.74));
+        b.box('toon', tx + side * (w2 + 0.02), 0, z + s.d * 0.1, 0.04, h * 0.9, s.d * 0.8, dark);
+      }
+      // ribs across the ramp: the thing that makes a kerb rattle a car
+      for (let r2 = 0; r2 < 3; r2++) {
+        b.box('toon', tx, h * (0.18 + r2 * 0.2), z + s.d * (0.36 - r2 * 0.14),
+          w2 * 1.9, 0.04, 0.09, shade(col, 1.55));
+      }
+      b.box('emissive', tx, h - 0.05, z - s.d * 0.05, w2 * 1.7, 0.05, 0.1,
+        shade(tall ? pal.accentGlow : pal.lane, 0.75));
     }
-    // The apex bollard, the tallest thing here and still inside the box.
-    const bh = s.h - 0.14;
-    b.cyl('toon', x + s.w * 0.12, 0, z, 0.15, 0.12, bh, 8, shade(pal.chrome, 0.9));
-    b.cyl('emissive', x + s.w * 0.12, bh * 0.62, z, 0.17, 0.17, 0.16, 8, shade(pal.accent, 1.1));
-    b.dome('emissive', x + s.w * 0.12, bh, z, 0.14, 0.14, 8, 3, shade(pal.accentGlow, 1.2));
+    // The apex bollard: a weighted base, a flexible sleeve and a lit band, and
+    // it leans, because a bollard on an apex has been hit.
+    const bh = s.h - 0.16;
+    const bx = x + s.w * 0.12;
+    b.cyl('toon', bx, 0, z, 0.24, 0.2, 0.1, 10, shade(pal.deck, 1.1));
+    b.cyl('toon', bx, 0.1, z, 0.16, 0.13, bh * 0.5, 10, shade(pal.chrome, 0.9));
+    b.cyl('toon', bx + 0.05, 0.1 + bh * 0.5, z + 0.03, 0.13, 0.11, bh * 0.42, 10,
+      shade(pal.chrome, 1.0));
+    b.cyl('emissive', bx + 0.02, bh * 0.5, z + 0.01, 0.15, 0.15, 0.14, 10, shade(pal.accent, 1.1));
+    b.cyl('emissive', bx + 0.05, bh * 0.78, z + 0.03, 0.13, 0.13, 0.1, 10, shade(pal.lane, 0.9));
+    b.dome('emissive', bx + 0.05, bh, z + 0.03, 0.12, 0.12, 8, 3, shade(pal.accentGlow, 1.2));
   },
 
   /**
@@ -431,31 +525,61 @@ const BARRIERS = {
   barrels(b, pal, x, z, s) {
     const drum = new THREE.Color('#e8622a');
     const r = s.w * 0.155;
+    // A ROAD BARREL IS RIBBED, AND IT IS THE RIBS THAT NAME IT.
+    //
+    // Three smooth cylinders with two chrome bands read as bollards. A real
+    // one is a moulded drum: a flared foot, three or four raised hoops, a
+    // tapered shoulder and a lid, and it is dented. Each drum here is built as
+    // stacked sections of alternating radius so the profile steps in and out,
+    // which is what catches the light in the rings that make it legible.
     for (let i = 0; i < 3; i++) {
       const bx = x + (i - 1) * s.w * 0.33;
-      const lean = (i - 1) * 0.06;                 // none of them stands straight
-      const h = s.h * (0.78 - Math.abs(i - 1) * 0.05);
-      b.cyl('toon', bx, 0, z + lean, r * 1.04, r * 0.92, h, 9, shade(drum, 0.95 + i * 0.06));
-      // reflective bands, the thing that says road furniture
-      for (const t of [0.34, 0.66]) {
-        b.cyl('chrome', bx, h * t, z + lean, r * 1.07, r * 1.07, 0.12, 9, shade(pal.kerb, 1.0));
+      const lean = (i - 1) * 0.07;
+      const h = s.h * (0.76 - Math.abs(i - 1) * 0.05);
+      const bz = z + lean;
+      // ballast foot, wider than the drum
+      b.taper('toon', bx, 0, bz, r * 2.5, 0.1, r * 2.2, r * 0.5, shade(drum, 0.6));
+      const bands = [[0.00, 1.00], [0.14, 1.10], [0.24, 1.00], [0.40, 1.10],
+                     [0.50, 1.00], [0.66, 1.10], [0.76, 1.00], [0.90, 0.86]];
+      for (let k = 0; k < bands.length - 1; k++) {
+        const [t0, w0] = bands[k];
+        const [t1, w1] = bands[k + 1];
+        // dented on one drum only, because three identical drums is a texture
+        const dent = (i === 1 && k === 3) ? 0.82 : 1;
+        b.taper('toon', bx, h * t0, bz, r * 2 * w0 * dent, h * (t1 - t0), r * 1.9 * w0,
+          (w0 - w1) * r, shade(drum, 0.88 + (k % 2) * 0.3));
       }
-      b.cyl('emissive', bx, h * 0.5, z + lean, r * 1.09, r * 1.09, 0.07, 9, shade(pal.accentGlow, 0.85));
-      // a weighted foot, so they sit on the road instead of floating on it
-      b.cyl('toon', bx, 0, z + lean, r * 1.22, r * 1.12, 0.08, 9, shade(drum, 0.6));
+      // reflective sleeves, set into the grooves rather than stuck on the face
+      for (const t of [0.29, 0.55]) {
+        b.cyl('chrome', bx, h * t, bz, r * 2.02, r * 2.02, h * 0.1, 12, shade(pal.kerb, 1.0));
+      }
+      b.cyl('emissive', bx, h * 0.42, bz, r * 2.04, r * 2.04, 0.06, 12, shade(pal.accentGlow, 0.9));
+      // lid with a lifting eye
+      b.taper('toon', bx, h * 0.9, bz, r * 1.75, h * 0.08, r * 1.7, r * 0.3, shade(drum, 1.25));
+      b.cyl('chrome', bx, h * 0.96, bz, 0.05, 0.05, 0.09, 6, shade(pal.chrome, 0.9));
     }
-    // The plank. Held at s.h - its own thickness so the top edge lands exactly
-    // on the hitbox: this is a barrier, and nothing may stand above it.
+    // The plank, on brackets, its top edge exactly on the hitbox.
     const plankH = 0.2;
-    b.box('toon', x, s.h - plankH, z, s.w * 1.02, plankH, s.d * 0.34, shade(pal.kerb, 0.95));
-    for (let i = 0; i < 5; i++) {
-      b.box('emissive', x - s.w * 0.4 + i * s.w * 0.2, s.h - plankH + 0.02, z + s.d * 0.18,
-        s.w * 0.11, plankH - 0.04, 0.05, shade(i % 2 ? pal.accent : pal.kerb, 0.7));
-    }
-    // the chain sagging between the drums, drawn as two dropped links
     for (const side of [-1, 1]) {
-      b.box('chrome', x + side * s.w * 0.165, s.h * 0.46, z - 0.06, s.w * 0.3, 0.05, 0.05,
-        shade(pal.chrome, 0.7));
+      b.box('chrome', x + side * s.w * 0.33, s.h - plankH - 0.06, z, 0.08, 0.24, s.d * 0.4,
+        shade(pal.chrome, 0.85));
+    }
+    b.box('toon', x, s.h - plankH, z, s.w * 1.04, plankH, s.d * 0.3, shade(pal.kerb, 0.95));
+    b.box('toon', x, s.h - plankH, z - s.d * 0.16, s.w * 1.04, plankH * 0.5, 0.05,
+      shade(pal.kerb, 0.66));
+    for (let i = 0; i < 6; i++) {
+      b.box('emissive', x - s.w * 0.44 + i * s.w * 0.176, s.h - plankH + 0.02, z + s.d * 0.16,
+        s.w * 0.1, plankH - 0.05, 0.05, shade(i % 2 ? pal.accent : pal.kerb, 0.75));
+    }
+    // chain between the drums, sagging in real links
+    for (const side of [-1, 1]) {
+      for (let k = 0; k < 4; k++) {
+        const t = (k + 0.5) / 4;
+        const cx = x + side * s.w * 0.165 + (t - 0.5) * s.w * 0.3 * side;
+        const sag = Math.sin(t * Math.PI) * 0.09;
+        b.box('chrome', cx, s.h * 0.44 - sag, z - 0.07, 0.09, 0.05, 0.05,
+          shade(pal.chrome, k % 2 ? 0.9 : 0.66));
+      }
     }
   },
 
@@ -632,31 +756,60 @@ const GATES = {
    */
   marquee(b, pal, x, z, s) {
     for (const side of [-1, 1]) {
-      b.cyl('chrome', x + side * (s.w / 2 + 0.14), 0, z, 0.15, 0.12, s.base + s.h, 6, shade(pal.chrome, 0.8));
+      const px = x + side * (s.w / 2 + 0.14);
+      b.cyl('chrome', px, 0, z, 0.15, 0.12, s.base + s.h, 8, shade(pal.chrome, 0.8));
+      b.cyl('chrome', px, 0, z, 0.28, 0.24, 0.14, 10, shade(pal.chrome, 0.95));
+      for (let i = 0; i < 4; i++) {
+        b.box('chrome', px, (s.base + s.h) * (0.2 + i * 0.2), z, 0.24, 0.06, 0.24,
+          shade(pal.chrome, 1.05));
+      }
     }
     b.box('toon', x, s.base + s.h - 0.24, z, s.w + 0.7, 0.28, 0.34, shade(pal.deck, 1.15));
-    // the chains, one shorter than the other so it hangs off level
-    const drop = s.h * 0.42;
-    for (const [side, d] of [[-1, drop], [1, drop * 0.86]]) {
-      b.box('chrome', x + side * s.w * 0.34, s.base + s.h - 0.24 - d, z, 0.07, d, 0.07, shade(pal.chrome, 0.9));
+    // Real chain, not two dropped bars: alternating links, and one side hangs
+    // shorter so the whole sign is off level.
+    const drop = s.h * 0.4;
+    for (const [side, d] of [[-1, drop], [1, drop * 0.84]]) {
+      const cx = x + side * s.w * 0.34;
+      const links = 7;
+      for (let i = 0; i < links; i++) {
+        const ly = s.base + s.h - 0.24 - (i + 0.5) * (d / links);
+        const horiz = i % 2 === 0;
+        b.box('chrome', cx, ly, z, horiz ? 0.13 : 0.05, d / links * 0.9, horiz ? 0.05 : 0.13,
+          shade(pal.chrome, horiz ? 1.0 : 0.78));
+      }
     }
-    // The light box. Its underside is the clearance, so it sits exactly on
-    // `s.base` and nothing on this form goes below it.
+    // THE LIGHT BOX, WITH A REAL BEZEL. Its underside is the clearance, so it
+    // sits exactly on `s.base` and nothing on this form goes below it.
     const boxH = s.h * 0.5;
     b.box('toon', x, s.base, z, s.w * 0.94, boxH, s.d * 0.7, shade(pal.deck, 1.4));
-    b.box('chrome', x, s.base + boxH, z, s.w * 0.98, 0.08, s.d * 0.76, shade(pal.chrome, 1.0));
-    b.box('chrome', x, s.base, z, s.w * 0.98, 0.08, s.d * 0.76, shade(pal.chrome, 0.9));
-    // the lit face, and a row of chase bulbs around it
-    b.box('emissive', x, s.base + boxH * 0.2, z + s.d * 0.36, s.w * 0.78, boxH * 0.56, 0.05,
-      shade(pal.accent, 0.8));
-    for (let i = 0; i < 6; i++) {
-      const bx = x - s.w * 0.4 + i * s.w * 0.16;
-      b.dome('emissive', bx, s.base + boxH * 0.9, z + s.d * 0.34, 0.08, 0.07, 6, 2,
-        shade(i % 2 ? pal.accentGlow : pal.lane, 1.1));
+    b.taper('toon', x, s.base + boxH, z, s.w * 0.98, 0.14, s.d * 0.76, -0.06, shade(pal.deck, 1.6));
+    // The lower lip sits ON the clearance, not under it. Every other gate in
+    // the game lets its trim straddle that line; this one must not, because it
+    // is the line.
+    b.taper('toon', x, s.base, z, s.w * 0.98, 0.14, s.d * 0.76, 0.06, shade(pal.deck, 1.2));
+    b.box('chrome', x, s.base + boxH + 0.12, z, s.w * 1.0, 0.07, s.d * 0.8, shade(pal.chrome, 1.0));
+    b.box('chrome', x, s.base + 0.01, z, s.w * 1.0, 0.07, s.d * 0.8, shade(pal.chrome, 0.9));
+    // the lit face, and the letter blocks standing proud of it
+    b.box('emissive', x, s.base + boxH * 0.18, z + s.d * 0.36, s.w * 0.8, boxH * 0.6, 0.05,
+      shade(pal.accent, 0.85));
+    for (let i = 0; i < 5; i++) {
+      const lx = x - s.w * 0.32 + i * s.w * 0.16;
+      b.box('toon', lx, s.base + boxH * 0.24, z + s.d * 0.38, s.w * 0.1, boxH * 0.44, 0.05,
+        shade(pal.deck, 1.8));
+      b.box('emissive', lx, s.base + boxH * 0.26, z + s.d * 0.4, s.w * 0.07, boxH * 0.38, 0.04,
+        shade(pal.lane, 1.05));
     }
-    // one bulb blown, because a sign with every lamp working is a new sign
-    b.dome('toon', x + s.w * 0.24, s.base + boxH * 0.9, z + s.d * 0.34, 0.08, 0.07, 6, 2,
-      shade(pal.deck, 0.6));
+    // Chase bulbs in holders, all the way round the frame — the detail that
+    // makes a marquee a marquee, and one of them blown.
+    const ring = [];
+    for (let i = 0; i < 7; i++) ring.push([x - s.w * 0.42 + i * s.w * 0.14, s.base + boxH + 0.06]);
+    for (let i = 0; i < 7; i++) ring.push([x - s.w * 0.42 + i * s.w * 0.14, s.base + 0.12]);
+    ring.forEach(([bx, by], i) => {
+      b.cyl('chrome', bx, by - 0.03, z + s.d * 0.34, 0.055, 0.05, 0.06, 6, shade(pal.chrome, 0.95));
+      const dead = i === 4;
+      b.dome(dead ? 'toon' : 'emissive', bx, by + 0.02, z + s.d * 0.34, 0.075, 0.07, 7, 2,
+        shade(dead ? pal.deck : (i % 2 ? pal.accentGlow : pal.lane), dead ? 0.6 : 1.15));
+    });
   },
 
   /**
@@ -758,35 +911,55 @@ const GATES = {
   strut(b, pal, x, z, s) {
     const steel = shade(pal.chrome, 0.8);
     const top = s.base + s.h;
-    for (const side of [-1, 1]) {
-      const lx = x + side * (s.w / 2 + 0.2);
-      b.box('chrome', lx, 0, z, 0.26, top, 0.3, steel);
-      b.box('chrome', lx, 0, z, 0.6, 0.14, 0.6, shade(pal.chrome, 1.0));
-    }
-    // The X, drawn as two long quads. Each stays above `s.base` at every point
-    // across the clear span: the crossing sits at the middle of the gate, and
-    // the low ends of the diagonals are out at the legs where she is not.
     const half = s.w / 2 + 0.2;
-    const t = 0.16;
-    for (const dir of [-1, 1]) {
-      b.quad('chrome', [x - half, s.base + (dir > 0 ? 0.1 : s.h - 0.1), z - t],
-        [x + half, s.base + (dir > 0 ? s.h - 0.1 : 0.1), z - t],
-        [x + half, s.base + (dir > 0 ? s.h - 0.1 : 0.1) + 0.24, z - t],
-        [x - half, s.base + (dir > 0 ? 0.1 : s.h - 0.1) + 0.24, z - t], steel);
-      b.quad('chrome', [x - half, s.base + (dir > 0 ? 0.1 : s.h - 0.1), z + t],
-        [x - half, s.base + (dir > 0 ? 0.1 : s.h - 0.1) + 0.24, z + t],
-        [x + half, s.base + (dir > 0 ? s.h - 0.1 : 0.1) + 0.24, z + t],
-        [x + half, s.base + (dir > 0 ? s.h - 0.1 : 0.1), z + t], shade(pal.chrome, 0.66));
+    // A TRUSS IS AN OPEN FRAME, SO EVERY MEMBER IS ANGLE IRON.
+    //
+    // Two flat quads for the X read as crosses painted on the sky. Real
+    // bracing is L-section: two thin webs meeting at a right angle, which
+    // guarantees one face always catches the light differently from the
+    // other. On a zone whose whole palette is white, that self-shading is the
+    // only thing keeping the shape alive.
+    const angle = (x0, y0, z0, x1, y1, z1, w, tint) => {
+      b.quad('chrome', [x0, y0, z0 - w], [x1, y1, z1 - w],
+        [x1, y1 + w * 2, z1 - w], [x0, y0 + w * 2, z0 - w], shade(steel, tint));
+      b.quad('chrome', [x0, y0, z0 - w], [x1, y1, z1 - w],
+        [x1, y1, z1 + w], [x0, y0, z0 + w], shade(steel, tint * 0.72));
+    };
+    for (const side of [-1, 1]) {
+      const lx = x + side * half;
+      for (const dz of [-0.16, 0.16]) {
+        b.box('chrome', lx, 0, z + dz, 0.16, top, 0.07, shade(steel, dz < 0 ? 1.0 : 0.72));
+        b.box('chrome', lx + side * 0.055, 0, z + dz, 0.05, top, 0.2, shade(steel, 0.86));
+      }
+      for (let i = 0; i < 6; i++) {
+        b.box('chrome', lx, 0.4 + i * top * 0.16, z, 0.2, 0.09, 0.42, shade(pal.chrome, 1.0));
+      }
+      b.box('toon', lx, 0, z, 0.66, 0.16, 0.7, shade(pal.deck, 1.2));
+      for (const dz of [-0.22, 0.22]) {
+        b.cyl('chrome', lx + side * 0.2, 0.02, z + dz, 0.05, 0.045, 0.16, 6, shade(pal.chrome, 0.95));
+      }
     }
-    // top chord and the gusset where the diagonals meet
-    b.box('chrome', x, top - 0.2, z, s.w + 0.4, 0.2, 0.34, shade(pal.chrome, 0.95));
-    b.box('chrome', x, s.base + s.h * 0.5 - 0.18, z, 0.5, 0.36, 0.4, shade(pal.chrome, 1.1));
-    // The clearance line, flush with the base. Bolt heads along it, because a
-    // bare white bar is exactly the object this zone already got wrong once.
-    b.box('emissive', x, s.base, z, s.w * 0.94, 0.09, 0.08, shade(pal.accentGlow, 1.0));
-    for (let i = 0; i < 5; i++) {
-      b.dome('chrome', x - s.w * 0.4 + i * s.w * 0.2, s.base + 0.1, z + 0.18, 0.07, 0.05, 6, 2,
-        shade(pal.chrome, 1.15));
+    for (const dir of [-1, 1]) {
+      const y0 = s.base + (dir > 0 ? 0.12 : s.h - 0.12);
+      const y1 = s.base + (dir > 0 ? s.h - 0.12 : 0.12);
+      angle(x - half, y0, z + dir * 0.1, x + half, y1, z + dir * 0.1, 0.12, dir > 0 ? 1.0 : 0.66);
+    }
+    b.box('chrome', x, top - 0.24, z, s.w + 0.4, 0.14, 0.36, shade(pal.chrome, 0.95));
+    b.box('chrome', x, top - 0.1, z, s.w + 0.4, 0.1, 0.5, shade(pal.chrome, 1.12));
+    // the gusset where the diagonals cross, plated both sides and bolted
+    b.box('chrome', x, s.base + s.h * 0.5 - 0.26, z - 0.24, 0.7, 0.52, 0.06, shade(pal.chrome, 1.15));
+    b.box('chrome', x, s.base + s.h * 0.5 - 0.26, z + 0.24, 0.7, 0.52, 0.06, shade(pal.chrome, 0.7));
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.7;
+      b.cyl('chrome', x + Math.cos(a) * 0.2, s.base + s.h * 0.5 + Math.sin(a) * 0.14, z + 0.28,
+        0.05, 0.05, 0.05, 6, shade(pal.chrome, 1.3));
+    }
+    // The clearance, flush with the base, bolted rather than painted: the one
+    // bar she has to read must never be a plain white stripe on a white sky.
+    b.box('emissive', x, s.base, z, s.w * 0.94, 0.09, 0.1, shade(pal.accentGlow, 1.05));
+    for (let i = 0; i < 7; i++) {
+      b.cyl('chrome', x - s.w * 0.42 + i * s.w * 0.14, s.base + 0.1, z + 0.2, 0.05, 0.04, 0.05, 6,
+        shade(pal.chrome, 1.2));
     }
   },
 
@@ -805,30 +978,65 @@ const GATES = {
    */
   scanner(b, pal, x, z, s) {
     const armY = s.base + s.h * 0.5;
+    // THE LIGHTEST THING IN THE GAME THAT STILL STOPS YOU.
+    //
+    // Every other gate is heavy — a sign bridge, a crane beam, a pipe run. On
+    // a road that is already swinging sideways a second heavy shape is one too
+    // many to parse, so this one is a truss so slim it is mostly air: a top
+    // and bottom chord with zigzag webbing between them, which is stiff in
+    // reality and nearly transparent on screen.
+    const half = s.w / 2 + 0.24;
     for (const side of [-1, 1]) {
-      // legs raked outwards, built from two boxes because the matrix stack
-      // cannot roll a cylinder
-      const lx = x + side * (s.w / 2 + 0.22);
-      b.box('chrome', lx, 0, z, 0.16, armY * 0.62, 0.22, shade(pal.chrome, 0.8));
-      b.box('chrome', lx - side * 0.1, armY * 0.62, z, 0.16, armY * 0.42, 0.22, shade(pal.chrome, 0.9));
-      b.box('toon', lx, 0, z, 0.44, 0.12, 0.5, shade(pal.deck, 1.2));
+      const lx = x + side * half;
+      // raked legs, built as stacked boxes because the matrix stack cannot roll
+      for (let i = 0; i < 4; i++) {
+        const t = i / 4;
+        b.box('chrome', lx - side * t * 0.16, armY * t, z, 0.13, armY * 0.26, 0.18,
+          shade(pal.chrome, 0.78 + i * 0.07));
+      }
+      b.taper('toon', lx, 0, z, 0.6, 0.12, 0.66, 0.12, shade(pal.deck, 1.2));
+      for (const dz of [-0.2, 0.2]) {
+        b.cyl('chrome', lx, 0.02, z + dz, 0.05, 0.04, 0.14, 6, shade(pal.chrome, 0.95));
+      }
+      // a stay back to the deck, which is what a mast this thin would need
+      b.quad('chrome', [lx, armY * 0.9, z], [lx, armY * 0.86, z],
+        [lx + side * 0.5, 0.1, z + 0.5], [lx + side * 0.5, 0.14, z + 0.5], shade(pal.chrome, 0.7));
     }
-    b.box('chrome', x, armY, z, s.w + 0.7, 0.22, 0.26, shade(pal.chrome, 1.0));
-    b.box('emissive', x, armY + 0.06, z + 0.15, s.w + 0.4, 0.1, 0.05, shade(pal.edge, 0.9));
-    // camera pods, angled down the road
+    // chords and webbing
+    b.box('chrome', x, armY + 0.16, z, s.w + 0.8, 0.08, 0.16, shade(pal.chrome, 1.05));
+    b.box('chrome', x, armY - 0.1, z, s.w + 0.8, 0.08, 0.16, shade(pal.chrome, 0.85));
+    for (let i = 0; i < 10; i++) {
+      const x0 = x - (s.w + 0.8) / 2 + i * (s.w + 0.8) / 10;
+      const x1 = x0 + (s.w + 0.8) / 10;
+      const up = i % 2 === 0;
+      b.quad('chrome', [x0, armY - 0.02 + (up ? 0 : 0.18), z - 0.05],
+        [x1, armY - 0.02 + (up ? 0.18 : 0), z - 0.05],
+        [x1, armY + 0.04 + (up ? 0.18 : 0), z - 0.05],
+        [x0, armY + 0.04 + (up ? 0 : 0.18), z - 0.05], shade(pal.chrome, 0.66));
+    }
+    b.box('emissive', x, armY + 0.24, z + 0.1, s.w + 0.5, 0.06, 0.04, shade(pal.edge, 0.95));
+    // camera pods on yokes, aimed down the road
     for (const side of [-1, 1]) {
-      const px = x + side * s.w * 0.26;
-      b.box('toon', px, armY - 0.34, z, 0.3, 0.34, 0.42, shade(pal.deck, 1.1));
-      b.box('emissive', px, armY - 0.26, z + 0.22, 0.2, 0.14, 0.05, shade(pal.accent, 0.8));
+      const px = x + side * s.w * 0.28;
+      b.box('chrome', px, armY - 0.28, z, 0.07, 0.2, 0.07, shade(pal.chrome, 0.8));
+      b.taper('toon', px, armY - 0.5, z, 0.28, 0.24, 0.4, -0.06, shade(pal.deck, 1.1));
+      b.cyl('glass', px, armY - 0.44, z + 0.22, 0.09, 0.08, 0.06, 8, shade(pal.edge, 1.1));
+      b.box('emissive', px, armY - 0.38, z + 0.24, 0.14, 0.05, 0.04, shade(pal.accent, 0.9));
+      b.box('toon', px, armY - 0.26, z - 0.06, 0.3, 0.06, 0.3, shade(pal.deck, 1.35));
     }
-    // The light curtain. Teeth, not a sheet: a solid bar of light across the
-    // road at head height reads as something you must not touch, and this is
-    // the line you are meant to pass under.
+    // THE LIGHT CURTAIN. Teeth rather than a sheet: a solid bar of light at
+    // head height reads as something not to touch, and this is the line she is
+    // meant to pass under. Each tooth gets its own emitter so the row has
+    // structure instead of being a comb of identical sticks.
     for (let i = 0; i < 9; i++) {
       const tx = x - s.w / 2 + (s.w / 8) * i;
+      b.box('chrome', tx, s.base + 0.34, z, 0.06, 0.08, 0.06, shade(pal.chrome, 0.9));
       b.box('emissive', tx, s.base, z, 0.05, 0.34, 0.05, shade(pal.accentGlow, 1.0));
+      // Domed UPWARD. Pointing it down put the brightest thing on the gate 5 cm
+      // under the line it exists to draw, which is the one place nothing may be.
+      b.dome('emissive', tx, s.base + 0.02, z, 0.05, 0.05, 6, 2, shade(pal.accentGlow, 1.3));
     }
-    b.box('emissive', x, s.base, z, s.w * 0.96, 0.07, 0.06, shade(pal.accentGlow, 1.2));
+    b.box('emissive', x, s.base, z, s.w * 0.96, 0.06, 0.05, shade(pal.accentGlow, 1.2));
   },
 
   /**
@@ -847,29 +1055,61 @@ const GATES = {
   signal(b, pal, x, z, s) {
     const mast = shade(pal.deck, 1.1);
     const armY = s.base + s.h * 0.72;
+    // A SIGNAL HEAD IS A STACK OF HOODED LENSES.
+    //
+    // Flat boxes with three coloured discs on the front read as dominoes. The
+    // shape that says traffic signal is the HOOD over each lens — a half tube
+    // sticking out — plus the back box being deeper than it is wide. Both are
+    // built here, because at speed the hoods are the only part with a
+    // silhouette of their own.
     for (const side of [-1, 1]) {
-      b.cyl('toon', x + side * (s.w / 2 + 0.16), 0, z, 0.19, 0.15, armY + 0.3, 7, mast);
-      // a bolted base plate, so the mast is planted and not stuck on
-      b.box('chrome', x + side * (s.w / 2 + 0.16), 0, z, 0.5, 0.1, 0.5, shade(pal.chrome, 0.8));
+      const mx = x + side * (s.w / 2 + 0.16);
+      b.cyl('toon', mx, 0, z, 0.21, 0.16, armY + 0.3, 8, mast);
+      b.taper('toon', mx, 0, z, 0.68, 0.16, 0.68, 0.14, shade(pal.deck, 1.3));
+      b.box('chrome', mx, 0.16, z, 0.52, 0.06, 0.52, shade(pal.chrome, 0.8));
+      for (let i = 0; i < 4; i++) {
+        b.cyl('chrome', mx + Math.cos(i * 1.57) * 0.2, 0.02, z + Math.sin(i * 1.57) * 0.2,
+          0.05, 0.04, 0.13, 6, shade(pal.chrome, 0.95));
+      }
+      // a cable dropping down the mast into a junction box
+      b.box('chrome', mx + side * 0.19, armY * 0.3, z, 0.05, armY * 0.6, 0.05, shade(pal.chrome, 0.7));
+      b.box('toon', mx + side * 0.22, armY * 0.24, z, 0.16, 0.3, 0.22, shade(pal.deck, 1.25));
     }
-    b.box('toon', x, armY, z, s.w + 0.9, 0.26, 0.3, mast);
-    b.box('chrome', x, armY + 0.26, z, s.w + 0.7, 0.08, 0.36, shade(pal.chrome, 0.9));
-    // Three heads on short drops. The middle one is the only one still lit,
-    // which is the whole story of the zone in one object.
+    b.box('toon', x, armY, z, s.w + 0.9, 0.24, 0.28, mast);
+    b.box('chrome', x, armY + 0.24, z, s.w + 0.7, 0.08, 0.34, shade(pal.chrome, 0.9));
+    for (let i = -2; i <= 2; i++) {
+      b.box('chrome', x + i * s.w * 0.22, armY - 0.1, z, 0.06, 0.1, 0.2, shade(pal.chrome, 0.75));
+    }
+    // Three heads. The middle one still burns, which is the whole story of the
+    // zone in one object.
     for (let i = 0; i < 3; i++) {
       const hx = x + (i - 1) * s.w * 0.34;
-      const drop = armY - s.base - 0.62;
-      b.box('chrome', hx, s.base + 0.62, z, 0.07, drop, 0.07, shade(pal.chrome, 0.75));
-      b.box('toon', hx, s.base, z, 0.3, 0.62, 0.26, shade(pal.deck, 0.8));
-      b.box('toon', hx, s.base + 0.62, z + 0.06, 0.34, 0.07, 0.3, shade(pal.deck, 1.3));
+      const drop = armY - s.base - 0.66;
+      b.box('chrome', hx, s.base + 0.66, z, 0.06, drop, 0.06, shade(pal.chrome, 0.75));
+      b.cyl('chrome', hx, s.base + 0.6, z, 0.09, 0.07, 0.08, 8, shade(pal.chrome, 0.95));
+      // the back box, deeper than wide, with a lid
+      b.box('toon', hx, s.base, z, 0.3, 0.66, 0.3, shade(pal.deck, 0.82));
+      b.box('toon', hx, s.base + 0.66, z, 0.34, 0.06, 0.34, shade(pal.deck, 1.3));
       for (let k = 0; k < 3; k++) {
+        const ly = s.base + 0.09 + k * 0.2;
         const lit = i === 1 && k === 2;
-        b.cyl('emissive', hx, s.base + 0.1 + k * 0.19, z + 0.14, 0.09, 0.09, 0.04, 7,
-          shade(lit ? pal.accent : pal.deck, lit ? 1.4 : 0.5));
+        // the hood: a half tube standing off the face
+        for (let seg = 0; seg < 5; seg++) {
+          const a0 = Math.PI * (seg / 5), a1 = Math.PI * ((seg + 1) / 5);
+          b.quad('toon',
+            [hx + Math.cos(a0) * 0.11, ly + 0.03 + Math.sin(a0) * 0.11, z + 0.1],
+            [hx + Math.cos(a1) * 0.11, ly + 0.03 + Math.sin(a1) * 0.11, z + 0.1],
+            [hx + Math.cos(a1) * 0.11, ly + 0.03 + Math.sin(a1) * 0.11, z + 0.22],
+            [hx + Math.cos(a0) * 0.11, ly + 0.03 + Math.sin(a0) * 0.11, z + 0.22],
+            shade(pal.deck, 0.7 + seg * 0.12));
+        }
+        b.cyl('toon', hx, ly, z + 0.1, 0.1, 0.1, 0.04, 10, shade(pal.deck, 1.15));
+        b.cyl('emissive', hx, ly + 0.01, z + 0.13, 0.08, 0.08, 0.04, 10,
+          shade(lit ? pal.accent : pal.deck, lit ? 1.5 : 0.5));
       }
     }
     // The clearance line, flush with the base rather than hanging under it.
-    b.box('emissive', x, s.base, z - 0.2, s.w * 0.94, 0.1, 0.06, shade(pal.accentGlow, 0.9));
+    b.box('emissive', x, s.base, z - 0.22, s.w * 0.94, 0.1, 0.06, shade(pal.accentGlow, 0.95));
   },
 
   /** Curtain of hanging vines. */
@@ -1125,31 +1365,62 @@ const BLOCKS = {
   crane(b, pal, x, z, s) {
     const frame = pal.facades[2];
     b.at(x, 0, z, 0.1, 1, 1, 1);
-    b.taper('toon', 0, 0, 0, s.w * 0.86, s.h * 0.3, s.d * 1.2, 0.08, shade(frame, 1.05));
-    b.box('emissive', 0, s.h * 0.16, s.d * 0.62, s.w * 0.5, s.h * 0.1, 0.05, shade(pal.accent, 0.8));
-    // the case: posts at the corners and glass between them
-    const cy = s.h * 0.3, ch = s.h * 0.52, cw = s.w * 0.78, cd = s.d * 1.06;
+    // A CLAW MACHINE IS A GLASS BOX ON A CABINET, AND THE GLASS IS THE POINT.
+    //
+    // The first pass put a solid glass block on a plinth and dropped a few
+    // domes inside. A real one has a deep base with a prize chute, a frame of
+    // slim posts with the panes SET INSIDE them, and a gantry the claw rides
+    // on. The read at speed is the lit heap behind glass, so everything else
+    // is built to stay out of its way.
+    b.taper('toon', 0, 0, 0, s.w * 0.9, s.h * 0.26, s.d * 1.25, 0.06, shade(frame, 1.0));
+    b.box('toon', 0, s.h * 0.26, 0, s.w * 0.84, s.h * 0.06, s.d * 1.2, shade(frame, 1.3));
+    // the chute and its flap, on the face she passes
+    b.box('toon', 0, s.h * 0.06, s.d * 0.62, s.w * 0.36, s.h * 0.16, 0.08, shade(frame, 0.7));
+    b.box('emissive', 0, s.h * 0.1, s.d * 0.66, s.w * 0.3, s.h * 0.08, 0.04, shade(pal.accent, 0.85));
+    b.box('chrome', -s.w * 0.26, s.h * 0.14, s.d * 0.64, 0.12, 0.2, 0.06, shade(pal.chrome, 1.0));
+    const cy = s.h * 0.32, ch = s.h * 0.5, cw = s.w * 0.76, cd = s.d * 1.04;
+    // posts at the corners, and slim mullions between them
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      b.box('chrome', sx * cw * 0.5, cy, sz * cd * 0.5, 0.1, ch, 0.1, shade(pal.chrome, 0.95));
+      b.box('chrome', sx * cw * 0.5, cy, sz * cd * 0.5, 0.1, ch, 0.1, shade(pal.chrome, 1.0));
     }
-    b.box('glass', 0, cy, 0, cw, ch, cd, shade(pal.edge, 1.05));
-    // prizes heaped in the bottom
-    for (let i = 0; i < 7; i++) {
-      const a = (i * 2.1) % (Math.PI * 2);
-      b.dome('emissive', Math.cos(a) * cw * 0.28, cy + 0.06 + (i % 3) * 0.14, Math.sin(a) * cd * 0.26,
-        0.2, 0.17, 6, 2, shade(i % 2 ? pal.accent : pal.accentGlow, 0.7));
+    for (const sz of [-1, 1]) {
+      b.box('chrome', 0, cy, sz * cd * 0.5, 0.05, ch, 0.06, shade(pal.chrome, 0.8));
     }
-    // the claw, hung off its rail near the top of the case
-    b.box('chrome', 0, cy + ch - 0.12, 0, cw * 0.9, 0.08, 0.1, shade(pal.chrome, 1.0));
-    b.box('chrome', s.w * 0.1, cy + ch * 0.62, 0, 0.05, ch * 0.34, 0.05, shade(pal.chrome, 0.85));
-    for (const [dx, dz] of [[-1, 0], [0.5, 0.86], [0.5, -0.86]]) {
-      b.box('chrome', s.w * 0.1 + dx * 0.12, cy + ch * 0.56, dz * 0.12, 0.06, 0.22, 0.06,
-        shade(pal.chrome, 1.1));
+    b.box('chrome', 0, cy, 0, cw + 0.06, 0.07, cd + 0.06, shade(pal.chrome, 0.9));
+    b.box('chrome', 0, cy + ch, 0, cw + 0.06, 0.07, cd + 0.06, shade(pal.chrome, 0.9));
+    // the panes, set inside the frame so the posts read in front of them
+    b.box('glass', 0, cy + 0.05, 0, cw - 0.08, ch - 0.1, cd - 0.08, shade(pal.edge, 1.05));
+    // The heap: a mound rather than a ring, biggest at the bottom, with a few
+    // shapes that are not spheres so it does not read as a bag of marbles.
+    for (let i = 0; i < 11; i++) {
+      const a = i * 2.4;
+      const rr = cw * 0.3 * (1 - i / 16);
+      const py = cy + 0.1 + (i % 4) * 0.11;
+      const c = shade(i % 3 === 0 ? pal.accent : i % 3 === 1 ? pal.accentGlow : pal.lane, 0.72);
+      if (i % 4 === 3) b.box('emissive', Math.cos(a) * rr, py, Math.sin(a) * rr * 0.8, 0.24, 0.2, 0.24, c);
+      else b.dome('emissive', Math.cos(a) * rr, py, Math.sin(a) * rr * 0.8, 0.18, 0.16, 7, 2, c);
     }
-    // crown, marquee and the coin door
-    b.box('toon', 0, cy + ch, 0, cw * 1.1, s.h * 0.14, cd * 1.1, shade(frame, 1.3));
-    b.box('emissive', 0, cy + ch + s.h * 0.03, cd * 0.56, cw * 0.8, s.h * 0.08, 0.05, shade(pal.lane, 0.85));
-    b.dome('emissive', 0, cy + ch + s.h * 0.14, 0, 0.22, 0.26, 8, 3, shade(pal.accent, 1.1));
+    // The gantry: two rails, a carriage, and the claw hanging open on its cord.
+    b.box('chrome', 0, cy + ch - 0.14, -cd * 0.3, cw * 0.9, 0.06, 0.07, shade(pal.chrome, 1.05));
+    b.box('chrome', 0, cy + ch - 0.14, cd * 0.3, cw * 0.9, 0.06, 0.07, shade(pal.chrome, 1.05));
+    const clx = s.w * 0.1;
+    b.box('chrome', clx, cy + ch - 0.2, 0, 0.2, 0.1, cd * 0.7, shade(pal.chrome, 1.15));
+    b.box('chrome', clx, cy + ch * 0.62, 0, 0.04, ch * 0.36, 0.04, shade(pal.chrome, 0.85));
+    b.cyl('chrome', clx, cy + ch * 0.6, 0, 0.11, 0.09, 0.1, 8, shade(pal.chrome, 1.1));
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      b.box('chrome', clx + Math.cos(a) * 0.11, cy + ch * 0.5, Math.sin(a) * 0.11,
+        0.05, 0.2, 0.05, shade(pal.chrome, 1.2));
+      b.box('chrome', clx + Math.cos(a) * 0.16, cy + ch * 0.42, Math.sin(a) * 0.16,
+        0.05, 0.1, 0.05, shade(pal.chrome, 1.0));
+    }
+    // crown, marquee and the beacon
+    b.box('toon', 0, cy + ch + 0.07, 0, cw * 1.12, s.h * 0.13, cd * 1.12, shade(frame, 1.3));
+    b.taper('toon', 0, cy + ch + 0.07 + s.h * 0.13, 0, cw * 1.06, s.h * 0.05, cd * 1.06, 0.14,
+      shade(frame, 1.55));
+    b.box('emissive', 0, cy + ch + s.h * 0.11, cd * 0.57, cw * 0.78, s.h * 0.08, 0.05,
+      shade(pal.lane, 0.9));
+    b.dome('emissive', 0, cy + ch + s.h * 0.2, 0, 0.2, 0.24, 8, 3, shade(pal.accent, 1.15));
     b.pop();
   },
 
@@ -1246,36 +1517,68 @@ const BLOCKS = {
    */
   pylon(b, pal, x, z, s) {
     const steel = shade(pal.chrome, 0.85);
-    const legs = s.h * 0.46;
-    // an A-frame: two legs drawing together into a single mast
-    for (const side of [-1, 1]) {
-      b.quad('chrome', [x + side * s.w * 0.42, 0, z - 0.18], [x + side * s.w * 0.42, 0, z + 0.18],
-        [x + side * s.w * 0.12, legs, z + 0.16], [x + side * s.w * 0.12, legs, z - 0.16], steel);
-      b.quad('chrome', [x + side * s.w * 0.42, 0, z + 0.18], [x + side * (s.w * 0.42 - 0.22), 0, z + 0.18],
-        [x + side * (s.w * 0.12 - 0.18), legs, z + 0.16], [x + side * s.w * 0.12, legs, z + 0.16],
-        shade(pal.chrome, 0.6));
-      b.box('toon', x + side * s.w * 0.42, 0, z, 0.6, 0.2, 0.7, shade(pal.deck, 1.2));
+    const legs = s.h * 0.44;
+    // A PYLON IS A LATTICE, AND A LATTICE IS READ FROM ITS HOLES.
+    //
+    // Two flat quads per leg gave a pair of tapered planks. This is four
+    // chords drawn as crossed webs, with a collar and a diagonal in every bay,
+    // so the tower is mostly gaps — which is also what keeps it legible
+    // against a sky the same value as the steel.
+    const BAYS = 5;
+    const legAt = (sx, sz, t) => [
+      x + sx * s.w * (0.42 - t * 0.3),
+      t * legs,
+      z + sz * (0.34 - t * 0.22),
+    ];
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      for (let i = 0; i < BAYS; i++) {
+        const p0 = legAt(sx, sz, i / BAYS), p1 = legAt(sx, sz, (i + 1) / BAYS);
+        b.quad('chrome', [p0[0] - 0.07, p0[1], p0[2]], [p0[0] + 0.07, p0[1], p0[2]],
+          [p1[0] + 0.07, p1[1], p1[2]], [p1[0] - 0.07, p1[1], p1[2]], shade(steel, 0.8 + i * 0.07));
+        b.quad('chrome', [p0[0], p0[1], p0[2] - 0.07], [p0[0], p0[1], p0[2] + 0.07],
+          [p1[0], p1[1], p1[2] + 0.07], [p1[0], p1[1], p1[2] - 0.07], shade(steel, 0.6 + i * 0.06));
+      }
+      const foot = legAt(sx, sz, 0);
+      b.box('toon', foot[0], 0, foot[2], 0.5, 0.18, 0.5, shade(pal.deck, 1.2));
     }
-    // the cross beam where the legs meet, then the mast
-    b.box('chrome', x, legs, z, s.w * 0.4, 0.26, 0.44, shade(pal.chrome, 1.05));
-    b.box('chrome', x, legs + 0.26, z, s.w * 0.2, s.h * 0.4, 0.34, steel);
-    b.taper('toon', x, legs + 0.26 + s.h * 0.4, z, s.w * 0.22, s.h * 0.12, 0.36, 0.06, shade(pal.deck, 1.35));
-    // The fan. Six stays leaving the mast head at six angles, cut off at the
-    // road: they run to a deck that is off in the fog, and drawing them all
-    // the way would put geometry across the lane she is in.
-    const headY = legs + 0.26 + s.h * 0.34;
+    for (let i = 0; i <= BAYS; i++) {
+      const c = legAt(1, 1, i / BAYS);
+      const w = (c[0] - x) * 2, d = (c[2] - z) * 2;
+      b.box('chrome', x, c[1], z, w + 0.12, 0.07, 0.09, shade(pal.chrome, 1.0));
+      b.box('chrome', x, c[1], z, 0.09, 0.07, d + 0.12, shade(pal.chrome, 0.82));
+      if (i < BAYS) {
+        const c1 = legAt(1, 1, (i + 1) / BAYS);
+        const dir = i % 2 ? 1 : -1;
+        b.quad('chrome', [x - dir * (w / 2), c[1], z + d / 2],
+          [x - dir * (w / 2) + 0.09, c[1], z + d / 2],
+          [x + dir * (c1[0] - x) + 0.09, c1[1], z + (c1[2] - z)],
+          [x + dir * (c1[0] - x), c1[1], z + (c1[2] - z)], shade(steel, 0.66));
+      }
+    }
+    // the head: crossbeam, a tapering mast, and the saddles the stays sit in
+    b.box('chrome', x, legs, z, s.w * 0.34, 0.22, 0.42, shade(pal.chrome, 1.05));
+    for (let i = 0; i < 4; i++) {
+      b.box('chrome', x, legs + 0.22 + i * s.h * 0.09, z, s.w * (0.2 - i * 0.02), 0.06, 0.3,
+        shade(pal.chrome, 0.95));
+      b.box('chrome', x, legs + 0.28 + i * s.h * 0.09, z, 0.08, s.h * 0.08, 0.08, steel);
+    }
+    const headY = legs + 0.22 + s.h * 0.38;
+    b.taper('toon', x, headY, z, s.w * 0.2, s.h * 0.1, 0.34, 0.06, shade(pal.deck, 1.35));
+    // The fan: six stays, each a pair of webs so it is a bar and not a ribbon.
     for (let i = 0; i < 6; i++) {
       const side = i % 2 ? 1 : -1;
-      const spread = 0.34 + Math.floor(i / 2) * 0.26;
-      b.quad('chrome',
-        [x, headY, z - 0.05], [x, headY, z + 0.05],
-        [x + side * s.w * spread * 1.5, headY - s.h * (0.34 + Math.floor(i / 2) * 0.1), z + 0.05],
-        [x + side * s.w * spread * 1.5, headY - s.h * (0.34 + Math.floor(i / 2) * 0.1), z - 0.05],
-        shade(pal.chrome, 0.72 + i * 0.04));
+      const step = Math.floor(i / 2);
+      const ex = x + side * s.w * (0.5 + step * 0.4);
+      const ey = headY - s.h * (0.3 + step * 0.1);
+      for (const dz of [-0.05, 0.05]) {
+        b.quad('chrome', [x, headY, z + dz], [x, headY - 0.1, z + dz],
+          [ex, ey - 0.1, z + dz], [ex, ey, z + dz], shade(pal.chrome, dz < 0 ? 0.9 : 0.62));
+      }
+      b.cyl('chrome', x + side * 0.14, headY - 0.06, z, 0.06, 0.05, 0.12, 6, shade(pal.chrome, 1.15));
     }
-    // aircraft warning lights, the one saturated thing on a white zone
-    b.dome('emissive', x, legs + 0.26 + s.h * 0.52, z, 0.16, 0.18, 7, 3, shade(pal.accent, 1.25));
-    b.box('emissive', x, legs - 0.1, z, s.w * 0.44, 0.08, 0.46, shade(pal.accentGlow, 0.7));
+    b.dome('emissive', x, headY + s.h * 0.1, z, 0.15, 0.17, 7, 3, shade(pal.accent, 1.25));
+    b.box('emissive', x, legs + 0.1, z, s.w * 0.36, 0.07, 0.44, shade(pal.accentGlow, 0.75));
+    b.cyl('emissive', x, 0.03, z, s.w * 0.6, s.w * 0.54, 0.05, 16, shade(pal.accentGlow, 0.45));
   },
 
   /**
@@ -1293,32 +1596,64 @@ const BLOCKS = {
    */
   gumball(b, pal, x, z, s) {
     const r = s.w * 0.42;
-    const stalkH = s.h * 0.42;
-    // pedestal, then the stalk, both narrower than the globe so it overhangs
-    b.taper('toon', x, 0, z, s.w * 0.56, 0.34, s.d * 0.9, 0.14, shade(pal.deck, 1.25));
-    b.cyl('chrome', x, 0.34, z, s.w * 0.17, s.w * 0.13, stalkH, 10, shade(pal.chrome, 0.95));
-    b.cyl('chrome', x, 0.34 + stalkH, z, s.w * 0.24, s.w * 0.24, 0.12, 10, shade(pal.chrome, 1.05));
-    // the globe, built as two domes so it is a ball and not a bulge
-    const gy = 0.34 + stalkH + 0.12;
-    b.dome('glass', x, gy, z, r, r * 0.98, 14, 6, shade(pal.edge, 1.15));
-    b.dome('glass', x, gy, z, r, -r * 0.72, 14, 5, shade(pal.edge, 0.95));
-    // the capsules inside, lit, in a ring so the glass has something to hold
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * Math.PI * 2;
-      const rr = r * 0.52;
-      b.dome('emissive', x + Math.cos(a) * rr, gy + r * (0.16 + (i % 3) * 0.16), z + Math.sin(a) * rr,
-        r * 0.2, r * 0.18, 6, 2, shade(i % 2 ? pal.accent : pal.accentGlow, 0.66));
+    const stalkH = s.h * 0.4;
+    // THE ONLY SPHERE IN THE GAME, so the sphere has to be a sphere.
+    //
+    // Two domes back to back gave a bulge with a seam across its middle. This
+    // is a proper globe of stacked rings, with a chrome equator band that
+    // hides the joint and gives the glass something to reflect, plus a cast
+    // base with mouldings — the object is a piece of street furniture, not a
+    // ball on a stick.
+    b.taper('toon', x, 0, z, s.w * 0.62, 0.22, s.d * 0.95, 0.1, shade(pal.deck, 1.15));
+    b.taper('toon', x, 0.22, z, s.w * 0.46, 0.14, s.d * 0.72, 0.06, shade(pal.deck, 1.35));
+    b.cyl('chrome', x, 0.36, z, s.w * 0.19, s.w * 0.14, stalkH, 12, shade(pal.chrome, 0.95));
+    for (let i = 0; i < 3; i++) {
+      b.cyl('chrome', x, 0.42 + i * stalkH * 0.3, z, s.w * 0.2 - i * 0.01, s.w * 0.19 - i * 0.01,
+        0.06, 12, shade(pal.chrome, 1.15));
     }
-    // the crown, cracked open on one side
-    b.cyl('chrome', x, gy + r * 0.9, z, r * 0.42, r * 0.3, 0.16, 10, shade(pal.chrome, 1.0));
-    b.tri('toon', [x - r * 0.4, gy + r * 1.06, z], [x + r * 0.34, gy + r * 1.06, z - r * 0.2],
-      [x - r * 0.06, gy + r * 1.3, z], shade(pal.chrome, 0.85));
-    // the coin slot and the chute, at the height a hand would be
-    b.box('chrome', x, gy - r * 0.55, z + r * 0.86, s.w * 0.2, 0.22, 0.08, shade(pal.chrome, 0.9));
-    b.box('emissive', x, gy - r * 0.5, z + r * 0.9, s.w * 0.12, 0.06, 0.04, shade(pal.accent, 0.9));
-    // capsules that got out, on the road at its foot
-    for (const [dx, dz] of [[-0.62, 0.5], [0.7, -0.3], [0.4, 0.66]]) {
-      b.dome('emissive', x + dx, 0.02, z + dz, 0.16, 0.14, 6, 2, shade(pal.accentGlow, 0.8));
+    b.cyl('chrome', x, 0.36 + stalkH, z, s.w * 0.28, s.w * 0.26, 0.14, 12, shade(pal.chrome, 1.05));
+    // The globe: rings of latitude, so it is round from every angle.
+    const gy = 0.36 + stalkH + 0.14 + r;
+    const LAT = 7, LON = 14;
+    for (let i = 0; i < LAT; i++) {
+      const t0 = (i / LAT) * Math.PI, t1 = ((i + 1) / LAT) * Math.PI;
+      const r0 = Math.sin(t0) * r, r1 = Math.sin(t1) * r;
+      const y0 = gy - Math.cos(t0) * r, y1 = gy - Math.cos(t1) * r;
+      for (let k = 0; k < LON; k++) {
+        const a0 = (k / LON) * Math.PI * 2, a1 = ((k + 1) / LON) * Math.PI * 2;
+        b.quad('glass',
+          [x + Math.cos(a0) * r0, y0, z + Math.sin(a0) * r0],
+          [x + Math.cos(a1) * r0, y0, z + Math.sin(a1) * r0],
+          [x + Math.cos(a1) * r1, y1, z + Math.sin(a1) * r1],
+          [x + Math.cos(a0) * r1, y1, z + Math.sin(a0) * r1],
+          shade(pal.edge, 1.0 + Math.sin(t0) * 0.24));
+      }
+    }
+    b.cyl('chrome', x, gy - 0.06, z, r * 1.02, r * 1.02, 0.12, LON, shade(pal.chrome, 1.1));
+    // the capsules inside, heaped rather than ringed, and a few different sizes
+    for (let i = 0; i < 13; i++) {
+      const a = i * 2.4;
+      const rr = r * 0.56 * (1 - i / 22);
+      const cy2 = gy - r * 0.5 + (i % 5) * r * 0.24;
+      const sz = r * (0.16 + (i % 3) * 0.05);
+      b.dome('emissive', x + Math.cos(a) * rr, cy2, z + Math.sin(a) * rr, sz, sz * 0.9, 7, 2,
+        shade(i % 3 === 0 ? pal.accent : i % 3 === 1 ? pal.accentGlow : pal.lane, 0.7));
+    }
+    // the crown, cracked open, with the lid tipped off one side
+    b.cyl('chrome', x, gy + r * 0.86, z, r * 0.44, r * 0.3, 0.16, 12, shade(pal.chrome, 1.0));
+    b.taper('toon', x - r * 0.1, gy + r * 1.02, z + r * 0.06, r * 0.5, r * 0.2, r * 0.5, r * 0.16,
+      shade(pal.chrome, 0.85));
+    b.tri('toon', [x + r * 0.3, gy + r * 1.0, z], [x + r * 0.62, gy + r * 0.78, z - r * 0.2],
+      [x + r * 0.26, gy + r * 0.7, z], shade(pal.chrome, 0.7));
+    // coin mech, chute and the handle you turn
+    b.box('chrome', x, gy - r * 1.0, z + r * 0.78, s.w * 0.22, 0.26, 0.1, shade(pal.chrome, 0.9));
+    b.cyl('chrome', x + s.w * 0.11, gy - r * 0.98, z + r * 0.8, 0.07, 0.07, 0.12, 8,
+      shade(pal.chrome, 1.15));
+    b.box('emissive', x, gy - r * 0.92, z + r * 0.84, s.w * 0.14, 0.06, 0.04, shade(pal.accent, 0.95));
+    b.box('toon', x, 0.36 + stalkH * 0.4, z + s.w * 0.2, s.w * 0.2, 0.16, 0.08, shade(pal.deck, 1.4));
+    // capsules that got out
+    for (const [dx, dz, sz] of [[-0.62, 0.5, 0.16], [0.7, -0.3, 0.13], [0.4, 0.66, 0.1], [-0.3, 0.8, 0.12]]) {
+      b.dome('emissive', x + dx, 0.02, z + dz, sz, sz * 0.85, 7, 2, shade(pal.accentGlow, 0.8));
     }
   },
 
@@ -1334,28 +1669,54 @@ const BLOCKS = {
   booth(b, pal, x, z, s) {
     const wall = pal.facades[0];
     b.at(x, 0, z, 0.13, 1, 1, 1);
-    // plinth, a step wider than the cabin so it reads as founded
-    b.taper('toon', 0, 0, 0, s.w * 0.92, 0.3, s.d * 1.5, 0.06, shade(pal.deck, 1.2));
-    const w = s.w * 0.7, h = s.h * 0.66, d = s.d * 1.25;
-    b.box('toon', 0, 0.3, 0, w, h, d, shade(wall, 1.15));
-    // corner posts, which is what stops a box from reading as a box
+    // THE ONLY BUILDING IN THE GAME, so it is built like one.
+    //
+    // A box with a window band on it is a box. A cabin reads from its parts: a
+    // plinth it stands on, a plinth course above that, corner posts, a window
+    // with a sill and a head, a door in a frame, a roof with an overhang and a
+    // fascia, and a parapet. All of them are here, and all of them are shallow
+    // — the depth of each is what casts the small shadows that say "made of
+    // pieces" instead of "one shape".
+    b.taper('toon', 0, 0, 0, s.w * 0.96, 0.26, s.d * 1.55, 0.05, shade(pal.deck, 1.15));
+    b.box('toon', 0, 0.26, 0, s.w * 0.86, 0.1, s.d * 1.42, shade(pal.deck, 1.4));
+    const w = s.w * 0.7, h = s.h * 0.62, d = s.d * 1.25, y0 = 0.36;
+    b.box('toon', 0, y0, 0, w, h, d, shade(wall, 1.12));
+    // plinth course and a string course, both proud of the wall
+    b.box('toon', 0, y0, 0, w * 1.05, h * 0.1, d * 1.04, shade(wall, 0.8));
+    b.box('toon', 0, y0 + h * 0.74, 0, w * 1.04, h * 0.05, d * 1.03, shade(wall, 1.35));
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      b.box('chrome', sx * w * 0.48, 0.3, sz * d * 0.48, 0.11, h, 0.11, shade(pal.chrome, 0.85));
+      b.box('chrome', sx * w * 0.49, y0, sz * d * 0.49, 0.12, h, 0.12, shade(pal.chrome, 0.88));
+      b.box('chrome', sx * w * 0.49, y0 + h * 0.5, sz * d * 0.49, 0.16, 0.06, 0.16,
+        shade(pal.chrome, 1.1));
     }
-    // the window band, and the light still on behind it
-    b.box('glass', 0, 0.3 + h * 0.52, d * 0.5, w * 0.82, h * 0.34, 0.06, shade(pal.edge, 1.1));
-    b.box('emissive', 0, 0.3 + h * 0.52, d * 0.47, w * 0.74, h * 0.28, 0.05, shade(pal.accent, 0.72));
-    b.box('chrome', 0, 0.3 + h * 0.34, d * 0.5, w * 0.86, 0.07, 0.1, shade(pal.chrome, 0.95));
-    // the door, hanging open on the side you pass
-    b.box('toon', -w * 0.5, 0.3, -d * 0.16, 0.06, h * 0.72, d * 0.42, shade(wall, 0.8));
-    b.quad('toon', [-w * 0.5, 0.3, -d * 0.37], [-w * 0.86, 0.3, -d * 0.6],
-      [-w * 0.86, 0.3 + h * 0.72, -d * 0.6], [-w * 0.5, 0.3 + h * 0.72, -d * 0.37], shade(wall, 0.65));
-    // roof with an overhang, the aerial, and the beacon
-    b.box('toon', 0, 0.3 + h, 0, w * 1.16, s.h * 0.09, d * 1.16, shade(pal.deck, 1.45));
-    b.box('chrome', 0, 0.3 + h + s.h * 0.09, 0, w * 0.9, 0.06, d * 0.9, shade(pal.chrome, 0.9));
-    b.cyl('chrome', w * 0.3, 0.3 + h + s.h * 0.09, d * 0.2, 0.045, 0.03, s.h * 0.2, 5, shade(pal.chrome, 0.8));
-    b.cyl('toon', 0, 0.3 + h + s.h * 0.11, 0, 0.17, 0.15, s.h * 0.1, 8, shade(pal.deck, 0.9));
-    b.dome('emissive', 0, 0.3 + h + s.h * 0.21, 0, 0.17, 0.2, 8, 3, shade(pal.accentGlow, 1.35));
+    // The window: reveal, sill, head and a mullion, with the light behind it.
+    const gy = y0 + h * 0.46, gh = h * 0.3, gw = w * 0.8;
+    b.box('toon', 0, gy - 0.06, d * 0.47, gw + 0.12, gh + 0.14, 0.07, shade(wall, 0.72));
+    b.box('glass', 0, gy, d * 0.5, gw, gh, 0.05, shade(pal.edge, 1.1));
+    b.box('emissive', 0, gy + 0.02, d * 0.47, gw * 0.9, gh * 0.8, 0.04, shade(pal.accent, 0.75));
+    b.box('chrome', 0, gy, d * 0.52, 0.05, gh, 0.04, shade(pal.chrome, 1.0));
+    b.box('chrome', 0, gy - 0.1, d * 0.52, gw + 0.2, 0.08, 0.14, shade(pal.chrome, 0.95));
+    b.box('toon', 0, gy + gh, d * 0.5, gw + 0.16, 0.07, 0.12, shade(wall, 1.5));
+    // the door, in its frame, hanging open on the side she passes
+    b.box('toon', -w * 0.5, y0 + 0.06, -d * 0.16, 0.06, h * 0.7, d * 0.46, shade(wall, 0.7));
+    b.box('chrome', -w * 0.52, y0 + h * 0.76, -d * 0.16, 0.05, 0.06, d * 0.5, shade(pal.chrome, 0.9));
+    b.quad('toon', [-w * 0.5, y0 + 0.06, -d * 0.38], [-w * 0.88, y0 + 0.06, -d * 0.62],
+      [-w * 0.88, y0 + h * 0.72, -d * 0.62], [-w * 0.5, y0 + h * 0.72, -d * 0.38], shade(wall, 0.6));
+    b.cyl('chrome', -w * 0.82, y0 + h * 0.38, -d * 0.56, 0.04, 0.04, 0.16, 6, shade(pal.chrome, 1.1));
+    // roof: overhang, fascia, parapet, then the plant on top
+    b.box('toon', 0, y0 + h, 0, w * 1.2, s.h * 0.06, d * 1.2, shade(pal.deck, 1.5));
+    b.box('toon', 0, y0 + h - 0.05, 0, w * 1.24, 0.06, d * 1.24, shade(pal.deck, 1.1));
+    for (const sx of [-1, 1]) {
+      b.box('toon', sx * w * 0.58, y0 + h + s.h * 0.06, 0, 0.08, s.h * 0.07, d * 1.14,
+        shade(pal.deck, 1.35));
+    }
+    b.box('chrome', 0, y0 + h + s.h * 0.06, 0, w * 0.86, 0.05, d * 0.86, shade(pal.chrome, 0.9));
+    b.cyl('chrome', w * 0.3, y0 + h + s.h * 0.08, d * 0.2, 0.05, 0.03, s.h * 0.22, 6,
+      shade(pal.chrome, 0.85));
+    b.box('toon', -w * 0.24, y0 + h + s.h * 0.07, -d * 0.2, w * 0.3, s.h * 0.08, d * 0.4,
+      shade(pal.deck, 1.2));
+    b.cyl('toon', 0, y0 + h + s.h * 0.09, 0, 0.18, 0.16, s.h * 0.09, 10, shade(pal.deck, 0.95));
+    b.dome('emissive', 0, y0 + h + s.h * 0.19, 0, 0.17, 0.2, 8, 3, shade(pal.accentGlow, 1.35));
     b.pop();
   },
 
