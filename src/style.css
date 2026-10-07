@@ -716,6 +716,14 @@ html, body {
 
 .howto b { color: var(--sky); }
 
+/* about: plain copy on the title screen, folded so the screen stays a game */
+.about { margin-top: 18px; font-size: 13px; line-height: 1.6; color: #fff; text-shadow: 0 1px 0 var(--ink), 0 0 12px rgba(61, 13, 82, 0.95); }
+.about summary { cursor: pointer; font-weight: 700; letter-spacing: 0.2em; color: var(--sky); list-style: none; }
+.about summary::-webkit-details-marker { display: none; }
+.about p { margin-top: 10px; text-align: left; }
+.about a { color: var(--sky); }
+.about__credit { opacity: 0.8; }
+
 /* --- zone select ---------------------------------------------------------
    Cards rather than a list: each one has to carry an identity, because the
    whole point of a zone is that it looks nothing like the last one. -------- */
